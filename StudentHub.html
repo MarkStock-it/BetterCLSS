@@ -403,7 +403,7 @@
         addAssistantMessage('assistant', data.reply || 'No reply from model.');
       } catch (err) {
         const text = err && err.message ? err.message : 'Unknown assistant error';
-        addAssistantMessage('assistant', 'AI backend error: ' + text + '. Check model server and .env, then restart npm run dev.');
+        addAssistantMessage('assistant', 'AI backend error: ' + text + '. Check your backend URL and deployed environment variables.');
       } finally {
         APP.ai.sending = false;
         if (btn) btn.textContent = 'Send';
