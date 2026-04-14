@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,12 +22,12 @@
     </div>
 
     <div class="topbar-center">
-      <span class="search-icon">&#128269;</span>
       <input class="search-input" type="text" placeholder="Search assignments, courses..." id="globalSearch" oninput="onSearch(this.value)">
     </div>
 
     <div class="topbar-right">
       <div class="topbar-badge" id="topDate"></div>
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark mode">☀️</button>
       <div class="canvas-status" onclick="showCanvasSetup()">
         <div class="status-dot" id="statusDot"></div>
         <span id="statusLabel">Connect Canvas</span>
@@ -35,19 +35,42 @@
     </div>
   </header>
 
+  <!-- Mobile-only nav (hidden on desktop) -->
   <nav class="nav-tabs">
-    <div class="nav-tab active" data-page="dashboard" onclick="switchPage('dashboard', this)">&#128202; Dashboard</div>
-    <div class="nav-tab" data-page="assignments" onclick="switchPage('assignments', this)">&#128203; Assignments <span class="tab-count" id="badgePending">0</span></div>
-    <div class="nav-tab" data-page="calendar" onclick="switchPage('calendar', this)">&#128197; Calendar</div>
-    <div class="nav-tab" data-page="grades" onclick="switchPage('grades', this)">&#127891; Grades</div>
-    <div class="nav-tab" data-page="announcements" onclick="switchPage('announcements', this)">&#128226; Announcements <span class="tab-count alert" id="badgeAnnounce">0</span></div>
-    <div class="nav-tab" data-page="notes" onclick="switchPage('notes', this)">&#128221; Notes</div>
-    <div class="nav-tab" data-page="pomodoro" onclick="switchPage('pomodoro', this)">&#9201; Timer</div>
-    <div class="nav-tab" data-page="resources" onclick="switchPage('resources', this)">&#128279; Resources</div>
+    <div class="nav-tab active" data-page="dashboard" onclick="switchPage('dashboard', this)">Dashboard</div>
+    <div class="nav-tab" data-page="assignments" onclick="switchPage('assignments', this)">Assignments</div>
+    <div class="nav-tab" data-page="calendar" onclick="switchPage('calendar', this)">Calendar</div>
+    <div class="nav-tab" data-page="grades" onclick="switchPage('grades', this)">Grades</div>
+    <div class="nav-tab" data-page="announcements" onclick="switchPage('announcements', this)">Announcements</div>
+    <div class="nav-tab" data-page="notes" onclick="switchPage('notes', this)">Notes</div>
+    <div class="nav-tab" data-page="pomodoro" onclick="switchPage('pomodoro', this)">Timer</div>
+    <div class="nav-tab" data-page="resources" onclick="switchPage('resources', this)">Links</div>
   </nav>
 
   <div class="layout">
     <aside class="sidebar">
+      <!-- Sidebar nav -->
+      <nav class="sidenav">
+        <div class="sidenav-section-label">Navigate</div>
+        <div class="nav-tab active" data-page="dashboard" onclick="switchPage('dashboard', this)">Dashboard</div>
+        <div class="nav-tab" data-page="assignments" onclick="switchPage('assignments', this)">
+          <span>Assignments</span>
+          <span class="tab-count" id="badgePending">0</span>
+        </div>
+        <div class="nav-tab" data-page="calendar" onclick="switchPage('calendar', this)">Calendar</div>
+        <div class="nav-tab" data-page="grades" onclick="switchPage('grades', this)">Grades</div>
+        <div class="nav-tab" data-page="announcements" onclick="switchPage('announcements', this)">
+          <span>Announcements</span>
+          <span class="tab-count alert" id="badgeAnnounce">0</span>
+        </div>
+        <div class="sidenav-sep"></div>
+        <div class="nav-tab" data-page="notes" onclick="switchPage('notes', this)">Notes</div>
+        <div class="nav-tab" data-page="pomodoro" onclick="switchPage('pomodoro', this)">Timer</div>
+        <div class="nav-tab" data-page="resources" onclick="switchPage('resources', this)">Links</div>
+      </nav>
+
+      <div class="sidenav-sep"></div>
+
       <div>
         <div class="sidebar-label">Due Soon</div>
         <div class="mini-list" id="sidebarDue"></div>
@@ -230,7 +253,12 @@
     <div class="assistant-panel" id="assistantPanel">
       <div class="assistant-head">
         <div class="assistant-title">BetterCLSS AI</div>
+        <button class="assistant-key-btn" title="Set your own AI API key" onclick="toggleAiKeyRow()">⚙</button>
         <button class="assistant-close" onclick="toggleAssistant(false)">×</button>
+      </div>
+      <div class="assistant-key-row" id="assistantKeyRow" style="display:none">
+        <input type="password" id="aiKeyInput" placeholder="Paste your AI API key (optional)" autocomplete="off" oninput="saveAiApiKey()" />
+        <span class="assistant-key-hint">Stored locally on this device only. Leave blank to use the shared key.</span>
       </div>
       <div class="assistant-messages" id="assistantMessages"></div>
       <div class="assistant-input-row">
@@ -290,6 +318,23 @@
 
     function save() { localStorage.setItem('bclss_local', JSON.stringify(APP.local)); }
     function load() { try { const raw = localStorage.getItem('bclss_local'); if (raw) APP.local = { ...APP.local, ...JSON.parse(raw) }; } catch (_) {} }
+    function toggleTheme() {
+      const root = document.documentElement;
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('bclss_theme', next);
+      const btn = document.getElementById('themeToggle');
+      if (btn) btn.textContent = next === 'dark' ? '☀️' : '🌙';
+    }
+    function initTheme() {
+      const saved = localStorage.getItem('bclss_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+      const btn = document.getElementById('themeToggle');
+      if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+    }
+    function getAiApiKey() { return localStorage.getItem('bclss_ai_key') || ''; }
+    function saveAiApiKey() { const v = (document.getElementById('aiKeyInput') || {}).value || ''; if (v.trim()) { localStorage.setItem('bclss_ai_key', v.trim()); } else { localStorage.removeItem('bclss_ai_key'); } }
+    function toggleAiKeyRow() { const row = document.getElementById('assistantKeyRow'); if (!row) return; const open = row.style.display === 'none'; row.style.display = open ? '' : 'none'; if (open) { const inp = document.getElementById('aiKeyInput'); if (inp) { inp.value = getAiApiKey(); inp.focus(); } } }
     function uid() { APP.local.nextId += 1; return APP.local.nextId; }
     function todayISO() { return new Date().toISOString().split('T')[0]; }
     function daysFromToday(days) { const d = new Date(); d.setDate(d.getDate() + days); return d.toISOString().split('T')[0]; }
@@ -381,9 +426,12 @@
 
       try {
         const history = APP.ai.messages.slice(-12).map((m) => ({ role: m.role, content: m.content }));
+        const aiKey = getAiApiKey();
+        const reqHeaders = { 'Content-Type': 'application/json' };
+        if (aiKey) reqHeaders['x-ai-key'] = aiKey;
         const response = await fetch(CanvasAPI.apiUrl('/api/assistant/chat'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: reqHeaders,
           body: JSON.stringify({
             message,
             history,
@@ -909,6 +957,7 @@
     }
 
     function init() {
+      initTheme();
       load();
       document.getElementById('topDate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
       document.getElementById('pomoSessions').textContent = APP.local.pomoSessions;

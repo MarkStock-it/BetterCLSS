@@ -69,7 +69,7 @@ function json(res, status, data) {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': CORS_ALLOW_ORIGIN,
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Accept, x-canvas-token, x-canvas-domain',
+    'Access-Control-Allow-Headers': 'Content-Type, Accept, x-canvas-token, x-canvas-domain, x-ai-key',
     Vary: 'Origin',
   });
   res.end(JSON.stringify(data));
@@ -166,7 +166,7 @@ async function ensureOllamaRunning() {
   await ollamaBootPromise;
 }
 
-async function assistantChat(message, context = {}, history = []) {
+async function assistantChat(message, context = {}, history = [], callerApiKey = '') {
   await ensureOllamaRunning();
 
   const safeHistory = Array.isArray(history)
@@ -197,8 +197,9 @@ async function assistantChat(message, context = {}, history = []) {
     Accept: 'application/json',
   };
 
-  if (OPENCLAUDE_API_KEY) {
-    headers.Authorization = `Bearer ${OPENCLAUDE_API_KEY}`;
+  const effectiveApiKey = callerApiKey || OPENCLAUDE_API_KEY;
+  if (effectiveApiKey) {
+    headers.Authorization = `Bearer ${effectiveApiKey}`;
   }
 
   const response = await fetch(`${OPENCLAUDE_BASE_URL}/chat/completions`, {
@@ -498,7 +499,8 @@ async function handleApi(req, res) {
         return;
       }
 
-      const reply = await assistantChat(message, context, history);
+      const callerApiKey = String(req.headers['x-ai-key'] || '').trim();
+      const reply = await assistantChat(message, context, history, callerApiKey);
       json(res, 200, { reply });
       return;
     } catch (err) {
@@ -562,7 +564,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': CORS_ALLOW_ORIGIN,
       'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Accept, x-canvas-token, x-canvas-domain',
+      'Access-Control-Allow-Headers': 'Content-Type, Accept, x-canvas-token, x-canvas-domain, x-ai-key',
       'Access-Control-Max-Age': '86400',
       Vary: 'Origin',
     });
