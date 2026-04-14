@@ -15,25 +15,7 @@
     <div class="modal" id="modalContent"></div>
   </div>
 
-  <header class="topbar">
-    <div class="logo">
-      <div class="logo-dot"></div>
-      BetterCLSS
-    </div>
 
-    <div class="topbar-center">
-      <input class="search-input" type="text" placeholder="Search assignments, courses..." id="globalSearch" oninput="onSearch(this.value)">
-    </div>
-
-    <div class="topbar-right">
-      <div class="topbar-badge" id="topDate"></div>
-      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark mode">☀️</button>
-      <div class="canvas-status" onclick="showCanvasSetup()">
-        <div class="status-dot" id="statusDot"></div>
-        <span id="statusLabel">Connect Canvas</span>
-      </div>
-    </div>
-  </header>
 
   <!-- Mobile-only nav (hidden on desktop) -->
   <nav class="nav-tabs">
@@ -49,32 +31,56 @@
 
   <div class="layout">
     <aside class="sidebar">
+      <!-- Sidebar brand -->
+      <div class="sidebar-brand">
+        <svg class="sidebar-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 10 12 5 2 10 12 15 22 10"/>
+          <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+        </svg>
+        <span class="sidebar-brand-text">BetterCLSS</span>
+      </div>
+
       <!-- Sidebar nav -->
       <nav class="sidenav">
         <div class="sidenav-section-label">Navigate</div>
-        <div class="nav-tab active" data-page="dashboard" onclick="switchPage('dashboard', this)">Dashboard</div>
+        <div class="nav-tab active" data-page="dashboard" onclick="switchPage('dashboard', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>Dashboard</span>
+        </div>
         <div class="nav-tab" data-page="assignments" onclick="switchPage('assignments', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 12 2 2 4-4"/></svg>
           <span>Assignments</span>
           <span class="tab-count" id="badgePending">0</span>
         </div>
-        <div class="nav-tab" data-page="calendar" onclick="switchPage('calendar', this)">Calendar</div>
-        <div class="nav-tab" data-page="grades" onclick="switchPage('grades', this)">Grades</div>
+        <div class="nav-tab" data-page="calendar" onclick="switchPage('calendar', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          <span>Calendar</span>
+        </div>
+        <div class="nav-tab" data-page="grades" onclick="switchPage('grades', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+          <span>Grades</span>
+        </div>
         <div class="nav-tab" data-page="announcements" onclick="switchPage('announcements', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           <span>Announcements</span>
           <span class="tab-count alert" id="badgeAnnounce">0</span>
         </div>
         <div class="sidenav-sep"></div>
-        <div class="nav-tab" data-page="notes" onclick="switchPage('notes', this)">Notes</div>
-        <div class="nav-tab" data-page="pomodoro" onclick="switchPage('pomodoro', this)">Timer</div>
-        <div class="nav-tab" data-page="resources" onclick="switchPage('resources', this)">Links</div>
+        <div class="nav-tab" data-page="notes" onclick="switchPage('notes', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span>Notes</span>
+        </div>
+        <div class="nav-tab" data-page="pomodoro" onclick="switchPage('pomodoro', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>Timer</span>
+        </div>
+        <div class="nav-tab" data-page="resources" onclick="switchPage('resources', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <span>Links</span>
+        </div>
       </nav>
 
       <div class="sidenav-sep"></div>
-
-      <div>
-        <div class="sidebar-label">Due Soon</div>
-        <div class="mini-list" id="sidebarDue"></div>
-      </div>
 
       <div>
         <div class="sidebar-label">Study Goal</div>
@@ -97,6 +103,17 @@
       <div>
         <div class="sidebar-label">Courses</div>
         <div id="sidebarCourses"><div style="font-size:0.75rem;color:var(--text-muted)">Not connected</div></div>
+      </div>
+
+      <!-- Sidebar bottom controls -->
+      <div class="sidebar-footer">
+        <div class="canvas-status" onclick="showCanvasSetup()" style="flex:1">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusLabel">Connect Canvas</span>
+        </div>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark mode">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="themeIcon"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
       </div>
     </aside>
 
@@ -323,14 +340,23 @@
       const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       root.setAttribute('data-theme', next);
       localStorage.setItem('bclss_theme', next);
-      const btn = document.getElementById('themeToggle');
-      if (btn) btn.textContent = next === 'dark' ? '☀️' : '🌙';
+      setThemeIcon(next);
+    }
+    function setThemeIcon(theme) {
+      const icon = document.getElementById('themeIcon');
+      if (!icon) return;
+      if (theme === 'light') {
+        // moon icon for switching to dark
+        icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+      } else {
+        // sun icon for switching to light
+        icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+      }
     }
     function initTheme() {
       const saved = localStorage.getItem('bclss_theme') || 'dark';
       document.documentElement.setAttribute('data-theme', saved);
-      const btn = document.getElementById('themeToggle');
-      if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+      setThemeIcon(saved);
     }
     function getAiApiKey() { return localStorage.getItem('bclss_ai_key') || ''; }
     function saveAiApiKey() { const v = (document.getElementById('aiKeyInput') || {}).value || ''; if (v.trim()) { localStorage.setItem('bclss_ai_key', v.trim()); } else { localStorage.removeItem('bclss_ai_key'); } }
@@ -959,7 +985,8 @@
     function init() {
       initTheme();
       load();
-      document.getElementById('topDate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const topDate = document.getElementById('topDate');
+      if (topDate) topDate.textContent = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
       document.getElementById('pomoSessions').textContent = APP.local.pomoSessions;
       document.getElementById('modalOverlay').addEventListener('click', (e) => { if (e.target.id === 'modalOverlay') closeModal(); });
       const assistantInput = document.getElementById('assistantInput');

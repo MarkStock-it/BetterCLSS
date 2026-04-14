@@ -30,7 +30,7 @@
   --radius: 14px;
   --radius-sm: 9px;
   --nav-h: 44px;
-  --top-h: 56px;
+  --top-h: 0px;
 }
 
 [data-theme="light"] {
@@ -277,6 +277,44 @@ body {
 .tab-count.active-count { background: rgba(96, 128, 255, 0.15); color: var(--accent); }
 
 /* ============================================================
+   SIDEBAR BRAND
+   ============================================================ */
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+
+.sidebar-logo {
+  width: 28px;
+  height: 28px;
+  color: var(--accent);
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px rgba(96,128,255,0.35));
+}
+
+.sidebar-brand-text {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.15rem;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.nav-icon {
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.nav-tab:hover .nav-icon,
+.nav-tab.active .nav-icon {
+  opacity: 1;
+}
+
+/* ============================================================
    SIDENAV — vertical nav inside sidebar
    ============================================================ */
 .sidenav {
@@ -320,11 +358,24 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  height: calc(100vh - var(--top-h));
+  height: 100vh;
   overflow-y: auto;
   position: sticky;
-  top: var(--top-h);
+  top: 0;
   transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-footer .canvas-status {
+  font-size: 0.75rem;
 }
 
 .main-content {
