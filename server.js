@@ -48,7 +48,7 @@ const OPENCLAUDE_MODEL = process.env.OPENCLAUDE_MODEL || 'qwen2.5-coder:7b';
 const OPENCLAUDE_API_KEY = process.env.OPENCLAUDE_API_KEY || '';
 const AI_AUTOSTART_OLLAMA = process.env.AI_AUTOSTART_OLLAMA === '1';
 const AI_MODEL_KEEP_ALIVE = process.env.AI_MODEL_KEEP_ALIVE || '0m';
-const CORS_ALLOW_ORIGIN = process.env.CORS_ALLOW_ORIGIN || 'https://MarkStock-it.';
+const CORS_ALLOW_ORIGIN = process.env.CORS_ALLOW_ORIGIN || 'https://betterclss.onrender.com';
 
 let ollamaBootPromise = null;
 

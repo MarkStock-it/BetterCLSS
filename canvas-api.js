@@ -34,6 +34,10 @@ const CanvasAPI = (() => {
     return base ? `${base}${path}` : path;
   }
 
+  function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   function normalizeDomain(domain) {
     return String(domain || '')
       .trim()
@@ -58,8 +62,29 @@ const CanvasAPI = (() => {
     if (token) headers['x-canvas-token'] = token;
     if (domain) headers['x-canvas-domain'] = domain;
 
-    const res = await fetch(apiUrl(path), { headers });
-    if (!res.ok) {
+    const url = apiUrl(path);
+    let lastError = null;
+
+    // Render free-tier services can cold-start; retry a few times before failing.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      let res;
+      try {
+        res = await fetch(url, { headers });
+      } catch (err) {
+        lastError = err;
+        await delay(900 * (attempt + 1));
+        continue;
+      }
+
+      if (res.ok) {
+        return res.json();
+      }
+
+      if (res.status >= 500 && attempt < 2) {
+        await delay(900 * (attempt + 1));
+        continue;
+      }
+
       let msg = `HTTP ${res.status}`;
       try {
         const data = await res.json();
@@ -68,7 +93,12 @@ const CanvasAPI = (() => {
       if (res.status === 401) throw new Error('UNAUTHORIZED');
       throw new Error(msg);
     }
-    return res.json();
+
+    if (lastError) {
+      throw new Error('Load failed (backend cold start or network issue). Please retry in 15-30 seconds.');
+    }
+
+    throw new Error('Load failed');
   }
 
   function saveCredentials(token, domain) {
