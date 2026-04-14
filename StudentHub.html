@@ -520,7 +520,8 @@
         toast('Connected as ' + profile.name, 'success');
         await syncCanvas();
       } catch (err) {
-        toast('Connection failed: check token/domain and try again.', 'error');
+        const details = err && err.message ? err.message : 'Unknown connection error';
+        toast('Connection failed: ' + details, 'error');
       }
     }
 

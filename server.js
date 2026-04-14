@@ -48,6 +48,7 @@ const OPENCLAUDE_MODEL = process.env.OPENCLAUDE_MODEL || 'qwen2.5-coder:7b';
 const OPENCLAUDE_API_KEY = process.env.OPENCLAUDE_API_KEY || '';
 const AI_AUTOSTART_OLLAMA = process.env.AI_AUTOSTART_OLLAMA === '1';
 const AI_MODEL_KEEP_ALIVE = process.env.AI_MODEL_KEEP_ALIVE || '0m';
+const CORS_ALLOW_ORIGIN = process.env.CORS_ALLOW_ORIGIN || 'https://markstock-it.github.io';
 
 let ollamaBootPromise = null;
 
@@ -64,7 +65,13 @@ const MIME = {
 };
 
 function json(res, status, data) {
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Access-Control-Allow-Origin': CORS_ALLOW_ORIGIN,
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Accept, x-canvas-token, x-canvas-domain',
+    Vary: 'Origin',
+  });
   res.end(JSON.stringify(data));
 }
 
@@ -551,6 +558,18 @@ async function handleApi(req, res) {
 }
 
 const server = http.createServer((req, res) => {
+  if (req.url.startsWith('/api/') && req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': CORS_ALLOW_ORIGIN,
+      'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Accept, x-canvas-token, x-canvas-domain',
+      'Access-Control-Max-Age': '86400',
+      Vary: 'Origin',
+    });
+    res.end();
+    return;
+  }
+
   if (req.url.startsWith('/api/')) {
     handleApi(req, res);
     return;
