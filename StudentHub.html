@@ -1,0 +1,1913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudentHub</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg: #0d0f14;
+  --surface: #151821;
+  --surface-2: #1c202e;
+  --surface-3: #222638;
+  --border: #2a2f45;
+  --text: #e8eaf2;
+  --text-muted: #6b7194;
+  --text-dim: #9499be;
+  --accent: #6c8eff;
+  --accent-2: #ff6c8e;
+  --accent-3: #6cffb8;
+  --accent-4: #ffc46c;
+  --high: #ff5757;
+  --med: #ffc46c;
+  --low: #6cffb8;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --radius: 14px;
+}
+
+html { font-size: 15px; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── TOPBAR ── */
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.45rem;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.date-pill {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.streak-badge {
+  background: linear-gradient(135deg, #ff6c8e22, #6c8eff22);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 0.8rem;
+  color: var(--accent-2);
+  font-weight: 600;
+  cursor: default;
+}
+
+/* ── NAV TABS ── */
+.nav-tabs {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 0;
+  padding: 0 28px;
+  overflow-x: auto;
+}
+.nav-tab {
+  padding: 12px 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.nav-tab:hover { color: var(--text); }
+.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-badge {
+  background: var(--accent);
+  color: white;
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.tab-badge.red { background: var(--high); }
+
+/* ── MAIN LAYOUT ── */
+.main { display: flex; flex: 1; }
+
+.sidebar {
+  width: 280px;
+  min-width: 280px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: calc(100vh - 58px - 42px);
+  overflow-y: auto;
+  position: sticky;
+  top: 100px;
+}
+
+.content {
+  flex: 1;
+  padding: 24px 28px;
+  overflow-y: auto;
+}
+
+/* ── PAGES ── */
+.page { display: none; animation: fadeIn 0.25s ease; }
+.page.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── CARDS ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 18px;
+}
+.card-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.1rem;
+  margin-bottom: 14px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title span { font-size: 1rem; }
+
+/* ── DASHBOARD STATS ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+.stat-card.blue::before { background: var(--accent); }
+.stat-card.pink::before { background: var(--accent-2); }
+.stat-card.green::before { background: var(--accent-3); }
+.stat-card.yellow::before { background: var(--accent-4); }
+.stat-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+.stat-value { font-family: 'Instrument Serif', serif; font-size: 2.2rem; line-height: 1; }
+.stat-card.blue .stat-value { color: var(--accent); }
+.stat-card.pink .stat-value { color: var(--accent-2); }
+.stat-card.green .stat-value { color: var(--accent-3); }
+.stat-card.yellow .stat-value { color: var(--accent-4); }
+.stat-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+
+/* ── DASHBOARD GRID ── */
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.dash-grid .card { margin-bottom: 0; }
+
+/* ── UPCOMING FEED ── */
+.upcoming-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.upcoming-item:last-child { border-bottom: none; }
+.upcoming-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+.upcoming-title { font-size: 0.875rem; font-weight: 500; color: var(--text); }
+.upcoming-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+.due-chip {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.due-chip.urgent { background: #ff575722; color: var(--high); }
+.due-chip.soon { background: #ffc46c22; color: var(--accent-4); }
+.due-chip.ok { background: #6cffb822; color: var(--accent-3); }
+
+/* ── PROGRESS BARS ── */
+.subject-row {
+  margin-bottom: 14px;
+}
+.subject-row:last-child { margin-bottom: 0; }
+.subject-meta { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.subject-name { font-size: 0.85rem; font-weight: 500; }
+.subject-pct { font-size: 0.8rem; color: var(--text-muted); }
+.progress-bar {
+  height: 6px;
+  background: var(--surface-3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ── ASSIGNMENTS ── */
+.assign-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.filter-btn {
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+.filter-btn.active, .filter-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.assign-item {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: border-color 0.2s, transform 0.15s;
+  cursor: pointer;
+}
+.assign-item:hover { border-color: var(--accent); transform: translateX(3px); }
+.assign-item.done { opacity: 0.5; }
+.assign-item.done .assign-title { text-decoration: line-through; }
+
+.priority-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.priority-dot.high { background: var(--high); box-shadow: 0 0 6px var(--high); }
+.priority-dot.medium { background: var(--med); box-shadow: 0 0 6px var(--med); }
+.priority-dot.low { background: var(--low); box-shadow: 0 0 6px var(--low); }
+
+.assign-info { flex: 1; min-width: 0; }
+.assign-title { font-size: 0.9rem; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.assign-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+
+.assign-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.days-left {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 10px;
+}
+.days-left.urgent { background: #ff575722; color: var(--high); }
+.days-left.soon { background: #ffc46c22; color: var(--accent-4); }
+.days-left.ok { background: #6cffb822; color: var(--accent-3); }
+.days-left.overdue { background: #ff000022; color: #ff4444; }
+
+.check-btn {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  border: 2px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  color: var(--accent-3);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.check-btn:hover, .assign-item.done .check-btn { background: var(--surface-3); border-color: var(--accent-3); }
+
+.add-assign-form {
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.form-row { display: flex; gap: 10px; }
+
+/* ── FORM ELEMENTS ── */
+input[type="text"], input[type="date"], select, textarea {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.875rem;
+  color: var(--text);
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+input[type="text"]:focus, input[type="date"]:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+}
+input[type="date"] { color-scheme: dark; }
+select option { background: var(--surface-2); }
+textarea { resize: vertical; min-height: 70px; }
+
+.btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: #5a7aff; }
+.btn-secondary { background: var(--surface-3); color: var(--text-dim); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--accent); color: var(--text); }
+.btn-danger { background: #ff575722; color: var(--high); border: 1px solid #ff575744; }
+.btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+.btn:active { transform: scale(0.97); }
+
+/* ── CALENDAR ── */
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.cal-nav { display: flex; gap: 8px; }
+.cal-nav button {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: 'Outfit', sans-serif;
+  transition: all 0.15s;
+}
+.cal-nav button:hover { border-color: var(--accent); }
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal-day-name {
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  padding: 6px 0;
+}
+.cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  border: 1px solid transparent;
+  gap: 2px;
+}
+.cal-day:hover { background: var(--surface-2); }
+.cal-day.other-month { color: var(--text-muted); opacity: 0.4; }
+.cal-day.today { background: var(--accent); color: white; font-weight: 700; }
+.cal-day.has-events::after {
+  content: '';
+  width: 4px; height: 4px;
+  background: var(--accent-2);
+  border-radius: 50%;
+  position: absolute;
+  bottom: 4px;
+}
+.cal-day.today.has-events::after { background: white; }
+.cal-day.selected { border-color: var(--accent); background: var(--surface-2); }
+
+.cal-events-panel {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.cal-event-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.cal-event-item:last-child { border-bottom: none; }
+
+/* ── GRADES ── */
+.grade-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.grade-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+.grade-subject { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+.grade-value { font-family: 'Instrument Serif', serif; font-size: 2rem; }
+.grade-value.a { color: var(--accent-3); }
+.grade-value.b { color: var(--accent); }
+.grade-value.c { color: var(--accent-4); }
+.grade-value.f { color: var(--high); }
+.grade-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+
+/* ── NOTES ── */
+.notes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.note-card {
+  border-radius: 10px;
+  padding: 16px;
+  min-height: 130px;
+  position: relative;
+  border: 1px solid transparent;
+  transition: transform 0.2s;
+  cursor: pointer;
+}
+.note-card:hover { transform: translateY(-3px); }
+.note-card.yellow { background: #ffc46c18; border-color: #ffc46c33; }
+.note-card.blue { background: #6c8eff18; border-color: #6c8eff33; }
+.note-card.pink { background: #ff6c8e18; border-color: #ff6c8e33; }
+.note-card.green { background: #6cffb818; border-color: #6cffb833; }
+.note-title { font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; }
+.note-content { font-size: 0.8rem; color: var(--text-dim); line-height: 1.5; }
+.note-footer { position: absolute; bottom: 12px; right: 12px; font-size: 0.7rem; color: var(--text-muted); }
+.note-del { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; opacity: 0; transition: opacity 0.15s; }
+.note-card:hover .note-del { opacity: 1; }
+.add-note-card {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  transition: all 0.15s;
+}
+.add-note-card:hover { border-color: var(--accent); color: var(--accent); background: var(--surface-2); }
+
+/* ── POMODORO ── */
+.pomodoro-ring {
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 6px solid var(--surface-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  position: relative;
+}
+.pomodoro-time {
+  font-family: 'Instrument Serif', serif;
+  font-size: 2.5rem;
+  color: var(--text);
+}
+.pomodoro-label { text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px; }
+.pomo-controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.pomo-modes { display: flex; gap: 8px; justify-content: center; margin-bottom: 14px; flex-wrap: wrap; }
+.pomo-mode-btn {
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  transition: all 0.15s;
+  font-family: 'Outfit', sans-serif;
+}
+.pomo-mode-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+/* ── ANNOUNCEMENTS ── */
+.announce-item {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  background: var(--surface-2);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+.announce-icon {
+  width: 36px; height: 36px;
+  background: var(--accent)22;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.announce-title { font-weight: 600; font-size: 0.875rem; }
+.announce-body { font-size: 0.8rem; color: var(--text-dim); margin-top: 3px; line-height: 1.5; }
+.announce-time { font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; }
+
+/* ── CONTACTS ── */
+.contacts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.contact-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  transition: border-color 0.2s;
+}
+.contact-card:hover { border-color: var(--accent); }
+.contact-avatar {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.2rem;
+  color: white;
+}
+.contact-name { font-weight: 600; font-size: 0.875rem; }
+.contact-role { font-size: 0.75rem; color: var(--text-muted); }
+.contact-num { font-size: 0.75rem; color: var(--accent); }
+
+/* ── SIDEBAR WIDGETS ── */
+.sidebar-section { }
+.sidebar-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.mini-upcoming {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mini-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  border-left: 3px solid var(--border);
+  font-size: 0.78rem;
+  transition: border-color 0.15s;
+  cursor: pointer;
+}
+.mini-item:hover { border-left-color: var(--accent); }
+.mini-item-title { color: var(--text); font-weight: 500; }
+.mini-item-due { color: var(--text-muted); font-size: 0.72rem; }
+.mini-item .priority-dot { flex-shrink: 0; }
+
+.study-goal {
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+}
+.goal-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.goal-title { font-size: 0.8rem; font-weight: 500; }
+.goal-val { font-size: 0.8rem; color: var(--accent); font-weight: 700; }
+.goal-controls { display: flex; gap: 6px; margin-top: 8px; }
+.goal-btn {
+  flex: 1;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 5px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-family: 'Outfit', sans-serif;
+  transition: all 0.15s;
+}
+.goal-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── TOAST ── */
+.toast-container {
+  position: fixed;
+  top: 20px; right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toast {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  animation: slideIn 0.3s ease, fadeOut 0.4s ease 2.6s forwards;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 300px;
+}
+.toast.success { border-left: 3px solid var(--accent-3); }
+.toast.warn { border-left: 3px solid var(--accent-4); }
+.toast.info { border-left: 3px solid var(--accent); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; transform: translateX(10px); } }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  width: 90%;
+  max-width: 460px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: fadeIn 0.2s ease;
+}
+.modal-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.3rem;
+  margin-bottom: 18px;
+}
+.modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.form-label { font-size: 0.8rem; font-weight: 500; color: var(--text-dim); margin-bottom: 5px; display: block; }
+.form-group { margin-bottom: 12px; }
+
+/* ── MISC ── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.4rem;
+}
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+.empty-state div { font-size: 2rem; margin-bottom: 8px; }
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+.tag.high { background: #ff575722; color: var(--high); }
+.tag.medium { background: #ffc46c22; color: var(--accent-4); }
+.tag.low { background: #6cffb822; color: var(--accent-3); }
+
+/* ── GROUP PROJECTS ── */
+.project-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+.project-card:hover { border-color: var(--accent); }
+.project-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+.project-name { font-weight: 600; font-size: 0.9rem; }
+.project-course { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+.project-members { display: flex; gap: 4px; margin: 8px 0; flex-wrap: wrap; }
+.member-chip {
+  background: var(--surface-3);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+.project-progress { margin-top: 8px; }
+
+/* ── LINKS ── */
+.links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.link-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+.link-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.link-icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: var(--surface-3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.link-name { font-size: 0.875rem; font-weight: 500; color: var(--text); }
+.link-url { font-size: 0.72rem; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="logo"><div class="logo-dot"></div>StudentHub</div>
+  <div class="topbar-right">
+    <div class="date-pill" id="topDate"></div>
+    <div class="streak-badge" id="streakBadge">🔥 1 day streak</div>
+  </div>
+</header>
+
+<!-- NAV TABS -->
+<nav class="nav-tabs">
+  <div class="nav-tab active" onclick="switchPage('dashboard')">📊 Dashboard</div>
+  <div class="nav-tab" onclick="switchPage('assignments')">📋 Assignments <span class="tab-badge" id="pendingBadge">0</span></div>
+  <div class="nav-tab" onclick="switchPage('calendar')">📅 Calendar</div>
+  <div class="nav-tab" onclick="switchPage('grades')">🎓 Grades</div>
+  <div class="nav-tab" onclick="switchPage('notes')">📝 Notes</div>
+  <div class="nav-tab" onclick="switchPage('pomodoro')">⏱ Pomodoro</div>
+  <div class="nav-tab" onclick="switchPage('announcements')">📢 Announcements <span class="tab-badge red" id="announceBadge">0</span></div>
+  <div class="nav-tab" onclick="switchPage('contacts')">👥 Contacts</div>
+  <div class="nav-tab" onclick="switchPage('projects')">🗂 Projects</div>
+  <div class="nav-tab" onclick="switchPage('resources')">🔗 Resources</div>
+</nav>
+
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Due Soon</div>
+      <div class="mini-upcoming" id="sidebarUpcoming"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Daily Study Goal</div>
+      <div class="study-goal">
+        <div class="goal-meta">
+          <span class="goal-title">Today's Hours</span>
+          <span class="goal-val" id="studyDisplay">0 / 4h</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="studyProgressFill" style="width:0%;background:var(--accent)"></div>
+        </div>
+        <div class="goal-controls">
+          <button class="goal-btn" onclick="logStudy(0.5)">+30m</button>
+          <button class="goal-btn" onclick="logStudy(1)">+1h</button>
+          <button class="goal-btn" onclick="logStudy(-0.5)">-30m</button>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Subjects</div>
+      <div id="sidebarSubjectProgress"></div>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- ── DASHBOARD ── -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card blue">
+          <div class="stat-label">Pending Tasks</div>
+          <div class="stat-value" id="statPending">0</div>
+          <div class="stat-sub">assignments</div>
+        </div>
+        <div class="stat-card pink">
+          <div class="stat-label">Overdue</div>
+          <div class="stat-value" id="statOverdue">0</div>
+          <div class="stat-sub">need attention</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Completed</div>
+          <div class="stat-value" id="statDone">0</div>
+          <div class="stat-sub">this semester</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-label">Announcements</div>
+          <div class="stat-value" id="statAnnounce">0</div>
+          <div class="stat-sub">total</div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="card">
+          <div class="card-title"><span>⚡</span> Upcoming Deadlines</div>
+          <div id="dashUpcoming"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span>📈</span> Subject Progress</div>
+          <div id="dashProgress"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span>🔺</span> High Priority</div>
+          <div id="dashHighPriority"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span>📢</span> Latest Announcements</div>
+          <div id="dashAnnouncements"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ASSIGNMENTS ── -->
+    <div class="page" id="page-assignments">
+      <div class="section-header">
+        <div class="section-title">Assignments</div>
+        <button class="btn btn-primary" onclick="openAddAssignment()">+ Add Assignment</button>
+      </div>
+      <div class="assign-filters">
+        <button class="filter-btn active" onclick="filterAssign('all',this)">All</button>
+        <button class="filter-btn" onclick="filterAssign('pending',this)">Pending</button>
+        <button class="filter-btn" onclick="filterAssign('done',this)">Completed</button>
+        <button class="filter-btn" onclick="filterAssign('high',this)">🔴 High</button>
+        <button class="filter-btn" onclick="filterAssign('medium',this)">🟡 Medium</button>
+        <button class="filter-btn" onclick="filterAssign('low',this)">🟢 Low</button>
+      </div>
+      <div id="assignList"></div>
+    </div>
+
+    <!-- ── CALENDAR ── -->
+    <div class="page" id="page-calendar">
+      <div class="section-header">
+        <div class="section-title">Calendar</div>
+        <button class="btn btn-primary" onclick="openAddEvent()">+ Add Event</button>
+      </div>
+      <div class="card">
+        <div class="calendar-header">
+          <div style="font-family:'Instrument Serif',serif;font-size:1.2rem" id="calMonthTitle"></div>
+          <div class="cal-nav">
+            <button onclick="changeMonth(-1)">‹</button>
+            <button onclick="changeMonth(0)">Today</button>
+            <button onclick="changeMonth(1)">›</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="cal-events-panel" id="calEventsPanel">
+          <div style="font-size:0.8rem;color:var(--text-muted)">Select a day to view events.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── GRADES ── -->
+    <div class="page" id="page-grades">
+      <div class="section-header">
+        <div class="section-title">Grade Tracker</div>
+        <button class="btn btn-primary" onclick="openAddGrade()">+ Log Grade</button>
+      </div>
+      <div class="grade-grid" id="gradeGrid"></div>
+      <div class="card">
+        <div class="card-title"><span>📊</span> Grade Log</div>
+        <div id="gradeLog"></div>
+      </div>
+    </div>
+
+    <!-- ── NOTES ── -->
+    <div class="page" id="page-notes">
+      <div class="section-header">
+        <div class="section-title">Notes</div>
+      </div>
+      <div class="notes-grid" id="notesGrid"></div>
+    </div>
+
+    <!-- ── POMODORO ── -->
+    <div class="page" id="page-pomodoro">
+      <div class="section-title" style="margin-bottom:24px">Study Timer</div>
+      <div class="card" style="max-width:360px;margin:0 auto;text-align:center">
+        <div class="pomo-modes">
+          <button class="pomo-mode-btn active" onclick="setPomoMode('focus',25,this)">Focus 25m</button>
+          <button class="pomo-mode-btn" onclick="setPomoMode('short',5,this)">Short Break 5m</button>
+          <button class="pomo-mode-btn" onclick="setPomoMode('long',15,this)">Long Break 15m</button>
+        </div>
+        <div class="pomodoro-ring" id="pomoRing">
+          <div class="pomodoro-time" id="pomoTime">25:00</div>
+        </div>
+        <div class="pomodoro-label" id="pomoLabel">Ready to focus?</div>
+        <div class="pomo-controls">
+          <button class="btn btn-primary" onclick="togglePomo()" id="pomoBtn">▶ Start</button>
+          <button class="btn btn-secondary" onclick="resetPomo()">↺ Reset</button>
+        </div>
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-size:0.8rem;color:var(--text-muted)">
+          Sessions today: <span style="color:var(--accent);font-weight:700" id="pomoSessions">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ANNOUNCEMENTS ── -->
+    <div class="page" id="page-announcements">
+      <div class="section-header">
+        <div class="section-title">Announcements</div>
+        <button class="btn btn-primary" onclick="openAddAnnouncement()">+ Post</button>
+      </div>
+      <div id="announceList"></div>
+    </div>
+
+    <!-- ── CONTACTS ── -->
+    <div class="page" id="page-contacts">
+      <div class="section-header">
+        <div class="section-title">Classmates</div>
+        <button class="btn btn-primary" onclick="openAddContact()">+ Add Contact</button>
+      </div>
+      <div class="contacts-grid" id="contactsGrid"></div>
+    </div>
+
+    <!-- ── PROJECTS ── -->
+    <div class="page" id="page-projects">
+      <div class="section-header">
+        <div class="section-title">Group Projects</div>
+        <button class="btn btn-primary" onclick="openAddProject()">+ New Project</button>
+      </div>
+      <div id="projectList"></div>
+    </div>
+
+    <!-- ── RESOURCES ── -->
+    <div class="page" id="page-resources">
+      <div class="section-header">
+        <div class="section-title">Resource Links</div>
+        <button class="btn btn-primary" onclick="openAddLink()">+ Add Link</button>
+      </div>
+      <div class="links-grid" id="linksGrid"></div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+let state = {
+  assignments: [
+    { id: 1, title: 'Programming Task 1', subject: 'CS101', priority: 'high', due: daysFromNow(2), done: false, desc: 'Implement linked list in C' },
+    { id: 2, title: 'Database Activity', subject: 'DBMS', priority: 'medium', due: daysFromNow(5), done: true, desc: 'ERD design exercise' },
+    { id: 3, title: 'Network Lab Report', subject: 'Networking', priority: 'high', due: daysFromNow(1), done: false, desc: 'Summarize Packet Tracer lab' },
+    { id: 4, title: 'Web Dev Portfolio', subject: 'WebDev', priority: 'low', due: daysFromNow(10), done: false, desc: 'Build personal portfolio site' },
+    { id: 5, title: 'Math Problem Set', subject: 'Math', priority: 'medium', due: daysFromNow(-1), done: false, desc: 'Chapter 7 exercises' },
+  ],
+  announcements: [
+    { id: 1, title: 'Math Quiz Moved', body: 'The Math quiz has been rescheduled to Friday. Please review Chapter 6 and 7.', time: '2 hours ago', icon: '📌' },
+    { id: 2, title: 'Assignment 2 Deadline', body: 'Submit Assignment 2 before 5PM today. Late submissions will not be accepted.', time: '5 hours ago', icon: '⚠️' },
+  ],
+  grades: [
+    { id: 1, subject: 'CS101', score: 92, total: 100, label: 'Midterm Exam' },
+    { id: 2, subject: 'DBMS', score: 85, total: 100, label: 'Quiz 3' },
+    { id: 3, subject: 'Networking', score: 78, total: 100, label: 'Lab Activity' },
+    { id: 4, subject: 'WebDev', score: 95, total: 100, label: 'Project 1' },
+    { id: 5, subject: 'Math', score: 70, total: 100, label: 'Long Test' },
+  ],
+  notes: [
+    { id: 1, title: 'DBMS Tips', content: 'Remember: B-trees for indexing, normalization reduces redundancy, always optimize queries.', color: 'yellow', date: 'Today' },
+    { id: 2, title: 'Networking Cheat Sheet', content: 'TCP/IP layers: App, Transport, Network, Link. DNS uses UDP port 53. DHCP: 67/68.', color: 'blue', date: 'Yesterday' },
+  ],
+  events: [
+    { id: 1, date: daysFromNow(2), title: 'CS101 Programming Task Due', type: 'deadline' },
+    { id: 2, date: daysFromNow(5), title: 'Group Project Meeting', type: 'event' },
+    { id: 3, date: daysFromNow(7), title: 'Math Exam', type: 'exam' },
+  ],
+  contacts: [
+    { id: 1, name: 'Maria Santos', role: 'CS101 Partner', num: '09xx-xxx-xxxx' },
+    { id: 2, name: 'Juan Dela Cruz', role: 'GroupMate - WebDev', num: '09xx-xxx-xxxx' },
+  ],
+  projects: [
+    { id: 1, name: 'JeepWise Analytics', course: 'Capstone', members: ['Elt', 'Maria', 'Juan'], progress: 65, due: daysFromNow(14), status: 'In Progress' },
+    { id: 2, name: 'DBMS Final Project', course: 'DBMS', members: ['Elt', 'Ana'], progress: 30, due: daysFromNow(21), status: 'Planning' },
+  ],
+  links: [
+    { id: 1, name: 'Canvas LMS', url: 'https://canvas.instructure.com', icon: '🎓' },
+    { id: 2, name: 'Google Drive', url: 'https://drive.google.com', icon: '📁' },
+    { id: 3, name: 'GitHub', url: 'https://github.com', icon: '💻' },
+    { id: 4, name: 'W3Schools', url: 'https://www.w3schools.com', icon: '🌐' },
+  ],
+  studyHours: 0,
+  studyGoal: 4,
+  pomoSessions: 0,
+  streak: 1,
+  calMonth: new Date().getMonth(),
+  calYear: new Date().getFullYear(),
+  selectedDate: null,
+  assignFilter: 'all',
+  nextId: 100,
+};
+
+function daysFromNow(n) {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString().split('T')[0];
+}
+
+function save() { try { localStorage.setItem('sh_state', JSON.stringify(state)); } catch(e){} }
+function load() {
+  try {
+    const s = localStorage.getItem('sh_state');
+    if (s) state = { ...state, ...JSON.parse(s) };
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════
+function daysLeft(dateStr) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(dateStr); due.setHours(0,0,0,0);
+  return Math.round((due - today) / 86400000);
+}
+
+function daysLeftLabel(dateStr) {
+  const d = daysLeft(dateStr);
+  if (d < 0) return { text: `${Math.abs(d)}d overdue`, cls: 'overdue' };
+  if (d === 0) return { text: 'Due today!', cls: 'urgent' };
+  if (d === 1) return { text: 'Due tomorrow', cls: 'urgent' };
+  if (d <= 3) return { text: `${d} days left`, cls: 'soon' };
+  return { text: `${d} days left`, cls: 'ok' };
+}
+
+function gradeClass(pct) {
+  if (pct >= 90) return 'a';
+  if (pct >= 80) return 'b';
+  if (pct >= 70) return 'c';
+  return 'f';
+}
+
+function gradeLetter(pct) {
+  if (pct >= 90) return 'A';
+  if (pct >= 80) return 'B';
+  if (pct >= 70) return 'C';
+  if (pct >= 60) return 'D';
+  return 'F';
+}
+
+function subjectColor(sub) {
+  const map = { CS101:'var(--accent)', DBMS:'var(--accent-2)', Networking:'var(--accent-3)', WebDev:'var(--accent-4)', Math:'#c46cff' };
+  return map[sub] || 'var(--accent)';
+}
+
+function toast(msg, type = 'info') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+function newId() { return ++state.nextId; }
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' });
+}
+
+// ═══════════════════════════════════════════
+//  PAGE SWITCHING
+// ═══════════════════════════════════════════
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const tabs = document.querySelectorAll('.nav-tab');
+  tabs.forEach(t => { if (t.textContent.toLowerCase().includes(name.replace('-',' ').split(' ')[0])) t.classList.add('active'); });
+  renderPage(name);
+}
+
+function renderPage(name) {
+  const renders = {
+    dashboard: renderDashboard,
+    assignments: renderAssignments,
+    calendar: renderCalendar,
+    grades: renderGrades,
+    notes: renderNotes,
+    announcements: renderAnnouncements,
+    contacts: renderContacts,
+    projects: renderProjects,
+    resources: renderLinks,
+  };
+  if (renders[name]) renders[name]();
+}
+
+// ═══════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════
+function renderDashboard() {
+  const pending = state.assignments.filter(a => !a.done).length;
+  const overdue = state.assignments.filter(a => !a.done && daysLeft(a.due) < 0).length;
+  const done = state.assignments.filter(a => a.done).length;
+
+  document.getElementById('statPending').textContent = pending;
+  document.getElementById('statOverdue').textContent = overdue;
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('statAnnounce').textContent = state.announcements.length;
+  document.getElementById('pendingBadge').textContent = pending;
+  document.getElementById('announceBadge').textContent = state.announcements.length;
+
+  // Upcoming
+  const upcoming = state.assignments.filter(a => !a.done).sort((a,b) => new Date(a.due)-new Date(b.due)).slice(0,5);
+  const upEl = document.getElementById('dashUpcoming');
+  if (!upcoming.length) { upEl.innerHTML = '<div class="empty-state"><div>✅</div>No pending deadlines!</div>'; }
+  else upEl.innerHTML = upcoming.map(a => {
+    const dl = daysLeftLabel(a.due);
+    return `<div class="upcoming-item">
+      <div class="upcoming-dot" style="background:${a.priority==='high'?'var(--high)':a.priority==='medium'?'var(--med)':'var(--low)'}"></div>
+      <div>
+        <div class="upcoming-title">${a.title}</div>
+        <div class="upcoming-meta">${a.subject} · ${formatDate(a.due)}</div>
+      </div>
+      <div class="due-chip ${dl.cls}">${dl.text}</div>
+    </div>`;
+  }).join('');
+
+  // Progress by subject
+  const subjects = [...new Set(state.assignments.map(a => a.subject))];
+  const progEl = document.getElementById('dashProgress');
+  progEl.innerHTML = subjects.map(sub => {
+    const total = state.assignments.filter(a => a.subject === sub).length;
+    const done2 = state.assignments.filter(a => a.subject === sub && a.done).length;
+    const pct = total ? Math.round(done2/total*100) : 0;
+    return `<div class="subject-row">
+      <div class="subject-meta">
+        <span class="subject-name">${sub}</span>
+        <span class="subject-pct">${done2}/${total}</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${subjectColor(sub)}"></div></div>
+    </div>`;
+  }).join('');
+
+  // High priority
+  const high = state.assignments.filter(a => a.priority === 'high' && !a.done);
+  const hiEl = document.getElementById('dashHighPriority');
+  if (!high.length) hiEl.innerHTML = '<div class="empty-state"><div>👍</div>No high priority tasks!</div>';
+  else hiEl.innerHTML = high.map(a => {
+    const dl = daysLeftLabel(a.due);
+    return `<div class="upcoming-item">
+      <div class="priority-dot high"></div>
+      <div><div class="upcoming-title">${a.title}</div><div class="upcoming-meta">${a.subject}</div></div>
+      <div class="due-chip ${dl.cls}">${dl.text}</div>
+    </div>`;
+  }).join('');
+
+  // Announcements
+  const annEl = document.getElementById('dashAnnouncements');
+  annEl.innerHTML = state.announcements.slice(0,3).map(a =>
+    `<div class="upcoming-item"><div class="upcoming-dot" style="background:var(--accent)"></div>
+    <div><div class="upcoming-title">${a.title}</div><div class="upcoming-meta">${a.time}</div></div></div>`
+  ).join('') || '<div class="empty-state"><div>📢</div>No announcements.</div>';
+
+  renderSidebar();
+}
+
+function renderSidebar() {
+  // Upcoming sidebar
+  const upcoming = state.assignments.filter(a => !a.done).sort((a,b) => new Date(a.due)-new Date(b.due)).slice(0,5);
+  document.getElementById('sidebarUpcoming').innerHTML = upcoming.map(a => {
+    const dl = daysLeftLabel(a.due);
+    return `<div class="mini-item">
+      <div class="priority-dot ${a.priority}"></div>
+      <div style="flex:1;min-width:0">
+        <div class="mini-item-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.title}</div>
+        <div class="mini-item-due">${dl.text}</div>
+      </div>
+    </div>`;
+  }).join('') || '<div style="font-size:0.78rem;color:var(--text-muted)">Nothing due soon!</div>';
+
+  // Subject progress sidebar
+  const subjects = [...new Set(state.assignments.map(a => a.subject))];
+  document.getElementById('sidebarSubjectProgress').innerHTML = subjects.map(sub => {
+    const total = state.assignments.filter(a => a.subject === sub).length;
+    const done2 = state.assignments.filter(a => a.subject === sub && a.done).length;
+    const pct = total ? Math.round(done2/total*100) : 0;
+    return `<div class="subject-row">
+      <div class="subject-meta">
+        <span class="subject-name" style="font-size:0.78rem">${sub}</span>
+        <span class="subject-pct" style="font-size:0.75rem">${pct}%</span>
+      </div>
+      <div class="progress-bar" style="height:4px">
+        <div class="progress-fill" style="width:${pct}%;background:${subjectColor(sub)}"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Study goal
+  const pct = Math.min(100, Math.round(state.studyHours / state.studyGoal * 100));
+  document.getElementById('studyDisplay').textContent = `${state.studyHours.toFixed(1)} / ${state.studyGoal}h`;
+  document.getElementById('studyProgressFill').style.width = pct + '%';
+}
+
+// ═══════════════════════════════════════════
+//  ASSIGNMENTS
+// ═══════════════════════════════════════════
+function renderAssignments() {
+  let list = [...state.assignments];
+  const f = state.assignFilter;
+  if (f === 'pending') list = list.filter(a => !a.done);
+  else if (f === 'done') list = list.filter(a => a.done);
+  else if (f === 'high') list = list.filter(a => a.priority === 'high');
+  else if (f === 'medium') list = list.filter(a => a.priority === 'medium');
+  else if (f === 'low') list = list.filter(a => a.priority === 'low');
+  list.sort((a,b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    const po = {high:0,medium:1,low:2};
+    return po[a.priority] - po[b.priority];
+  });
+  const el = document.getElementById('assignList');
+  if (!list.length) { el.innerHTML = '<div class="empty-state"><div>🎉</div>Nothing here!</div>'; return; }
+  el.innerHTML = list.map(a => {
+    const dl = daysLeftLabel(a.due);
+    return `<div class="assign-item ${a.done?'done':''}" id="ai-${a.id}">
+      <div class="priority-dot ${a.priority}"></div>
+      <div class="assign-info">
+        <div class="assign-title">${a.title}</div>
+        <div class="assign-sub">${a.subject} · Due ${formatDate(a.due)}${a.desc?' · '+a.desc:''}</div>
+      </div>
+      <div class="assign-right">
+        <span class="days-left ${dl.cls}">${dl.text}</span>
+        <span class="tag ${a.priority}">${a.priority}</span>
+        <button class="check-btn" onclick="toggleDone(${a.id},event)">${a.done?'✓':''}</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteAssign(${a.id},event)">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleDone(id, e) {
+  e.stopPropagation();
+  const a = state.assignments.find(x => x.id === id);
+  if (a) { a.done = !a.done; save(); renderAssignments(); renderSidebar(); toast(a.done?'✅ Marked complete!':'↩ Marked pending', a.done?'success':'info'); }
+}
+
+function deleteAssign(id, e) {
+  e.stopPropagation();
+  state.assignments = state.assignments.filter(x => x.id !== id);
+  save(); renderAssignments(); renderSidebar(); toast('🗑 Assignment removed', 'warn');
+}
+
+function filterAssign(f, btn) {
+  state.assignFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAssignments();
+}
+
+function openAddAssignment() {
+  openModal(`<div class="modal-title">➕ New Assignment</div>
+    <div class="form-group"><label class="form-label">Title</label><input type="text" id="m-title" placeholder="Assignment title"></div>
+    <div class="form-group"><label class="form-label">Subject</label><input type="text" id="m-sub" placeholder="e.g. CS101"></div>
+    <div class="form-group"><label class="form-label">Description</label><textarea id="m-desc" placeholder="Optional details..."></textarea></div>
+    <div class="form-row">
+      <div class="form-group" style="flex:1"><label class="form-label">Due Date</label><input type="date" id="m-due"></div>
+      <div class="form-group" style="flex:1"><label class="form-label">Priority</label>
+        <select id="m-pri"><option value="high">🔴 High</option><option value="medium" selected>🟡 Medium</option><option value="low">🟢 Low</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitAssignment()">Add Assignment</button>
+    </div>`);
+  document.getElementById('m-due').value = daysFromNow(7);
+}
+
+function submitAssignment() {
+  const title = document.getElementById('m-title').value.trim();
+  const sub = document.getElementById('m-sub').value.trim();
+  const desc = document.getElementById('m-desc').value.trim();
+  const due = document.getElementById('m-due').value;
+  const pri = document.getElementById('m-pri').value;
+  if (!title || !sub || !due) { toast('⚠️ Please fill required fields', 'warn'); return; }
+  state.assignments.push({ id: newId(), title, subject: sub, desc, due, priority: pri, done: false });
+  save(); closeModal(); renderAssignments(); renderSidebar();
+  toast('📋 Assignment added!', 'success');
+}
+
+// ═══════════════════════════════════════════
+//  CALENDAR
+// ═══════════════════════════════════════════
+function renderCalendar() {
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('calMonthTitle').textContent = `${months[state.calMonth]} ${state.calYear}`;
+  const grid = document.getElementById('calGrid');
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let html = days.map(d => `<div class="cal-day-name">${d}</div>`).join('');
+
+  const first = new Date(state.calYear, state.calMonth, 1).getDay();
+  const total = new Date(state.calYear, state.calMonth + 1, 0).getDate();
+  const prevTotal = new Date(state.calYear, state.calMonth, 0).getDate();
+  const today = new Date();
+
+  // All event/deadline dates
+  const eventDates = new Set([
+    ...state.assignments.filter(a => !a.done).map(a => a.due),
+    ...state.events.map(e => e.date),
+  ]);
+
+  for (let i = 0; i < first; i++) {
+    html += `<div class="cal-day other-month">${prevTotal - first + i + 1}</div>`;
+  }
+  for (let d = 1; d <= total; d++) {
+    const dateStr = `${state.calYear}-${String(state.calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = today.getDate()===d && today.getMonth()===state.calMonth && today.getFullYear()===state.calYear;
+    const hasEv = eventDates.has(dateStr);
+    const isSel = state.selectedDate === dateStr;
+    html += `<div class="cal-day${isToday?' today':''}${hasEv?' has-events':''}${isSel&&!isToday?' selected':''}" onclick="selectCalDay('${dateStr}')">${d}</div>`;
+  }
+  const remaining = (7 - ((first + total) % 7)) % 7;
+  for (let i = 1; i <= remaining; i++) html += `<div class="cal-day other-month">${i}</div>`;
+  grid.innerHTML = html;
+
+  if (state.selectedDate) renderCalEvents(state.selectedDate);
+}
+
+function selectCalDay(dateStr) {
+  state.selectedDate = dateStr;
+  renderCalendar();
+  renderCalEvents(dateStr);
+}
+
+function renderCalEvents(dateStr) {
+  const panel = document.getElementById('calEventsPanel');
+  const assigns = state.assignments.filter(a => a.due === dateStr);
+  const events = state.events.filter(e => e.date === dateStr);
+  if (!assigns.length && !events.length) {
+    panel.innerHTML = `<div style="font-size:0.8rem;color:var(--text-muted)">No events on ${formatDate(dateStr)}.</div>`;
+    return;
+  }
+  panel.innerHTML = `<div style="font-size:0.85rem;font-weight:600;margin-bottom:10px">${formatDate(dateStr)}</div>` +
+    assigns.map(a => `<div class="cal-event-item">
+      <div class="priority-dot ${a.priority}"></div>
+      <div><div style="font-weight:500">${a.title}</div><div style="font-size:0.72rem;color:var(--text-muted)">${a.subject} · Assignment Due</div></div>
+    </div>`).join('') +
+    events.map(e => `<div class="cal-event-item">
+      <div class="upcoming-dot" style="background:var(--accent-4)"></div>
+      <div><div style="font-weight:500">${e.title}</div><div style="font-size:0.72rem;color:var(--text-muted)">${e.type}</div></div>
+      <button class="btn btn-sm btn-danger" onclick="deleteEvent(${e.id})">✕</button>
+    </div>`).join('');
+}
+
+function changeMonth(dir) {
+  if (dir === 0) { state.calMonth = new Date().getMonth(); state.calYear = new Date().getFullYear(); }
+  else {
+    state.calMonth += dir;
+    if (state.calMonth < 0) { state.calMonth = 11; state.calYear--; }
+    if (state.calMonth > 11) { state.calMonth = 0; state.calYear++; }
+  }
+  state.selectedDate = null;
+  renderCalendar();
+}
+
+function openAddEvent() {
+  openModal(`<div class="modal-title">📅 Add Event</div>
+    <div class="form-group"><label class="form-label">Event Title</label><input type="text" id="m-etitle" placeholder="e.g. Math Exam"></div>
+    <div class="form-group"><label class="form-label">Date</label><input type="date" id="m-edate"></div>
+    <div class="form-group"><label class="form-label">Type</label>
+      <select id="m-etype"><option value="event">Event</option><option value="exam">Exam</option><option value="deadline">Deadline</option><option value="meeting">Meeting</option></select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitEvent()">Add Event</button>
+    </div>`);
+  document.getElementById('m-edate').value = state.selectedDate || daysFromNow(1);
+}
+
+function submitEvent() {
+  const title = document.getElementById('m-etitle').value.trim();
+  const date = document.getElementById('m-edate').value;
+  const type = document.getElementById('m-etype').value;
+  if (!title || !date) { toast('⚠️ Fill required fields', 'warn'); return; }
+  state.events.push({ id: newId(), title, date, type });
+  save(); closeModal(); renderCalendar(); toast('📅 Event added!', 'success');
+}
+
+function deleteEvent(id) {
+  state.events = state.events.filter(e => e.id !== id);
+  save(); renderCalendar(); toast('🗑 Event removed', 'warn');
+}
+
+// ═══════════════════════════════════════════
+//  GRADES
+// ═══════════════════════════════════════════
+function renderGrades() {
+  // Average per subject
+  const subjects = [...new Set(state.grades.map(g => g.subject))];
+  const gradeEl = document.getElementById('gradeGrid');
+  gradeEl.innerHTML = subjects.map(sub => {
+    const gs = state.grades.filter(g => g.subject === sub);
+    const avg = Math.round(gs.reduce((a,g) => a + g.score/g.total*100, 0) / gs.length);
+    const cls = gradeClass(avg);
+    return `<div class="grade-card">
+      <div class="grade-subject">${sub}</div>
+      <div class="grade-value ${cls}">${avg}%</div>
+      <div class="grade-label">${gradeLetter(avg)} · ${gs.length} record${gs.length!==1?'s':''}</div>
+    </div>`;
+  }).join('') || '<div class="empty-state"><div>📊</div>No grades yet.</div>';
+
+  // Log
+  const logEl = document.getElementById('gradeLog');
+  if (!state.grades.length) { logEl.innerHTML = '<div class="empty-state"><div>📋</div>No grade records.</div>'; return; }
+  logEl.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+    <thead><tr style="border-bottom:1px solid var(--border)">
+      <th style="text-align:left;padding:8px;color:var(--text-muted);font-weight:500">Subject</th>
+      <th style="text-align:left;padding:8px;color:var(--text-muted);font-weight:500">Activity</th>
+      <th style="text-align:right;padding:8px;color:var(--text-muted);font-weight:500">Score</th>
+      <th style="text-align:right;padding:8px;color:var(--text-muted);font-weight:500">Grade</th>
+      <th style="padding:8px"></th>
+    </tr></thead>
+    <tbody>${state.grades.map(g => {
+      const pct = Math.round(g.score/g.total*100);
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px"><span style="color:${subjectColor(g.subject)};font-weight:600">${g.subject}</span></td>
+        <td style="padding:8px;color:var(--text-dim)">${g.label}</td>
+        <td style="padding:8px;text-align:right">${g.score}/${g.total}</td>
+        <td style="padding:8px;text-align:right"><span class="grade-value ${gradeClass(pct)}" style="font-size:1rem">${pct}%</span></td>
+        <td style="padding:8px;text-align:right"><button class="btn btn-sm btn-danger" onclick="deleteGrade(${g.id})">✕</button></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function openAddGrade() {
+  openModal(`<div class="modal-title">🎓 Log Grade</div>
+    <div class="form-group"><label class="form-label">Subject</label><input type="text" id="m-gsub" placeholder="e.g. CS101"></div>
+    <div class="form-group"><label class="form-label">Activity / Exam Label</label><input type="text" id="m-glabel" placeholder="e.g. Midterm Exam"></div>
+    <div class="form-row">
+      <div class="form-group" style="flex:1"><label class="form-label">Score</label><input type="text" id="m-gscore" placeholder="e.g. 85"></div>
+      <div class="form-group" style="flex:1"><label class="form-label">Total</label><input type="text" id="m-gtotal" placeholder="e.g. 100"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitGrade()">Log Grade</button>
+    </div>`);
+}
+
+function submitGrade() {
+  const sub = document.getElementById('m-gsub').value.trim();
+  const label = document.getElementById('m-glabel').value.trim();
+  const score = parseFloat(document.getElementById('m-gscore').value);
+  const total = parseFloat(document.getElementById('m-gtotal').value);
+  if (!sub || !label || isNaN(score) || isNaN(total)) { toast('⚠️ Fill all fields correctly', 'warn'); return; }
+  state.grades.push({ id: newId(), subject: sub, label, score, total });
+  save(); closeModal(); renderGrades(); toast('🎓 Grade logged!', 'success');
+}
+
+function deleteGrade(id) {
+  state.grades = state.grades.filter(g => g.id !== id);
+  save(); renderGrades(); toast('🗑 Grade removed', 'warn');
+}
+
+// ═══════════════════════════════════════════
+//  NOTES
+// ═══════════════════════════════════════════
+function renderNotes() {
+  const colors = ['yellow','blue','pink','green'];
+  const grid = document.getElementById('notesGrid');
+  grid.innerHTML = state.notes.map(n => `
+    <div class="note-card ${n.color}">
+      <button class="note-del" onclick="deleteNote(${n.id})">✕</button>
+      <div class="note-title">${n.title}</div>
+      <div class="note-content">${n.content}</div>
+      <div class="note-footer">${n.date}</div>
+    </div>`).join('') +
+    `<div class="add-note-card" onclick="openAddNote()"><div style="font-size:1.5rem">+</div><div>Add Note</div></div>`;
+}
+
+function openAddNote() {
+  openModal(`<div class="modal-title">📝 New Note</div>
+    <div class="form-group"><label class="form-label">Title</label><input type="text" id="m-ntitle" placeholder="Note title"></div>
+    <div class="form-group"><label class="form-label">Content</label><textarea id="m-ncontent" placeholder="Write your note..."></textarea></div>
+    <div class="form-group"><label class="form-label">Color</label>
+      <select id="m-ncolor"><option value="yellow">🟡 Yellow</option><option value="blue">🔵 Blue</option><option value="pink">🩷 Pink</option><option value="green">🟢 Green</option></select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitNote()">Add Note</button>
+    </div>`);
+}
+
+function submitNote() {
+  const title = document.getElementById('m-ntitle').value.trim();
+  const content = document.getElementById('m-ncontent').value.trim();
+  const color = document.getElementById('m-ncolor').value;
+  if (!title) { toast('⚠️ Title required', 'warn'); return; }
+  state.notes.push({ id: newId(), title, content, color, date: 'Just now' });
+  save(); closeModal(); renderNotes(); toast('📝 Note saved!', 'success');
+}
+
+function deleteNote(id) {
+  state.notes = state.notes.filter(n => n.id !== id);
+  save(); renderNotes(); toast('🗑 Note removed', 'warn');
+}
+
+// ═══════════════════════════════════════════
+//  POMODORO
+// ═══════════════════════════════════════════
+let pomoInterval = null;
+let pomoSeconds = 25 * 60;
+let pomoRunning = false;
+let pomoMode = 'focus';
+
+function setPomoMode(mode, mins, btn) {
+  document.querySelectorAll('.pomo-mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  pomoMode = mode;
+  pomoSeconds = mins * 60;
+  pomoRunning = false;
+  clearInterval(pomoInterval);
+  document.getElementById('pomoBtn').textContent = '▶ Start';
+  updatePomoDisplay();
+}
+
+function togglePomo() {
+  if (pomoRunning) {
+    clearInterval(pomoInterval);
+    pomoRunning = false;
+    document.getElementById('pomoBtn').textContent = '▶ Resume';
+    document.getElementById('pomoLabel').textContent = 'Paused';
+  } else {
+    pomoRunning = true;
+    document.getElementById('pomoBtn').textContent = '⏸ Pause';
+    document.getElementById('pomoLabel').textContent = pomoMode === 'focus' ? '🧠 Stay focused!' : '☕ Take a break';
+    pomoInterval = setInterval(() => {
+      pomoSeconds--;
+      updatePomoDisplay();
+      if (pomoSeconds <= 0) {
+        clearInterval(pomoInterval);
+        pomoRunning = false;
+        document.getElementById('pomoBtn').textContent = '▶ Start';
+        if (pomoMode === 'focus') {
+          state.pomoSessions++;
+          document.getElementById('pomoSessions').textContent = state.pomoSessions;
+          toast('🎉 Focus session complete! Take a break.', 'success');
+        } else {
+          toast('⏰ Break over! Ready to focus?', 'info');
+        }
+      }
+    }, 1000);
+  }
+}
+
+function resetPomo() {
+  clearInterval(pomoInterval);
+  pomoRunning = false;
+  const mins = { focus: 25, short: 5, long: 15 };
+  pomoSeconds = (mins[pomoMode] || 25) * 60;
+  document.getElementById('pomoBtn').textContent = '▶ Start';
+  document.getElementById('pomoLabel').textContent = 'Ready to focus?';
+  updatePomoDisplay();
+}
+
+function updatePomoDisplay() {
+  const m = Math.floor(pomoSeconds / 60).toString().padStart(2,'0');
+  const s = (pomoSeconds % 60).toString().padStart(2,'0');
+  document.getElementById('pomoTime').textContent = `${m}:${s}`;
+}
+
+// ═══════════════════════════════════════════
+//  ANNOUNCEMENTS
+// ═══════════════════════════════════════════
+function renderAnnouncements() {
+  const el = document.getElementById('announceList');
+  if (!state.announcements.length) { el.innerHTML = '<div class="empty-state"><div>📢</div>No announcements yet.</div>'; return; }
+  el.innerHTML = state.announcements.map(a => `
+    <div class="announce-item">
+      <div class="announce-icon">${a.icon || '📌'}</div>
+      <div style="flex:1">
+        <div class="announce-title">${a.title}</div>
+        <div class="announce-body">${a.body}</div>
+        <div class="announce-time">${a.time}</div>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="deleteAnnouncement(${a.id})">✕</button>
+    </div>`).join('');
+}
+
+function openAddAnnouncement() {
+  openModal(`<div class="modal-title">📢 Post Announcement</div>
+    <div class="form-group"><label class="form-label">Title</label><input type="text" id="m-atitle" placeholder="Announcement title"></div>
+    <div class="form-group"><label class="form-label">Message</label><textarea id="m-abody" placeholder="Write announcement..."></textarea></div>
+    <div class="form-group"><label class="form-label">Icon (emoji)</label><input type="text" id="m-aicon" placeholder="📌" value="📌" style="width:80px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitAnnouncement()">Post</button>
+    </div>`);
+}
+
+function submitAnnouncement() {
+  const title = document.getElementById('m-atitle').value.trim();
+  const body = document.getElementById('m-abody').value.trim();
+  const icon = document.getElementById('m-aicon').value.trim() || '📌';
+  if (!title) { toast('⚠️ Title required', 'warn'); return; }
+  state.announcements.unshift({ id: newId(), title, body, icon, time: 'Just now' });
+  save(); closeModal(); renderAnnouncements(); toast('📢 Announcement posted!', 'success');
+}
+
+function deleteAnnouncement(id) {
+  state.announcements = state.announcements.filter(a => a.id !== id);
+  save(); renderAnnouncements(); toast('🗑 Removed', 'warn');
+}
+
+// ═══════════════════════════════════════════
+//  CONTACTS
+// ═══════════════════════════════════════════
+function renderContacts() {
+  const el = document.getElementById('contactsGrid');
+  el.innerHTML = state.contacts.map(c => `
+    <div class="contact-card">
+      <div class="contact-avatar">${c.name.charAt(0)}</div>
+      <div class="contact-name">${c.name}</div>
+      <div class="contact-role">${c.role}</div>
+      <div class="contact-num">${c.num}</div>
+      <button class="btn btn-sm btn-danger" onclick="deleteContact(${c.id})" style="margin-top:6px">Remove</button>
+    </div>`).join('') || '<div class="empty-state"><div>👥</div>No contacts yet.</div>';
+}
+
+function openAddContact() {
+  openModal(`<div class="modal-title">👥 Add Classmate</div>
+    <div class="form-group"><label class="form-label">Name</label><input type="text" id="m-cname" placeholder="Full name"></div>
+    <div class="form-group"><label class="form-label">Role / Class</label><input type="text" id="m-crole" placeholder="e.g. CS101 Groupmate"></div>
+    <div class="form-group"><label class="form-label">Contact Number</label><input type="text" id="m-cnum" placeholder="09xx-xxx-xxxx"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitContact()">Add Contact</button>
+    </div>`);
+}
+
+function submitContact() {
+  const name = document.getElementById('m-cname').value.trim();
+  const role = document.getElementById('m-crole').value.trim();
+  const num = document.getElementById('m-cnum').value.trim();
+  if (!name) { toast('⚠️ Name required', 'warn'); return; }
+  state.contacts.push({ id: newId(), name, role, num });
+  save(); closeModal(); renderContacts(); toast('👥 Contact added!', 'success');
+}
+
+function deleteContact(id) {
+  state.contacts = state.contacts.filter(c => c.id !== id);
+  save(); renderContacts(); toast('🗑 Contact removed', 'warn');
+}
+
+// ═══════════════════════════════════════════
+//  PROJECTS
+// ═══════════════════════════════════════════
+function renderProjects() {
+  const el = document.getElementById('projectList');
+  if (!state.projects.length) { el.innerHTML = '<div class="empty-state"><div>🗂</div>No projects yet.</div>'; return; }
+  el.innerHTML = state.projects.map(p => {
+    const dl = daysLeftLabel(p.due);
+    return `<div class="project-card">
+      <div class="project-header">
+        <div>
+          <div class="project-name">${p.name}</div>
+          <div class="project-course">${p.course}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="due-chip ${dl.cls}">${dl.text}</span>
+          <button class="btn btn-sm btn-danger" onclick="deleteProject(${p.id})">✕</button>
+        </div>
+      </div>
+      <div class="project-members">${p.members.map(m => `<span class="member-chip">${m}</span>`).join('')}</div>
+      <div class="project-progress">
+        <div class="subject-meta"><span style="font-size:0.78rem;color:var(--text-muted)">${p.status}</span><span style="font-size:0.78rem;font-weight:600;color:var(--accent)">${p.progress}%</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${p.progress}%;background:var(--accent)"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddProject() {
+  openModal(`<div class="modal-title">🗂 New Group Project</div>
+    <div class="form-group"><label class="form-label">Project Name</label><input type="text" id="m-pname" placeholder="Project title"></div>
+    <div class="form-group"><label class="form-label">Course</label><input type="text" id="m-pcourse" placeholder="e.g. CS Capstone"></div>
+    <div class="form-group"><label class="form-label">Members (comma-separated)</label><input type="text" id="m-pmembers" placeholder="e.g. Elt, Maria, Juan"></div>
+    <div class="form-row">
+      <div class="form-group" style="flex:1"><label class="form-label">Due Date</label><input type="date" id="m-pdue"></div>
+      <div class="form-group" style="flex:1"><label class="form-label">Progress %</label><input type="text" id="m-pprog" placeholder="0" value="0"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Status</label>
+      <select id="m-pstatus"><option>Planning</option><option>In Progress</option><option>Review</option><option>Done</option></select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitProject()">Add Project</button>
+    </div>`);
+  document.getElementById('m-pdue').value = daysFromNow(14);
+}
+
+function submitProject() {
+  const name = document.getElementById('m-pname').value.trim();
+  const course = document.getElementById('m-pcourse').value.trim();
+  const members = document.getElementById('m-pmembers').value.split(',').map(m => m.trim()).filter(Boolean);
+  const due = document.getElementById('m-pdue').value;
+  const progress = parseInt(document.getElementById('m-pprog').value) || 0;
+  const status = document.getElementById('m-pstatus').value;
+  if (!name) { toast('⚠️ Name required', 'warn'); return; }
+  state.projects.push({ id: newId(), name, course, members, due, progress, status });
+  save(); closeModal(); renderProjects(); toast('🗂 Project added!', 'success');
+}
+
+function deleteProject(id) {
+  state.projects = state.projects.filter(p => p.id !== id);
+  save(); renderProjects(); toast('🗑 Project removed', 'warn');
+}
+
+// ═══════════════════════════════════════════
+//  RESOURCE LINKS
+// ═══════════════════════════════════════════
+function renderLinks() {
+  const el = document.getElementById('linksGrid');
+  el.innerHTML = state.links.map(l => `
+    <a class="link-card" href="${l.url}" target="_blank" rel="noopener">
+      <div class="link-icon">${l.icon}</div>
+      <div>
+        <div class="link-name">${l.name}</div>
+        <div class="link-url">${l.url.replace('https://','')}</div>
+      </div>
+    </a>`).join('') +
+    `<div class="link-card" style="cursor:pointer;border-style:dashed" onclick="openAddLink()">
+      <div class="link-icon">➕</div><div><div class="link-name">Add Link</div></div>
+    </div>`;
+}
+
+function openAddLink() {
+  openModal(`<div class="modal-title">🔗 Add Resource Link</div>
+    <div class="form-group"><label class="form-label">Name</label><input type="text" id="m-lname" placeholder="e.g. Google Drive"></div>
+    <div class="form-group"><label class="form-label">URL</label><input type="text" id="m-lurl" placeholder="https://..."></div>
+    <div class="form-group"><label class="form-label">Icon (emoji)</label><input type="text" id="m-licon" placeholder="📁" value="🌐" style="width:80px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitLink()">Add Link</button>
+    </div>`);
+}
+
+function submitLink() {
+  const name = document.getElementById('m-lname').value.trim();
+  let url = document.getElementById('m-lurl').value.trim();
+  const icon = document.getElementById('m-licon').value.trim() || '🌐';
+  if (!name || !url) { toast('⚠️ Fill required fields', 'warn'); return; }
+  if (!url.startsWith('http')) url = 'https://' + url;
+  state.links.push({ id: newId(), name, url, icon });
+  save(); closeModal(); renderLinks(); toast('🔗 Link added!', 'success');
+}
+
+// ═══════════════════════════════════════════
+//  MODAL
+// ═══════════════════════════════════════════
+function openModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+});
+
+// ═══════════════════════════════════════════
+//  STUDY GOAL
+// ═══════════════════════════════════════════
+function logStudy(hrs) {
+  state.studyHours = Math.max(0, +(state.studyHours + hrs).toFixed(1));
+  save(); renderSidebar();
+  if (state.studyHours >= state.studyGoal) toast('🎯 Daily goal reached! Great work!', 'success');
+}
+
+// ═══════════════════════════════════════════
+//  DEADLINE ALERTS
+// ═══════════════════════════════════════════
+function checkDeadlineAlerts() {
+  const urgent = state.assignments.filter(a => !a.done && daysLeft(a.due) <= 1 && daysLeft(a.due) >= 0);
+  const overdue = state.assignments.filter(a => !a.done && daysLeft(a.due) < 0);
+  if (overdue.length) toast(`🚨 ${overdue.length} assignment(s) are overdue!`, 'warn');
+  else if (urgent.length) toast(`⚠️ ${urgent.length} assignment(s) due very soon!`, 'warn');
+}
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+function init() {
+  load();
+
+  // Top date
+  document.getElementById('topDate').textContent = new Date().toLocaleDateString('en-PH', { weekday:'short', month:'short', day:'numeric' });
+  document.getElementById('streakBadge').textContent = `🔥 ${state.streak} day streak`;
+  document.getElementById('pomoSessions').textContent = state.pomoSessions;
+
+  // Init calendar month/year to current
+  state.calMonth = new Date().getMonth();
+  state.calYear = new Date().getFullYear();
+
+  renderDashboard();
+  setTimeout(checkDeadlineAlerts, 1500);
+}
+
+init();
+</script>
+</body>
+</html>
