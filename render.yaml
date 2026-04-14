@@ -12,7 +12,7 @@ pservices:
       - key: CANVAS_DOMAIN
         value: usc.instructure.com
       - key: MAX_OVERDUE_DAYS
-        value: 30
+        value: 20
       - key: AI_AUTOSTART_OLLAMA
         value: 0
       - key: AI_MODEL_KEEP_ALIVE
