@@ -1,0 +1,10 @@
+{
+  "name": "betterclss",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BetterCLSS static web app",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  }
+}

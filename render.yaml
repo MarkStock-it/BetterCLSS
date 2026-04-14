@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: betterclss-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: CANVAS_DOMAIN
+        value: usc.instructure.com
+      - key: MAX_OVERDUE_DAYS
+        value: 30
+      - key: AI_AUTOSTART_OLLAMA
+        value: 0
+      - key: AI_MODEL_KEEP_ALIVE
+        value: 0m
