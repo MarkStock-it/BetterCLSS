@@ -44,7 +44,7 @@ const CANVAS_DOMAIN = process.env.CANVAS_DOMAIN || 'usc.instructure.com';
 const CANVAS_TOKEN = process.env.CANVAS_TOKEN || '';
 const MAX_OVERDUE_DAYS = Number(process.env.MAX_OVERDUE_DAYS || 30);
 const OPENCLAUDE_BASE_URL = (process.env.OPENCLAUDE_BASE_URL || 'http://127.0.0.1:1337/v1').replace(/\/+$/, 'https://generativelanguage.googleapis.com/v1beta/openai');
-const OPENCLAUDE_MODEL = process.env.OPENCLAUDE_MODEL || 'gemini-2.5-flash';
+const OPENCLAUDE_MODEL = process.env.OPENCLAUDE_MODEL || 'Gemini 2.5 Flash-Lite';
 const OPENCLAUDE_API_KEY = process.env.OPENCLAUDE_API_KEY || 'AIzaSyAOm2lUs2AqtcMi8zoQTWuvv6NGAL_YwXo';
 const AI_AUTOSTART_OLLAMA = process.env.AI_AUTOSTART_OLLAMA === '0';
 const AI_MODEL_KEEP_ALIVE = process.env.AI_MODEL_KEEP_ALIVE || '0m';
