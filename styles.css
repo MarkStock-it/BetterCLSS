@@ -12,6 +12,8 @@
 }
 
 :root {
+  --font-ui: 'IBM Plex Mono', 'SFMono-Regular', 'Cascadia Code', 'JetBrains Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+  --font-display: 'IBM Plex Mono', 'SFMono-Regular', 'Cascadia Code', 'JetBrains Mono', Consolas, 'Liberation Mono', Menlo, monospace;
   --bg: #0c0e18;
   --surface: #141720;
   --surface-2: #1a1e2e;
@@ -50,7 +52,7 @@ html {
 }
 
 body {
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-ui);
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -85,7 +87,7 @@ body {
 }
 
 .logo {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 1.3rem;
   color: var(--text);
   display: flex;
@@ -115,7 +117,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 7px 16px 7px 36px;
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-ui);
   font-size: 0.82rem;
   color: var(--text);
   outline: none;
@@ -297,10 +299,10 @@ body {
 }
 
 .sidebar-brand-text {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 1.15rem;
   color: var(--text);
-  letter-spacing: -0.01em;
+  letter-spacing: 0.02em;
   line-height: 1;
 }
 
@@ -410,7 +412,7 @@ body {
 }
 
 .section-title {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 1.5rem;
   color: var(--text);
   line-height: 1.1;
@@ -447,7 +449,7 @@ body {
 }
 
 .card-title {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 1.05rem;
   color: var(--text);
   display: flex;
@@ -502,7 +504,7 @@ body {
 }
 
 .stat-value {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 2.1rem;
   line-height: 1;
 }
@@ -628,7 +630,7 @@ body {
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-muted);
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-ui);
   transition: all 0.15s;
 }
 .filter-btn:hover,
@@ -816,7 +818,7 @@ body {
   margin-bottom: 14px;
 }
 .cal-month-label {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 1.1rem;
 }
 .cal-nav-btns { display: flex; gap: 6px; }
@@ -828,7 +830,7 @@ body {
   padding: 5px 12px;
   cursor: pointer;
   font-size: 0.82rem;
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-ui);
   transition: border-color 0.15s;
 }
 .cal-nav-btns button:hover { border-color: var(--accent); }
@@ -908,7 +910,7 @@ body {
 }
 .grade-course { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
 .grade-val {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 1.9rem;
   line-height: 1;
 }
@@ -1012,7 +1014,7 @@ body {
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-muted);
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-ui);
   transition: all 0.15s;
 }
 .pomo-mode-btn.active {
@@ -1032,7 +1034,7 @@ body {
   margin: 0 auto 16px;
 }
 .pomo-time {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 2.4rem;
   color: var(--text);
 }
@@ -1134,7 +1136,7 @@ body {
   padding: 4px;
   cursor: pointer;
   font-size: 0.72rem;
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-ui);
   transition: all 0.12s;
 }
 .study-btn:hover { border-color: var(--accent); color: var(--accent); }
@@ -1148,7 +1150,7 @@ body {
   gap: 6px;
   padding: 8px 16px;
   border-radius: var(--radius-sm);
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-ui);
   font-size: 0.845rem;
   font-weight: 600;
   cursor: pointer;
@@ -1193,7 +1195,7 @@ textarea {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 9px 12px;
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-ui);
   font-size: 0.875rem;
   color: var(--text);
   outline: none;
@@ -1255,7 +1257,7 @@ input[type="password"] { letter-spacing: 0.1em; }
 @keyframes slideUp { from { transform: translateY(18px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 .modal-title {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 1.25rem;
   margin-bottom: 18px;
 }
@@ -1319,7 +1321,7 @@ input[type="password"] { letter-spacing: 0.1em; }
   color: white;
   border-radius: 999px;
   padding: 10px 18px;
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-ui);
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
@@ -1469,7 +1471,7 @@ input[type="password"] { letter-spacing: 0.1em; }
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 0.8rem;
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-ui);
 }
 
 .assistant-input-row input:focus {
@@ -1515,7 +1517,7 @@ input[type="password"] { letter-spacing: 0.1em; }
   border-radius: 50%;
   background: linear-gradient(135deg, var(--accent), var(--purple));
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 1.1rem;
   color: white;
 }
