@@ -418,22 +418,108 @@
       const dueSoon = pending.filter((a) => {
         const d = dueDays(a.due);
         return d !== null && d >= 0 && d <= 7;
-      }).slice(0, 12).map((a) => ({ title: a.title, subject: a.subject, due: a.due }));
+      }).slice(0, 20).map((a) => ({
+        title: a.title,
+        subject: a.subject,
+        due: a.due,
+        dueInDays: dueDays(a.due),
+        source: a.source,
+        priority: a.priority,
+      }));
+
+      const upcomingEvents = APP.local.events
+        .filter((e) => e && e.date)
+        .map((e) => ({
+          title: e.title,
+          date: e.date,
+          type: e.type || 'Event',
+          dueInDays: dueDays(e.date),
+        }))
+        .filter((e) => e.dueInDays === null || e.dueInDays >= 0)
+        .sort((a, b) => {
+          const av = a.dueInDays == null ? 9999 : a.dueInDays;
+          const bv = b.dueInDays == null ? 9999 : b.dueInDays;
+          return av - bv;
+        })
+        .slice(0, 12);
+
+      const recentAnnouncements = [...APP.canvas.announcements, ...APP.local.announcements]
+        .slice(0, 12)
+        .map((a) => ({
+          title: a.title,
+          course: a.courseName || a.time || 'General',
+          messagePreview: (a.message || a.body || '').slice(0, 180),
+        }));
+
+      const upcomingAssignments = pending
+        .filter((a) => dueDays(a.due) === null || dueDays(a.due) >= 0)
+        .slice(0, 20)
+        .map((a) => ({
+          title: a.title,
+          subject: a.subject,
+          due: a.due,
+          dueInDays: dueDays(a.due),
+          priority: a.priority,
+          source: a.source,
+        }));
+
+      const overdueAssignments = overdue
+        .slice(0, 20)
+        .map((a) => ({
+          title: a.title,
+          subject: a.subject,
+          due: a.due,
+          overdueByDays: Math.abs(dueDays(a.due) || 0),
+          priority: a.priority,
+          source: a.source,
+        }));
+
+      const localGradeLog = APP.local.grades.slice(-20).map((g) => ({
+        subject: g.subject,
+        activity: g.label,
+        score: g.score,
+        total: g.total,
+      }));
 
       return {
+        contextVersion: 2,
+        now: new Date().toISOString(),
         activePage: (document.querySelector('.page.active') || {}).id || 'page-dashboard',
+        canvasConnected: !!APP.canvas.connected,
+        canvasSyncing: !!APP.canvas.syncing,
+        aiKeyMode: getAiApiKey() ? 'user' : 'shared',
         totals: {
+          assignmentsTotal: all.length,
           pending: pending.length,
           overdue: overdue.length,
+          submitted: all.filter((a) => a.done).length,
           announcements: APP.canvas.announcements.length + APP.local.announcements.length,
           courses: APP.canvas.courses.length,
+          events: APP.local.events.length,
+          notes: APP.local.notes.length,
         },
         dueSoon,
+        upcomingAssignments,
+        overdueAssignments,
         grades: APP.canvas.grades.slice(0, 12).map((g) => ({
           course: g.courseCode || g.courseName,
           score: g.currentScore,
+          finalScore: g.finalScore,
+          grade: g.currentGrade,
         })),
-        notesCount: APP.local.notes.length,
+        localGradeLog,
+        recentAnnouncements,
+        upcomingEvents,
+        notes: APP.local.notes.slice(-10).map((n) => ({
+          title: n.title,
+          color: n.color,
+          preview: String(n.content || '').slice(0, 180),
+        })),
+        study: {
+          hoursToday: APP.local.studyHours,
+          dailyGoalHours: APP.local.studyGoal,
+          pomodoroSessionsToday: APP.local.pomoSessions,
+        },
       };
     }
 

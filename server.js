@@ -43,10 +43,10 @@ const PORT = Number(process.env.PORT || 5500);
 const CANVAS_DOMAIN = process.env.CANVAS_DOMAIN || 'usc.instructure.com';
 const CANVAS_TOKEN = process.env.CANVAS_TOKEN || '';
 const MAX_OVERDUE_DAYS = Number(process.env.MAX_OVERDUE_DAYS || 30);
-const OPENCLAUDE_BASE_URL = (process.env.OPENCLAUDE_BASE_URL || 'http://127.0.0.1:1337/v1').replace(/\/+$/, 'https://generativelanguage.googleapis.com/v1beta/openai');
-const OPENCLAUDE_MODEL = process.env.OPENCLAUDE_MODEL || 'Gemini 2.5 Flash-Lite';
-const OPENCLAUDE_API_KEY = process.env.OPENCLAUDE_API_KEY || 'AIzaSyAOm2lUs2AqtcMi8zoQTWuvv6NGAL_YwXo';
-const AI_AUTOSTART_OLLAMA = process.env.AI_AUTOSTART_OLLAMA === '0';
+const OPENCLAUDE_BASE_URL = (process.env.OPENCLAUDE_BASE_URL || 'http://127.0.0.1:1337/v1').replace(/\/+$/, '');
+const OPENCLAUDE_MODEL = process.env.OPENCLAUDE_MODEL || 'qwen2.5-coder:7b';
+const OPENCLAUDE_API_KEY = process.env.OPENCLAUDE_API_KEY || '';
+const AI_AUTOSTART_OLLAMA = process.env.AI_AUTOSTART_OLLAMA !== '0';
 const AI_MODEL_KEEP_ALIVE = process.env.AI_MODEL_KEEP_ALIVE || '0m';
 const CORS_ALLOW_ORIGIN = process.env.CORS_ALLOW_ORIGIN || 'https://betterclss.onrender.com';
 
@@ -166,6 +166,46 @@ async function ensureOllamaRunning() {
   await ollamaBootPromise;
 }
 
+function summarizeDashboardContext(context) {
+  const safe = context && typeof context === 'object' ? context : {};
+  const totals = safe.totals && typeof safe.totals === 'object' ? safe.totals : {};
+
+  function listToLines(arr, mapper) {
+    if (!Array.isArray(arr) || !arr.length) return 'none';
+    return arr.slice(0, 12).map(mapper).join('\n');
+  }
+
+  const dueSoon = listToLines(safe.dueSoon, (a, idx) => {
+    const title = a && a.title ? a.title : 'Untitled';
+    const subject = a && a.subject ? a.subject : 'Unknown course';
+    const due = a && a.due ? a.due : 'no due date';
+    const din = a && Number.isFinite(a.dueInDays) ? `${a.dueInDays}d` : '?d';
+    return `${idx + 1}. ${title} (${subject}) due ${due} [${din}]`;
+  });
+
+  const overdue = listToLines(safe.overdueAssignments, (a, idx) => {
+    const title = a && a.title ? a.title : 'Untitled';
+    const subject = a && a.subject ? a.subject : 'Unknown course';
+    const od = a && Number.isFinite(a.overdueByDays) ? `${a.overdueByDays}d` : '?d';
+    return `${idx + 1}. ${title} (${subject}) overdue by ${od}`;
+  });
+
+  const grades = listToLines(safe.grades, (g, idx) => {
+    const course = g && g.course ? g.course : 'Course';
+    const score = g && g.score != null ? `${Math.round(Number(g.score))}%` : '--';
+    return `${idx + 1}. ${course}: ${score}`;
+  });
+
+  return [
+    `activePage: ${safe.activePage || 'unknown'}`,
+    `canvasConnected: ${safe.canvasConnected ? 'yes' : 'no'}`,
+    `totals: pending=${Number(totals.pending || 0)}, overdue=${Number(totals.overdue || 0)}, submitted=${Number(totals.submitted || 0)}, announcements=${Number(totals.announcements || 0)}, courses=${Number(totals.courses || 0)}`,
+    `dueSoon:\n${dueSoon}`,
+    `overdue:\n${overdue}`,
+    `grades:\n${grades}`,
+  ].join('\n\n');
+}
+
 async function assistantChat(message, context = {}, history = [], callerApiKey = '') {
   await ensureOllamaRunning();
 
@@ -173,10 +213,14 @@ async function assistantChat(message, context = {}, history = [], callerApiKey =
     ? history.slice(-12).filter((m) => m && typeof m.role === 'string' && typeof m.content === 'string')
     : [];
 
+  const contextSummary = summarizeDashboardContext(context);
+
   const systemPrompt = [
     'You are BetterCLSS Assistant inside a student dashboard.',
-    'Answer briefly and practically.',
-    'Use the provided dashboard context as source-of-truth when relevant.',
+    'Answer briefly, practically, and in plain language.',
+    'Use the provided dashboard context as source-of-truth.',
+    'When user asks for priorities or planning, cite specific assignments/courses from context.',
+    'Never pretend to have context that is not provided.',
     'If context lacks detail, state that clearly and suggest the next click or sync step.',
   ].join(' ');
 
@@ -186,6 +230,7 @@ async function assistantChat(message, context = {}, history = [], callerApiKey =
     max_tokens: 700,
     messages: [
       { role: 'system', content: systemPrompt },
+      { role: 'system', content: `Dashboard summary:\n${contextSummary}` },
       { role: 'system', content: `Dashboard context JSON: ${JSON.stringify(context).slice(0, 12000)}` },
       ...safeHistory,
       { role: 'user', content: String(message || '').slice(0, 4000) },
@@ -246,6 +291,98 @@ async function assistantChat(message, context = {}, history = [], callerApiKey =
   const content = data?.choices?.[0]?.message?.content;
   if (!content) throw new Error('AI_EMPTY');
   return String(content);
+}
+
+function normalizeAiError(err) {
+  const rawMessage = String((err && err.message) || 'UNKNOWN_ASSISTANT_ERROR');
+
+  if (rawMessage === 'OLLAMA_NOT_AVAILABLE') {
+    return {
+      status: 502,
+      code: 'ollama_unavailable',
+      message: 'Local Ollama is not reachable.',
+      hint: 'Start Ollama or set OPENCLAUDE_BASE_URL to a reachable OpenAI-compatible endpoint.',
+    };
+  }
+
+  if (rawMessage === 'AI_EMPTY') {
+    return {
+      status: 502,
+      code: 'assistant_empty_response',
+      message: 'AI provider returned an empty response.',
+      hint: 'Try again or switch model/provider settings.',
+    };
+  }
+
+  if (/^AI_HTTP_\d+/.test(rawMessage)) {
+    const statusMatch = rawMessage.match(/^AI_HTTP_(\d+)/);
+    const providerStatus = statusMatch ? Number(statusMatch[1]) : 502;
+    const detail = rawMessage.includes(':') ? rawMessage.slice(rawMessage.indexOf(':') + 1).trim() : '';
+    const detailSingleLine = detail.replace(/\s+/g, ' ').slice(0, 300);
+    const detailLower = detailSingleLine.toLowerCase();
+
+    const badKeySignals = [
+      'api_key_invalid',
+      'api key invalid',
+      'api key expired',
+      'invalid api key',
+      'key expired',
+      'expired key',
+      'invalid authentication',
+      'invalid_api_key',
+    ];
+
+    const hasBadKeySignal = badKeySignals.some((s) => detailLower.includes(s));
+
+    if (providerStatus === 401 || providerStatus === 403 || hasBadKeySignal) {
+      return {
+        status: 401,
+        code: 'ai_auth_error',
+        message: 'AI API key is invalid or expired.',
+        hint: 'Set a fresh key in assistant settings (gear icon) or update OPENCLAUDE_API_KEY in backend environment variables.',
+        providerStatus,
+        detail: detailSingleLine || undefined,
+      };
+    }
+
+    if (providerStatus === 429) {
+      return {
+        status: 429,
+        code: 'ai_rate_limited',
+        message: 'AI provider rate limit hit.',
+        hint: 'Wait and retry, or switch to a provider/model with higher quota.',
+        providerStatus,
+        detail: detailSingleLine || undefined,
+      };
+    }
+
+    if (providerStatus === 404) {
+      return {
+        status: 502,
+        code: 'ai_endpoint_not_found',
+        message: 'AI endpoint was not found.',
+        hint: 'Verify OPENCLAUDE_BASE_URL includes the correct /v1 path for your provider.',
+        providerStatus,
+        detail: detailSingleLine || undefined,
+      };
+    }
+
+    return {
+      status: 502,
+      code: 'ai_provider_http_error',
+      message: `AI provider returned HTTP ${providerStatus}.`,
+      hint: 'Check provider health, model name, backend URL, and deployed environment variables.',
+      providerStatus,
+      detail: detailSingleLine || undefined,
+    };
+  }
+
+  return {
+    status: 502,
+    code: 'assistant_error',
+    message: rawMessage,
+    hint: 'Check backend logs and AI provider configuration.',
+  };
 }
 
 function normalizeCanvasDomain(value) {
@@ -509,7 +646,15 @@ async function handleApi(req, res) {
         json(res, 400, { error: err.message.toLowerCase() });
         return;
       }
-      json(res, 502, { error: 'assistant_error', message: err.message });
+      const normalized = normalizeAiError(err);
+      json(res, normalized.status, {
+        error: 'assistant_error',
+        code: normalized.code,
+        message: normalized.message,
+        hint: normalized.hint,
+        providerStatus: normalized.providerStatus,
+        detail: normalized.detail,
+      });
       return;
     }
   }
