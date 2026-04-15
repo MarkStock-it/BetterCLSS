@@ -767,11 +767,19 @@
 
     function renderSidebar() {
       const due = allAssignments().filter(a => !a.done).slice(0, 6);
-      document.getElementById('sidebarDue').innerHTML = due.length ? due.map(a => { const chip = dueChip(dueDays(a.due)); return '<div class="mini-item"><div class="priority-dot ' + a.priority + '"></div><div class="mini-item-info"><div class="mini-item-title">' + esc(a.title) + '</div><div class="mini-item-due">' + chip.text + ' · ' + esc(a.subject) + '</div></div></div>'; }).join('') : '<div style="font-size:0.75rem;color:var(--text-muted)">Nothing pending</div>';
-      document.getElementById('sidebarCourses').innerHTML = APP.canvas.courses.length ? APP.canvas.courses.map(c => '<div style="font-size:0.78rem;color:var(--text-dim);padding:4px 0">' + esc(c.name) + '</div>').join('') : '<div style="font-size:0.75rem;color:var(--text-muted)">Not connected</div>';
+      const sidebarDue = document.getElementById('sidebarDue');
+      if (sidebarDue) {
+        sidebarDue.innerHTML = due.length ? due.map(a => { const chip = dueChip(dueDays(a.due)); return '<div class="mini-item"><div class="priority-dot ' + a.priority + '"></div><div class="mini-item-info"><div class="mini-item-title">' + esc(a.title) + '</div><div class="mini-item-due">' + chip.text + ' · ' + esc(a.subject) + '</div></div></div>'; }).join('') : '<div style="font-size:0.75rem;color:var(--text-muted)">Nothing pending</div>';
+      }
+      const sidebarCourses = document.getElementById('sidebarCourses');
+      if (sidebarCourses) {
+        sidebarCourses.innerHTML = APP.canvas.courses.length ? APP.canvas.courses.map(c => '<div style="font-size:0.78rem;color:var(--text-dim);padding:4px 0">' + esc(c.name) + '</div>').join('') : '<div style="font-size:0.75rem;color:var(--text-muted)">Not connected</div>';
+      }
       const pct = Math.min(100, Math.round((APP.local.studyHours / APP.local.studyGoal) * 100));
-      document.getElementById('studyVal').textContent = APP.local.studyHours.toFixed(1) + ' / ' + APP.local.studyGoal + 'h';
-      document.getElementById('studyFill').style.width = pct + '%';
+      const studyVal = document.getElementById('studyVal');
+      if (studyVal) studyVal.textContent = APP.local.studyHours.toFixed(1) + ' / ' + APP.local.studyGoal + 'h';
+      const studyFill = document.getElementById('studyFill');
+      if (studyFill) studyFill.style.width = pct + '%';
     }
 
     function dashboardFeed(items) {
