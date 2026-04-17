@@ -1,7 +1,7 @@
 /* global importScripts, firebase */
 
 const CACHE_NAME = 'betterclss-v1';
-const OFFLINE_URLS = ['/','/index.html','/StudentHub.html','/styles.css','/canvas-api.js','/config.js','/push-notifications.js'];
+const OFFLINE_URLS = ['./','./index.html','./StudentHub.html','./styles.css','./canvas-api.js','./config.js','./push-notifications.js'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -26,7 +26,7 @@ self.addEventListener('fetch', (event) => {
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned)).catch(() => {});
         return networkResponse;
       });
-    }).catch(() => caches.match('/StudentHub.html'))
+    }).catch(() => caches.match('./StudentHub.html'))
   );
 });
 
@@ -48,10 +48,10 @@ messaging.onBackgroundMessage((payload) => {
   const title = payload?.notification?.title || payload?.data?.title || 'BetterCLSS';
   const options = {
     body: payload?.notification?.body || payload?.data?.body || 'You have a new update.',
-    icon: '/icons/icon-192.svg',
-    badge: '/icons/icon-192.svg',
+    icon: 'icons/icon-192.svg',
+    badge: 'icons/icon-192.svg',
     data: {
-      url: payload?.data?.url || '/StudentHub.html'
+      url: payload?.data?.url || './StudentHub.html'
     }
   };
 
@@ -69,10 +69,10 @@ self.addEventListener('push', (event) => {
   const title = payload?.notification?.title || payload?.data?.title || 'BetterCLSS';
   const options = {
     body: payload?.notification?.body || payload?.data?.body || 'You have a new update.',
-    icon: '/icons/icon-192.svg',
-    badge: '/icons/icon-192.svg',
+    icon: 'icons/icon-192.svg',
+    badge: 'icons/icon-192.svg',
     data: {
-      url: payload?.data?.url || '/StudentHub.html'
+      url: payload?.data?.url || './StudentHub.html'
     }
   };
 
@@ -81,7 +81,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification?.data?.url || '/StudentHub.html';
+  const targetUrl = event.notification?.data?.url || './StudentHub.html';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {

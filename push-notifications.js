@@ -18,7 +18,7 @@ async function setupPushNotifications() {
   }
 
   try {
-    const swRegistration = await navigator.serviceWorker.register('/service-worker.js');
+    const swRegistration = await navigator.serviceWorker.register('./service-worker.js');
     console.log('Service worker registered:', swRegistration.scope);
 
     const permission = await Notification.requestPermission();
@@ -52,9 +52,9 @@ async function setupPushNotifications() {
       const title = payload?.notification?.title || payload?.data?.title || 'BetterCLSS';
       const options = {
         body: payload?.notification?.body || payload?.data?.body || 'You have a new update.',
-        icon: '/icons/icon-192.svg',
-        badge: '/icons/icon-192.svg',
-        data: { url: payload?.data?.url || '/StudentHub.html' }
+        icon: 'icons/icon-192.svg',
+        badge: 'icons/icon-192.svg',
+        data: { url: payload?.data?.url || './StudentHub.html' }
       };
 
       if (Notification.permission === 'granted') {
