@@ -2,9 +2,13 @@
   "name": "betterclss",
   "version": "1.0.0",
   "private": true,
-  "description": "BetterCLSS static web app",
+  "description": "BetterCLSS backend with Express + Firebase Cloud Messaging",
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "firebase-admin": "^12.7.0"
   }
 }

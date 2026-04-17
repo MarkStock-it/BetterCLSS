@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0d1117">
   <title>BetterCLSS - USC Canvas</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
@@ -287,6 +290,9 @@
 
   <script src="config.js"></script>
   <script src="canvas-api.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+  <script src="push-notifications.js"></script>
   <script>
     const APP = {
       local: {
@@ -1079,6 +1085,7 @@
     function init() {
       initTheme();
       load();
+      setupPushNotifications();
       const topDate = document.getElementById('topDate');
       if (topDate) topDate.textContent = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
       document.getElementById('pomoSessions').textContent = APP.local.pomoSessions;

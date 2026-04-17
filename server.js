@@ -1,8 +1,9 @@
-const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { URL } = require('url');
 const { spawn } = require('child_process');
+const express = require('express');
+const admin = require('firebase-admin');
 
 function loadEnv() {
   const envCandidates = [
@@ -50,7 +51,10 @@ const AI_AUTOSTART_OLLAMA = process.env.AI_AUTOSTART_OLLAMA !== '0';
 const AI_MODEL_KEEP_ALIVE = process.env.AI_MODEL_KEEP_ALIVE || '0m';
 const CORS_ALLOW_ORIGIN = process.env.CORS_ALLOW_ORIGIN || 'https://betterclss.onrender.com';
 
+const FIREBASE_SERVICE_ACCOUNT_JSON = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '';
+
 let ollamaBootPromise = null;
+const fcmTokens = new Set();
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -107,6 +111,83 @@ function readJsonBody(req) {
 
     req.on('error', () => reject(new Error('BODY_READ_ERROR')));
   });
+}
+
+async function parseRequestBody(req) {
+  if (req.body && typeof req.body === 'object') return req.body;
+  return readJsonBody(req);
+}
+
+function initializeFirebaseAdmin() {
+  if (admin.apps.length) return true;
+  if (!FIREBASE_SERVICE_ACCOUNT_JSON) {
+    console.warn('FCM disabled: FIREBASE_SERVICE_ACCOUNT_JSON is missing.');
+    return false;
+  }
+
+  try {
+    const serviceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT_JSON);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+    return true;
+  } catch (err) {
+    console.error('FCM disabled: invalid FIREBASE_SERVICE_ACCOUNT_JSON.', err.message);
+    return false;
+  }
+}
+
+const fcmEnabled = initializeFirebaseAdmin();
+
+function isValidToken(value) {
+  return typeof value === 'string' && value.trim().length > 20;
+}
+
+async function sendNotificationToAllTokens(payload) {
+  const tokens = [...fcmTokens];
+  const results = {
+    success: 0,
+    failed: 0,
+    removed: 0,
+    total: tokens.length,
+  };
+
+  for (const token of tokens) {
+    try {
+      await admin.messaging().send({
+        token,
+        notification: {
+          title: payload.title,
+          body: payload.body,
+        },
+        webpush: {
+          notification: {
+            title: payload.title,
+            body: payload.body,
+            icon: '/icons/icon-192.svg',
+          },
+          fcmOptions: {
+            link: payload.url,
+          },
+          data: {
+            title: payload.title,
+            body: payload.body,
+            url: payload.url,
+          },
+        },
+      });
+      results.success += 1;
+    } catch (err) {
+      results.failed += 1;
+      const code = String(err?.code || '');
+      if (code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token') {
+        fcmTokens.delete(token);
+        results.removed += 1;
+      }
+    }
+  }
+
+  return results;
 }
 
 function isLocalOllamaBaseUrl(baseUrl) {
@@ -619,6 +700,78 @@ function serveStatic(req, res) {
 async function handleApi(req, res) {
   const reqUrl = new URL(req.url, `http://${req.headers.host}`);
 
+  if (reqUrl.pathname === '/register-token' || reqUrl.pathname === '/api/register-token') {
+    if (req.method !== 'POST') {
+      json(res, 405, { error: 'method_not_allowed' });
+      return;
+    }
+
+    try {
+      const body = await parseRequestBody(req);
+      const token = typeof body.token === 'string' ? body.token.trim() : '';
+      if (!isValidToken(token)) {
+        json(res, 400, { error: 'invalid_token' });
+        return;
+      }
+
+      fcmTokens.add(token);
+      json(res, 200, { success: true, totalTokens: fcmTokens.size });
+      return;
+    } catch (err) {
+      const known = ['INVALID_JSON', 'BODY_TOO_LARGE', 'BODY_READ_ERROR'];
+      if (known.includes(err.message)) {
+        json(res, 400, { error: err.message.toLowerCase() });
+        return;
+      }
+      json(res, 500, { error: 'token_registration_failed' });
+      return;
+    }
+  }
+
+  if (reqUrl.pathname === '/send-notification' || reqUrl.pathname === '/api/send-notification') {
+    if (req.method !== 'POST') {
+      json(res, 405, { error: 'method_not_allowed' });
+      return;
+    }
+
+    if (!fcmEnabled) {
+      json(res, 500, { error: 'fcm_not_configured', message: 'Set FIREBASE_SERVICE_ACCOUNT_JSON on the backend.' });
+      return;
+    }
+
+    if (!fcmTokens.size) {
+      json(res, 400, { error: 'no_registered_tokens' });
+      return;
+    }
+
+    try {
+      const body = await parseRequestBody(req);
+      const title = typeof body.title === 'string' && body.title.trim() ? body.title.trim() : 'BetterCLSS';
+      const messageBody = typeof body.body === 'string' && body.body.trim() ? body.body.trim() : 'You have a new update.';
+      const url = typeof body.url === 'string' && body.url.trim() ? body.url.trim() : 'https://your-frontend-url.github.io';
+
+      const result = await sendNotificationToAllTokens({
+        title,
+        body: messageBody,
+        url,
+      });
+
+      json(res, 200, {
+        success: true,
+        ...result,
+      });
+      return;
+    } catch (err) {
+      const known = ['INVALID_JSON', 'BODY_TOO_LARGE', 'BODY_READ_ERROR'];
+      if (known.includes(err.message)) {
+        json(res, 400, { error: err.message.toLowerCase() });
+        return;
+      }
+      json(res, 500, { error: 'notification_send_failed', message: err.message });
+      return;
+    }
+  }
+
   if (reqUrl.pathname === '/api/assistant/chat') {
     if (req.method !== 'POST') {
       json(res, 405, { error: 'method_not_allowed' });
@@ -626,7 +779,7 @@ async function handleApi(req, res) {
     }
 
     try {
-      const body = await readJsonBody(req);
+      const body = await parseRequestBody(req);
       const message = typeof body.message === 'string' ? body.message.trim() : '';
       const context = body.context && typeof body.context === 'object' ? body.context : {};
       const history = Array.isArray(body.history) ? body.history : [];
@@ -704,8 +857,11 @@ async function handleApi(req, res) {
   }
 }
 
-const server = http.createServer((req, res) => {
-  if (req.url.startsWith('/api/') && req.method === 'OPTIONS') {
+const app = express();
+
+app.use((req, res, next) => {
+  const isApiOptions = req.url.startsWith('/api/') || req.url === '/register-token' || req.url === '/send-notification';
+  if (isApiOptions && req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': CORS_ALLOW_ORIGIN,
       'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
@@ -716,14 +872,17 @@ const server = http.createServer((req, res) => {
     res.end();
     return;
   }
+  next();
+});
 
-  if (req.url.startsWith('/api/')) {
+app.use((req, res) => {
+  if (req.url.startsWith('/api/') || req.url === '/register-token' || req.url === '/send-notification') {
     handleApi(req, res);
     return;
   }
   serveStatic(req, res);
 });
 
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`BetterCLSS running on http://localhost:${PORT}`);
 });

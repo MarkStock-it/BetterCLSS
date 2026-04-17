@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="BetterCLSS icon">
+  <rect width="512" height="512" rx="88" fill="#0d1117"/>
+  <path d="M112 256L256 148L400 256L256 364Z" fill="#4ade80"/>
+  <path d="M164 276V348C217 396 295 396 348 348V276" fill="none" stroke="#f8fafc" stroke-width="26" stroke-linecap="round"/>
+</svg>
