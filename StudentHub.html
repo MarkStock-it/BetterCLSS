@@ -4,9 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#0d1117">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="BetterCLSS">
   <title>BetterCLSS - USC Canvas</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
@@ -285,6 +289,7 @@
             <button class="btn btn-primary" id="installAppBtn" onclick="installApp()">Install BetterCLSS</button>
             <span id="installStatusText" style="font-size:0.78rem;color:var(--text-muted)">Checking install availability...</span>
           </div>
+          <div id="iosInstallHint" style="display:none;margin-top:10px;font-size:0.78rem;color:var(--text-dim)">On iPhone Safari, tap Share then Add to Home Screen.</div>
         </div>
       </div>
     </main>
