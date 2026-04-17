@@ -411,9 +411,18 @@
       updateInstallButtonState();
     }
 
+    function isIosSafari() {
+      const ua = navigator.userAgent || '';
+      const isIOS = /iPhone|iPad|iPod/i.test(ua);
+      const isWebKit = /WebKit/i.test(ua);
+      const isOtherIOSBrowser = /CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
+      return isIOS && isWebKit && !isOtherIOSBrowser;
+    }
+
     function updateInstallButtonState() {
       const installBtn = document.getElementById('installAppBtn');
       const status = document.getElementById('installStatusText');
+      const iosHint = document.getElementById('iosInstallHint');
       if (!installBtn) return;
 
       const inStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
@@ -421,8 +430,19 @@
         installBtn.disabled = true;
         installBtn.textContent = 'Installed';
         if (status) status.textContent = 'App is already installed on this device.';
+        if (iosHint) iosHint.style.display = 'none';
         return;
       }
+
+      if (isIosSafari()) {
+        installBtn.disabled = true;
+        installBtn.textContent = 'Install BetterCLSS';
+        if (status) status.textContent = 'Use Safari Share menu to install.';
+        if (iosHint) iosHint.style.display = 'block';
+        return;
+      }
+
+      if (iosHint) iosHint.style.display = 'none';
 
       if (deferredInstallPrompt) {
         installBtn.disabled = false;
