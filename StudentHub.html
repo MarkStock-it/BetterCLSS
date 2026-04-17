@@ -291,6 +291,23 @@
           </div>
           <div id="iosInstallHint" style="display:none;margin-top:10px;font-size:0.78rem;color:var(--text-dim)">On iPhone Safari, tap Share then Add to Home Screen.</div>
         </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-title" style="margin-bottom:14px">Accent Color</div>
+          <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px">Customize the highlight color used across the app UI.</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+            <input type="color" id="accentColorPicker" value="#6080ff" oninput="setAccentColor(this.value, false)" style="width:42px;height:34px;padding:0;border:none;background:transparent;cursor:pointer">
+            <span id="accentHexValue" style="font-size:0.78rem;color:var(--text-muted)">#6080ff</span>
+            <button class="btn btn-secondary btn-sm" onclick="resetAccentColor()">Reset</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <button data-accent="#6080ff" onclick="setAccentColor('#6080ff')" title="Blue" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#6080ff;cursor:pointer"></button>
+            <button data-accent="#3dd9a4" onclick="setAccentColor('#3dd9a4')" title="Mint" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#3dd9a4;cursor:pointer"></button>
+            <button data-accent="#ffb84f" onclick="setAccentColor('#ffb84f')" title="Amber" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#ffb84f;cursor:pointer"></button>
+            <button data-accent="#ff4f5e" onclick="setAccentColor('#ff4f5e')" title="Red" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#ff4f5e;cursor:pointer"></button>
+            <button data-accent="#b06fff" onclick="setAccentColor('#b06fff')" title="Purple" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#b06fff;cursor:pointer"></button>
+            <button data-accent="#06b6d4" onclick="setAccentColor('#06b6d4')" title="Cyan" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#06b6d4;cursor:pointer"></button>
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -367,6 +384,8 @@
     let pomoRunning = false;
     let deferredInstallPrompt = null;
     let sidebarCoursesCollapsed = false;
+    const ACCENT_STORAGE_KEY = 'bclss_accent';
+    const DEFAULT_ACCENT = '#6080ff';
 
     function save() { localStorage.setItem('bclss_local', JSON.stringify(APP.local)); }
     function load() { try { const raw = localStorage.getItem('bclss_local'); if (raw) APP.local = { ...APP.local, ...JSON.parse(raw) }; } catch (_) {} }
@@ -392,6 +411,65 @@
       const saved = localStorage.getItem('bclss_theme') || 'dark';
       document.documentElement.setAttribute('data-theme', saved);
       setThemeIcon(saved);
+    }
+    function normalizeAccent(value) {
+      const v = String(value || '').trim();
+      if (/^#[0-9a-fA-F]{6}$/.test(v)) return v.toLowerCase();
+      if (/^#[0-9a-fA-F]{3}$/.test(v)) return ('#' + v[1] + v[1] + v[2] + v[2] + v[3] + v[3]).toLowerCase();
+      return null;
+    }
+
+    function shadeColor(hex, percent) {
+      const clean = normalizeAccent(hex) || DEFAULT_ACCENT;
+      const num = parseInt(clean.slice(1), 16);
+      const amt = Math.round(2.55 * percent);
+      const r = Math.min(255, Math.max(0, (num >> 16) + amt));
+      const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amt));
+      const b = Math.min(255, Math.max(0, (num & 0x0000FF) + amt));
+      return '#' + (0x1000000 + (r * 0x10000) + (g * 0x100) + b).toString(16).slice(1);
+    }
+
+    function syncAccentControls() {
+      const current = normalizeAccent(localStorage.getItem(ACCENT_STORAGE_KEY)) || DEFAULT_ACCENT;
+      const picker = document.getElementById('accentColorPicker');
+      const hex = document.getElementById('accentHexValue');
+      if (picker) picker.value = current;
+      if (hex) hex.textContent = current;
+
+      document.querySelectorAll('[data-accent]').forEach((btn) => {
+        const swatch = normalizeAccent(btn.getAttribute('data-accent'));
+        btn.style.borderColor = swatch === current ? 'var(--text)' : 'var(--border)';
+      });
+    }
+
+    function applyAccentColor(accent) {
+      const root = document.documentElement;
+      const clean = normalizeAccent(accent) || DEFAULT_ACCENT;
+      root.style.setProperty('--accent', clean);
+      root.style.setProperty('--accent-hover', shadeColor(clean, -12));
+    }
+
+    function setAccentColor(accent, showToast = true) {
+      const clean = normalizeAccent(accent);
+      if (!clean) return;
+      localStorage.setItem(ACCENT_STORAGE_KEY, clean);
+      applyAccentColor(clean);
+      syncAccentControls();
+      if (showToast) toast('Accent updated', 'success');
+    }
+
+    function resetAccentColor() {
+      localStorage.removeItem(ACCENT_STORAGE_KEY);
+      applyAccentColor(DEFAULT_ACCENT);
+      syncAccentControls();
+      toast('Accent reset', 'info');
+    }
+
+    function initAccentTheme() {
+      const saved = normalizeAccent(localStorage.getItem(ACCENT_STORAGE_KEY)) || DEFAULT_ACCENT;
+      applyAccentColor(saved);
+      localStorage.setItem(ACCENT_STORAGE_KEY, saved);
+      syncAccentControls();
     }
     async function installApp() {
       if (!deferredInstallPrompt) {
@@ -866,7 +944,10 @@
       if (page === 'notes') renderNotes();
       if (page === 'resources') renderLinks();
       if (page === 'pomodoro') updatePomoDisplay();
-      if (page === 'settings') updateInstallButtonState();
+      if (page === 'settings') {
+        updateInstallButtonState();
+        syncAccentControls();
+      }
     }
 
     function renderAll() {
@@ -1204,6 +1285,7 @@
 
     function init() {
       initTheme();
+      initAccentTheme();
       load();
       sidebarCoursesCollapsed = localStorage.getItem('bclss_courses_collapsed') === '1';
       setSidebarCoursesCollapsed(sidebarCoursesCollapsed);
