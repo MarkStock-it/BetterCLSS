@@ -386,6 +386,7 @@
     let sidebarCoursesCollapsed = false;
     const ACCENT_STORAGE_KEY = 'bclss_accent';
     const DEFAULT_ACCENT = '#6080ff';
+    const MOBILE_PAGE_ORDER = ['dashboard', 'assignments', 'calendar', 'grades', 'announcements', 'notes', 'pomodoro', 'resources', 'settings'];
 
     function save() { localStorage.setItem('bclss_local', JSON.stringify(APP.local)); }
     function load() { try { const raw = localStorage.getItem('bclss_local'); if (raw) APP.local = { ...APP.local, ...JSON.parse(raw) }; } catch (_) {} }
@@ -932,7 +933,27 @@
       document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
       document.getElementById('page-' + page).classList.add('active');
       if (tab) tab.classList.add('active');
+      document.querySelectorAll('[data-page="' + page + '"]').forEach((navTab) => navTab.classList.add('active'));
+
+      const mobileTab = document.querySelector('.nav-tabs [data-page="' + page + '"]');
+      if (mobileTab && mobileTab.scrollIntoView) {
+        mobileTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+
       renderPage(page);
+    }
+
+    function swipeToPage(direction) {
+      const activeId = ((document.querySelector('.page.active') || {}).id || 'page-dashboard').replace('page-', '');
+      const currentIndex = MOBILE_PAGE_ORDER.indexOf(activeId);
+      if (currentIndex === -1) return;
+
+      const nextIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
+      if (nextIndex < 0 || nextIndex >= MOBILE_PAGE_ORDER.length) return;
+
+      const nextPage = MOBILE_PAGE_ORDER[nextIndex];
+      const nextTab = document.querySelector('[data-page="' + nextPage + '"]');
+      switchPage(nextPage, nextTab || undefined);
     }
 
     function renderPage(page) {
@@ -1283,6 +1304,44 @@
       updatePomoDisplay();
     }
 
+    function setupMobileTouchGuards() {
+      if (window.innerWidth > 900) return;
+
+      const mainContent = document.querySelector('.main-content');
+      if (!mainContent) return;
+
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let touchTarget = null;
+
+      mainContent.addEventListener('touchstart', (event) => {
+        if (!event.touches || event.touches.length !== 1) return;
+        touchStartX = event.touches[0].clientX;
+        touchStartY = event.touches[0].clientY;
+        touchTarget = event.target;
+      }, { passive: true });
+
+      mainContent.addEventListener('touchend', (event) => {
+        if (!touchTarget || !event.changedTouches || event.changedTouches.length !== 1) return;
+
+        if (touchTarget.closest && touchTarget.closest('input, textarea, select, button, a, .assistant-shell, .modal-overlay, .nav-tabs, .cal-nav-btns, .study-btns, .pomo-controls')) {
+          touchTarget = null;
+          return;
+        }
+
+        const deltaX = event.changedTouches[0].clientX - touchStartX;
+        const deltaY = event.changedTouches[0].clientY - touchStartY;
+
+        touchTarget = null;
+
+        if (Math.abs(deltaY) > 60) return;
+        if (Math.abs(deltaX) < 70) return;
+
+        if (deltaX < 0) swipeToPage('right');
+        if (deltaX > 0) swipeToPage('left');
+      }, { passive: true });
+    }
+
     function init() {
       initTheme();
       initAccentTheme();
@@ -1291,6 +1350,7 @@
       setSidebarCoursesCollapsed(sidebarCoursesCollapsed);
       setupPushNotifications();
       setupInstallPrompt();
+      setupMobileTouchGuards();
       const topDate = document.getElementById('topDate');
       if (topDate) topDate.textContent = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
       document.getElementById('pomoSessions').textContent = APP.local.pomoSessions;
