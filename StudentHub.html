@@ -114,6 +114,7 @@
           <div class="status-dot" id="statusDot"></div>
           <span id="statusLabel">Connect Canvas</span>
         </div>
+        <button class="theme-toggle" id="installAppBtn" onclick="installApp()" title="Install BetterCLSS" style="display:none">⇩</button>
         <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark mode">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="themeIcon"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
         </button>
@@ -338,6 +339,7 @@
     let pomoSecs = 25 * 60;
     let pomoMode = 'focus';
     let pomoRunning = false;
+    let deferredInstallPrompt = null;
 
     function save() { localStorage.setItem('bclss_local', JSON.stringify(APP.local)); }
     function load() { try { const raw = localStorage.getItem('bclss_local'); if (raw) APP.local = { ...APP.local, ...JSON.parse(raw) }; } catch (_) {} }
@@ -363,6 +365,39 @@
       const saved = localStorage.getItem('bclss_theme') || 'dark';
       document.documentElement.setAttribute('data-theme', saved);
       setThemeIcon(saved);
+    }
+    async function installApp() {
+      if (!deferredInstallPrompt) {
+        toast('Install prompt is not ready yet.', 'info');
+        return;
+      }
+
+      deferredInstallPrompt.prompt();
+      const result = await deferredInstallPrompt.userChoice;
+      if (result && result.outcome === 'accepted') {
+        toast('BetterCLSS installed.', 'success');
+      } else {
+        toast('Install canceled.', 'warn');
+      }
+
+      deferredInstallPrompt = null;
+      const installBtn = document.getElementById('installAppBtn');
+      if (installBtn) installBtn.style.display = 'none';
+    }
+
+    function setupInstallPrompt() {
+      window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        const installBtn = document.getElementById('installAppBtn');
+        if (installBtn) installBtn.style.display = 'inline-flex';
+      });
+
+      window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        const installBtn = document.getElementById('installAppBtn');
+        if (installBtn) installBtn.style.display = 'none';
+      });
     }
     function getAiApiKey() { return localStorage.getItem('bclss_ai_key') || ''; }
     function saveAiApiKey() { const v = (document.getElementById('aiKeyInput') || {}).value || ''; if (v.trim()) { localStorage.setItem('bclss_ai_key', v.trim()); } else { localStorage.removeItem('bclss_ai_key'); } }
@@ -1086,6 +1121,7 @@
       initTheme();
       load();
       setupPushNotifications();
+      setupInstallPrompt();
       const topDate = document.getElementById('topDate');
       if (topDate) topDate.textContent = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
       document.getElementById('pomoSessions').textContent = APP.local.pomoSessions;
