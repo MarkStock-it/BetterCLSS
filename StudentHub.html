@@ -30,6 +30,7 @@
     <div class="nav-tab" data-page="notes" onclick="switchPage('notes', this)">Notes</div>
     <div class="nav-tab" data-page="pomodoro" onclick="switchPage('pomodoro', this)">Timer</div>
     <div class="nav-tab" data-page="resources" onclick="switchPage('resources', this)">Links</div>
+    <div class="nav-tab" data-page="settings" onclick="switchPage('settings', this)">Settings</div>
   </nav>
 
   <div class="layout">
@@ -81,6 +82,10 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           <span>Links</span>
         </div>
+        <div class="nav-tab" data-page="settings" onclick="switchPage('settings', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Settings</span>
+        </div>
       </nav>
 
       <div class="sidenav-sep"></div>
@@ -104,8 +109,13 @@
       </div>
 
       <div>
-        <div class="sidebar-label">Courses</div>
-        <div id="sidebarCourses"><div style="font-size:0.75rem;color:var(--text-muted)">Not connected</div></div>
+        <button class="sidebar-courses-toggle" id="sidebarCoursesToggle" onclick="toggleSidebarCourses()">
+          <span class="sidebar-label sidebarlabelcourses" id="sidebarlabelcourses">Courses</span>
+          <span class="sidebar-caret" id="sidebarCoursesCaret">▾</span>
+        </button>
+        <div id="sidebarCoursesWrap" class="sidebar-courses-wrap">
+          <div id="sidebarCourses"><div style="font-size:0.75rem;color:var(--text-muted)">Not connected</div></div>
+        </div>
       </div>
 
       <!-- Sidebar bottom controls -->
@@ -114,7 +124,6 @@
           <div class="status-dot" id="statusDot"></div>
           <span id="statusLabel">Connect Canvas</span>
         </div>
-        <button class="theme-toggle" id="installAppBtn" onclick="installApp()" title="Install BetterCLSS" style="display:none">⇩</button>
         <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark mode">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="themeIcon"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
         </button>
@@ -266,6 +275,18 @@
         <div class="section-header"><div class="section-title">Quick Links</div><button class="btn btn-primary" onclick="openAddLink()">+ Add Link</button></div>
         <div class="links-grid" id="linksGrid"></div>
       </div>
+
+      <div class="page" id="page-settings">
+        <div class="section-header"><div class="section-title">Settings</div></div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">App Install</div>
+          <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px">Install BetterCLSS as an app when your browser allows it.</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary" id="installAppBtn" onclick="installApp()">Install BetterCLSS</button>
+            <span id="installStatusText" style="font-size:0.78rem;color:var(--text-muted)">Checking install availability...</span>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -340,6 +361,7 @@
     let pomoMode = 'focus';
     let pomoRunning = false;
     let deferredInstallPrompt = null;
+    let sidebarCoursesCollapsed = false;
 
     function save() { localStorage.setItem('bclss_local', JSON.stringify(APP.local)); }
     function load() { try { const raw = localStorage.getItem('bclss_local'); if (raw) APP.local = { ...APP.local, ...JSON.parse(raw) }; } catch (_) {} }
@@ -368,7 +390,7 @@
     }
     async function installApp() {
       if (!deferredInstallPrompt) {
-        toast('Install prompt is not ready yet.', 'info');
+        toast('Install is not available yet on this browser/page.', 'info');
         return;
       }
 
@@ -381,23 +403,60 @@
       }
 
       deferredInstallPrompt = null;
+      updateInstallButtonState();
+    }
+
+    function updateInstallButtonState() {
       const installBtn = document.getElementById('installAppBtn');
-      if (installBtn) installBtn.style.display = 'none';
+      const status = document.getElementById('installStatusText');
+      if (!installBtn) return;
+
+      const inStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      if (inStandalone) {
+        installBtn.disabled = true;
+        installBtn.textContent = 'Installed';
+        if (status) status.textContent = 'App is already installed on this device.';
+        return;
+      }
+
+      if (deferredInstallPrompt) {
+        installBtn.disabled = false;
+        installBtn.textContent = 'Install BetterCLSS';
+        if (status) status.textContent = 'Install is ready.';
+      } else {
+        installBtn.disabled = true;
+        installBtn.textContent = 'Install BetterCLSS';
+        if (status) status.textContent = 'Install prompt not available yet. Use HTTPS and refresh once.';
+      }
+    }
+
+    function setSidebarCoursesCollapsed(collapsed) {
+      sidebarCoursesCollapsed = !!collapsed;
+      localStorage.setItem('bclss_courses_collapsed', sidebarCoursesCollapsed ? '1' : '0');
+
+      const wrap = document.getElementById('sidebarCoursesWrap');
+      const caret = document.getElementById('sidebarCoursesCaret');
+      if (wrap) wrap.style.display = sidebarCoursesCollapsed ? 'none' : '';
+      if (caret) caret.textContent = sidebarCoursesCollapsed ? '▸' : '▾';
+    }
+
+    function toggleSidebarCourses() {
+      setSidebarCoursesCollapsed(!sidebarCoursesCollapsed);
     }
 
     function setupInstallPrompt() {
       window.addEventListener('beforeinstallprompt', (event) => {
         event.preventDefault();
         deferredInstallPrompt = event;
-        const installBtn = document.getElementById('installAppBtn');
-        if (installBtn) installBtn.style.display = 'inline-flex';
+        updateInstallButtonState();
       });
 
       window.addEventListener('appinstalled', () => {
         deferredInstallPrompt = null;
-        const installBtn = document.getElementById('installAppBtn');
-        if (installBtn) installBtn.style.display = 'none';
+        updateInstallButtonState();
       });
+
+      updateInstallButtonState();
     }
     function getAiApiKey() { return localStorage.getItem('bclss_ai_key') || ''; }
     function saveAiApiKey() { const v = (document.getElementById('aiKeyInput') || {}).value || ''; if (v.trim()) { localStorage.setItem('bclss_ai_key', v.trim()); } else { localStorage.removeItem('bclss_ai_key'); } }
@@ -782,6 +841,7 @@
       if (page === 'notes') renderNotes();
       if (page === 'resources') renderLinks();
       if (page === 'pomodoro') updatePomoDisplay();
+      if (page === 'settings') updateInstallButtonState();
     }
 
     function renderAll() {
@@ -1120,6 +1180,8 @@
     function init() {
       initTheme();
       load();
+      sidebarCoursesCollapsed = localStorage.getItem('bclss_courses_collapsed') === '1';
+      setSidebarCoursesCollapsed(sidebarCoursesCollapsed);
       setupPushNotifications();
       setupInstallPrompt();
       const topDate = document.getElementById('topDate');

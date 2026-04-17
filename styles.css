@@ -1093,6 +1093,40 @@ body {
   padding: 0 10px;
 }
 
+.sidebar-courses-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.sidebar-courses-toggle:hover {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+
+.sidebar-courses-toggle .sidebar-label {
+  margin-bottom: 0;
+  padding: 0;
+}
+
+.sidebar-caret {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.sidebar-courses-wrap {
+  margin-top: 6px;
+  padding: 0 2px;
+}
+
 .sidebar > div {
   display: flex;
   flex-direction: column;
