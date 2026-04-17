@@ -1644,7 +1644,28 @@ input[type="password"] { letter-spacing: 0.1em; }
   .topbar { padding: 0 14px; }
   .topbar-center { display: none; }
   .stats-row { grid-template-columns: 1fr 1fr; }
-  .assistant-shell { right: 12px; bottom: 12px; }
-  .assistant-panel { height: min(62vh, 460px); }
+  .assistant-shell {
+    left: 12px;
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    align-items: stretch;
+  }
+  .assistant-toggle { align-self: flex-end; }
+  .assistant-panel {
+    width: 100%;
+    height: min(68dvh, 520px);
+  }
+
+  /* iOS zooms focused inputs under 16px; keep form fields at 16px on phones. */
+  input[type="text"],
+  input[type="date"],
+  input[type="password"],
+  input[type="url"],
+  textarea,
+  select,
+  .assistant-input-row input {
+    font-size: 16px;
+  }
+
   .nav-tabs .nav-tab { padding: 0 10px; font-size: 0.77rem; }
 }
