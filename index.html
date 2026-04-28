@@ -257,12 +257,21 @@
               <div class="study-preset-row" id="presetRow"></div>
 
               <div class="study-phase-segment" id="studyPhaseSegment">
-                <button type="button" class="phase-chip" data-phase="work" onclick="setStudyPhase('work')">🎯 Work</button>
-                <button type="button" class="phase-chip" data-phase="break" onclick="setStudyPhase('break')">☕ Break</button>
-                <button type="button" class="phase-chip" data-phase="long" onclick="setStudyPhase('long')">🌙 Long Break</button>
+                <button type="button" class="phase-chip" data-phase="work" onclick="setStudyPhase('work')">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                  Work
+                </button>
+                <button type="button" class="phase-chip" data-phase="break" onclick="setStudyPhase('break')">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg>
+                  Break
+                </button>
+                <button type="button" class="phase-chip" data-phase="long" onclick="setStudyPhase('long')">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                  Long Break
+                </button>
               </div>
 
-              <div class="study-session-type" id="studySessionType">🎯 Work</div>
+              <div class="study-session-type" id="studySessionType"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline;vertical-align:middle;margin-right:4px"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>Work</div>
 
               <div class="study-ring-wrap" id="studyTimerWrap">
                 <svg class="study-ring" viewBox="0 0 240 240" aria-hidden="true">
@@ -285,9 +294,27 @@
               </div>
 
               <div class="study-interval-row">
-                <label>Work (min)<input type="number" id="workInterval" min="10" max="180" value="25"></label>
-                <label>Break (min)<input type="number" id="breakInterval" min="3" max="60" value="5"></label>
-                <label>Long (min)<input type="number" id="longBreakInterval" min="10" max="90" value="15"></label>
+                <label class="study-interval-item">
+                  <span class="study-interval-head">
+                    <span class="study-interval-label">Work</span>
+                    <span class="study-interval-value" id="workIntervalValue">25 min</span>
+                  </span>
+                  <input type="range" id="workInterval" min="10" max="180" step="1" value="25" aria-label="Work minutes">
+                </label>
+                <label class="study-interval-item">
+                  <span class="study-interval-head">
+                    <span class="study-interval-label">Break</span>
+                    <span class="study-interval-value" id="breakIntervalValue">5 min</span>
+                  </span>
+                  <input type="range" id="breakInterval" min="3" max="60" step="1" value="5" aria-label="Break minutes">
+                </label>
+                <label class="study-interval-item">
+                  <span class="study-interval-head">
+                    <span class="study-interval-label">Long Break</span>
+                    <span class="study-interval-value" id="longBreakIntervalValue">15 min</span>
+                  </span>
+                  <input type="range" id="longBreakInterval" min="10" max="90" step="1" value="15" aria-label="Long break minutes">
+                </label>
               </div>
             </section>
 
@@ -303,7 +330,7 @@
               </div>
 
               <div class="study-toolbar" id="studyToolbar">
-                <button class="toolbar-btn" onclick="formatStudyNote('bold')" title="Bold">🅱️</button>
+                <button class="toolbar-btn" onclick="formatStudyNote('bold')" title="Bold"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg></button>
                 <button class="toolbar-btn" onclick="formatStudyNote('italic')" title="Italic">𝘐</button>
                 <button class="toolbar-btn" onclick="formatStudyNote('h2')" title="Header">H2</button>
                 <button class="toolbar-btn" onclick="formatStudyNote('ul')" title="Bullet List">• List</button>
@@ -325,11 +352,41 @@
             <section class="card study-card study-ambient-card" data-stagger="2">
               <div class="study-section-head"><div class="card-title">Ambient + Tasks</div></div>
 
+              <button class="ambient-collapse-header" id="ambientCollapseHeader" onclick="toggleAmbientPanel()" aria-expanded="false" aria-controls="ambientCardRow">
+                <span class="ambient-collapse-left">
+                  <svg class="ambient-collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                  <span class="ambient-collapse-labels">
+                    <span class="ambient-collapse-title">Ambience</span>
+                    <span class="ambient-collapse-subtitle" id="ambientCollapseSubtitle">Off</span>
+                  </span>
+                </span>
+                <svg class="ambient-chevron" id="ambientChevron" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
               <div class="ambient-card-row" id="ambientCardRow">
-                <button class="ambient-card" data-mode="white" onclick="setAmbientMode('white')">🎵 White Noise</button>
-                <button class="ambient-card" data-mode="rain" onclick="setAmbientMode('rain')">🌧️ Rain</button>
-                <button class="ambient-card" data-mode="lofi" onclick="setAmbientMode('lofi')">🎹 Lo-fi Tone</button>
-                <button class="ambient-card" data-mode="off" onclick="setAmbientMode('off')">🔇 Off</button>
+                <button class="ambient-card" data-mode="white" onclick="setAmbientMode('white')">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                  <span>White Noise</span>
+                </button>
+                <button class="ambient-card" data-mode="rain" onclick="setAmbientMode('rain')">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></svg>
+                  <span>Rain</span>
+                </button>
+                <button class="ambient-card" data-mode="lofi" onclick="setAmbientMode('lofi')">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg>
+                  <span>Lo-fi</span>
+                </button>
+                <button class="ambient-card" data-mode="off" onclick="setAmbientMode('off')">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                  <span>Off</span>
+                </button>
+              </div>
+
+              <div class="ambient-volume-panel" id="ambientVolumePanel">
+                <div class="ambient-volume-row">
+                  <span class="ambient-volume-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg> Volume</span>
+                  <span class="ambient-volume-val" id="ambientVolumeVal">30%</span>
+                </div>
+                <input class="ambient-range" type="range" id="ambientVolume" min="0" max="100" value="30" oninput="this.style.setProperty('--pct',this.value+'%');setAmbientVolume(this.value)" style="--pct:30%">
               </div>
 
               <div class="ambient-meta-row">
@@ -337,15 +394,11 @@
                   <span class="eq-bars" aria-hidden="true"><span></span><span></span><span></span></span>
                   <span id="ambientPlayingText">Not playing</span>
                 </div>
-                <div class="ambient-volume-wrap">
-                  <label for="ambientVolume">Volume</label>
-                  <input type="range" id="ambientVolume" min="0" max="100" value="30" oninput="setAmbientVolume(this.value)">
-                </div>
               </div>
 
               <div class="study-task-row">
                 <input type="text" id="studyTaskInput" placeholder="Add a task and press Enter">
-                <select id="studyTaskPriority" aria-label="Task priority">
+                <select id="studyTaskPriority" class="study-task-priority" aria-label="Task priority">
                   <option value="medium">Medium</option>
                   <option value="high">High</option>
                   <option value="low">Low</option>
@@ -535,6 +588,7 @@
     let studyFocusMode = false;
     const ACCENT_STORAGE_KEY = 'bclss_accent';
     const TUTORIAL_SKIP_KEY = 'bclss_tutorial_skip';
+    const STUDY_INTERVALS_STORAGE_KEY = 'bclss_study_intervals';
     const BUILT_IN_TUTORIAL_VIDEO_URLS = [
       'assets/tutorial/tutorial.mp4',
       'assets/tutorial/tutorial.mov',
@@ -1101,6 +1155,30 @@
       openModal('<div class="modal-title">Connect Canvas</div><div class="form-group"><label class="form-label">Canvas Domain</label><input id="canvasDomainInput" type="text" value="' + esc(domain) + '" placeholder="usc.instructure.com"></div><div class="form-group"><label class="form-label">Canvas Access Token</label><input id="canvasTokenInput" type="password" value="' + esc(token) + '" placeholder="' + esc(tokenPlaceholder) + '" ' + tokenAttrs + '></div><div class="form-group"><label class="form-label">Backend API URL (optional for static hosting)</label><input id="apiBaseInput" type="text" value="' + esc(apiBase) + '" placeholder="https://your-backend.onrender.com"></div><div class="form-group"><div style="font-size:0.78rem;color:var(--text-dim);line-height:1.5">' + esc(tokenHelp) + '</div></div><div class="modal-footer"><button class="btn btn-danger" onclick="disconnectCanvas()">Disconnect</button><button class="btn btn-secondary" onclick="closeModal()">Close</button><button class="btn btn-canvas" onclick="connectCanvas()">' + esc(saveLabel) + '</button></div>');
     }
 
+    function showModalLoading(message) {
+      const modal = document.getElementById('modalContent');
+      if (!modal) return;
+      let overlay = modal.querySelector('.modal-loading-overlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'modal-loading-overlay';
+        overlay.innerHTML = '<div class="modal-loading-inner"><div class="modal-spinner"><span></span><span></span><span></span><span></span></div><div class="modal-loading-text" id="modalLoadingText"></div></div>';
+        modal.appendChild(overlay);
+      }
+      const txt = overlay.querySelector('#modalLoadingText');
+      if (txt) txt.textContent = message || 'Connecting…';
+      // blur the modal content behind
+      modal.classList.add('modal-is-loading');
+    }
+
+    function hideModalLoading() {
+      const modal = document.getElementById('modalContent');
+      if (!modal) return;
+      modal.classList.remove('modal-is-loading');
+      const overlay = modal.querySelector('.modal-loading-overlay');
+      if (overlay) overlay.remove();
+    }
+
     async function connectCanvas() {
       const tokenInput = document.getElementById('canvasTokenInput');
       const domainInput = document.getElementById('canvasDomainInput');
@@ -1117,12 +1195,15 @@
       CanvasAPI.saveCredentials(token, domain);
       CanvasAPI.setApiBase(apiBase);
 
+      showModalLoading('Connecting to Canvas…');
       try {
         const profile = await CanvasAPI.testConnection();
+        hideModalLoading();
         closeModal();
         toast('Connected as ' + profile.name, 'success');
         await syncCanvas();
       } catch (err) {
+        hideModalLoading();
         const details = err && err.message ? err.message : 'Unknown connection error';
         toast('Connection failed: ' + details, 'error');
       }
@@ -1481,9 +1562,13 @@
 
     function ensureStudyDefaults() {
       APP.local.studySettings = APP.local.studySettings || {};
-      APP.local.studySettings.workMins = Number(APP.local.studySettings.workMins) || 25;
-      APP.local.studySettings.breakMins = Number(APP.local.studySettings.breakMins) || 5;
-      APP.local.studySettings.longBreakMins = Number(APP.local.studySettings.longBreakMins) || 15;
+      const storedIntervals = readStoredStudyIntervals() || {};
+      const initialWork = Number(APP.local.studySettings.workMins) || Number(storedIntervals.workMins) || 25;
+      const initialBreak = Number(APP.local.studySettings.breakMins) || Number(storedIntervals.breakMins) || 5;
+      const initialLong = Number(APP.local.studySettings.longBreakMins) || Number(storedIntervals.longBreakMins) || 15;
+      APP.local.studySettings.workMins = Math.max(10, Math.min(180, initialWork));
+      APP.local.studySettings.breakMins = Math.max(3, Math.min(60, initialBreak));
+      APP.local.studySettings.longBreakMins = Math.max(10, Math.min(90, initialLong));
       APP.local.studySettings.dailyGoalHours = Number(APP.local.studySettings.dailyGoalHours) || 4;
       APP.local.studySettings.ambientMode = APP.local.studySettings.ambientMode || 'off';
       APP.local.studySettings.ambientVolume = Number(APP.local.studySettings.ambientVolume) || 30;
@@ -1493,6 +1578,7 @@
       APP.local.studyHistory = Array.isArray(APP.local.studyHistory) ? APP.local.studyHistory : [];
       APP.local.studyCurrentNote = APP.local.studyCurrentNote || { content: '', updatedAt: null };
       APP.local.studyTasks = APP.local.studyTasks.map((t) => ({ ...t, priority: t.priority || 'medium' }));
+      saveStudyIntervalsToStorage();
     }
 
     function applyStudyTheme() {
@@ -1513,8 +1599,67 @@
     function toggleFocusMode() {
       studyFocusMode = !studyFocusMode;
       document.body.classList.toggle('study-focus-mode', studyFocusMode);
+      document.body.classList.toggle('focus-mode-active', studyFocusMode);
       const btn = document.getElementById('focusModeBtn');
       if (btn) btn.textContent = studyFocusMode ? 'Exit Focus Mode' : 'Focus Mode';
+    }
+
+    function readStoredStudyIntervals() {
+      try {
+        const raw = localStorage.getItem(STUDY_INTERVALS_STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        return parsed;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function saveStudyIntervalsToStorage() {
+      localStorage.setItem(STUDY_INTERVALS_STORAGE_KEY, JSON.stringify({
+        workMins: APP.local.studySettings.workMins,
+        breakMins: APP.local.studySettings.breakMins,
+        longBreakMins: APP.local.studySettings.longBreakMins
+      }));
+    }
+
+    function updateStudyIntervalSliderUI(inputId, valueId) {
+      const input = document.getElementById(inputId);
+      const valueNode = document.getElementById(valueId);
+      if (!input) return;
+      const value = Number(input.value) || 0;
+      const min = Number(input.min) || 0;
+      const max = Number(input.max) || 100;
+      const pct = ((value - min) / Math.max(1, max - min)) * 100;
+      input.style.setProperty('--pct', pct + '%');
+      if (valueNode) valueNode.textContent = value + ' min';
+    }
+
+    function bindStudyIntervalSliders() {
+      const sliderMap = [
+        { inputId: 'workInterval', valueId: 'workIntervalValue', key: 'workMins', min: 10, max: 180, phase: 'work' },
+        { inputId: 'breakInterval', valueId: 'breakIntervalValue', key: 'breakMins', min: 3, max: 60, phase: 'break' },
+        { inputId: 'longBreakInterval', valueId: 'longBreakIntervalValue', key: 'longBreakMins', min: 10, max: 90, phase: 'long' }
+      ];
+
+      sliderMap.forEach((cfg) => {
+        const input = document.getElementById(cfg.inputId);
+        if (!input) return;
+        input.oninput = () => {
+          const value = Math.max(cfg.min, Math.min(cfg.max, Number(input.value) || cfg.min));
+          input.value = String(value);
+          APP.local.studySettings[cfg.key] = value;
+          updateStudyIntervalSliderUI(cfg.inputId, cfg.valueId);
+          saveStudyIntervalsToStorage();
+          save();
+          if (!studyTimerRunning && studyPhase === cfg.phase) {
+            studyTimerSecs = value * 60;
+            setStudyTimerDisplay();
+          }
+        };
+        updateStudyIntervalSliderUI(cfg.inputId, cfg.valueId);
+      });
     }
 
     function renderStudyPresets() {
@@ -1544,8 +1689,12 @@
       if (workInput) workInput.value = String(preset.work);
       if (breakInput) breakInput.value = String(preset.brk);
       if (longInput) longInput.value = String(preset.long);
+      updateStudyIntervalSliderUI('workInterval', 'workIntervalValue');
+      updateStudyIntervalSliderUI('breakInterval', 'breakIntervalValue');
+      updateStudyIntervalSliderUI('longBreakInterval', 'longBreakIntervalValue');
       setStudyPhase('work');
       resetStudyTimer();
+      saveStudyIntervalsToStorage();
       save();
     }
 
@@ -1556,6 +1705,10 @@
       if (workInput) APP.local.studySettings.workMins = Math.max(10, Math.min(180, Number(workInput.value) || 25));
       if (breakInput) APP.local.studySettings.breakMins = Math.max(3, Math.min(60, Number(breakInput.value) || 5));
       if (longInput) APP.local.studySettings.longBreakMins = Math.max(10, Math.min(90, Number(longInput.value) || 15));
+      updateStudyIntervalSliderUI('workInterval', 'workIntervalValue');
+      updateStudyIntervalSliderUI('breakInterval', 'breakIntervalValue');
+      updateStudyIntervalSliderUI('longBreakInterval', 'longBreakIntervalValue');
+      saveStudyIntervalsToStorage();
       save();
     }
 
@@ -1566,9 +1719,13 @@
     }
 
     function phaseLabel(phase) {
-      if (phase === 'break') return '☕ Break';
-      if (phase === 'long') return '🌙 Long Break';
-      return '🎯 Work';
+      const icons = {
+        work:  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline;vertical-align:middle;margin-right:4px"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>',
+        break: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg>',
+        long:  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>'
+      };
+      const labels = { work: 'Work', break: 'Break', long: 'Long Break' };
+      return (icons[phase] || icons.work) + (labels[phase] || 'Work');
     }
 
     function setStudyPhase(phase) {
@@ -1576,7 +1733,7 @@
       const chips = document.querySelectorAll('.phase-chip');
       chips.forEach((chip) => chip.classList.toggle('active', chip.getAttribute('data-phase') === phase));
       const label = document.getElementById('studySessionType');
-      if (label) label.textContent = phaseLabel(phase);
+      if (label) label.innerHTML = phaseLabel(phase);
       studyTimerSecs = getPhaseMinutes(phase) * 60;
       setStudyTimerDisplay();
       updateStudyRing();
@@ -1962,6 +2119,17 @@
       ambientNodes.push(source, filter, gain);
     }
 
+    function toggleAmbientPanel(forceClose) {
+      const row = document.getElementById('ambientCardRow');
+      const volPanel = document.getElementById('ambientVolumePanel');
+      const header = document.getElementById('ambientCollapseHeader');
+      if (!row || !header) return;
+      const expanded = forceClose ? true : header.getAttribute('aria-expanded') === 'true';
+      header.setAttribute('aria-expanded', String(!expanded));
+      row.classList.toggle('ambient-expanded', !expanded);
+      if (volPanel) volPanel.classList.toggle('ambient-vol-expanded', !expanded);
+    }
+
     function syncAmbientUI() {
       const mode = APP.local.studySettings.ambientMode || 'off';
       document.querySelectorAll('.ambient-card').forEach((card) => card.classList.toggle('active', card.getAttribute('data-mode') === mode));
@@ -1969,11 +2137,24 @@
       if (text) text.textContent = mode === 'off' ? 'Not playing' : 'Now playing: ' + mode;
       const eq = document.querySelector('.eq-bars');
       if (eq) eq.classList.toggle('active', mode !== 'off');
+      const subtitle = document.getElementById('ambientCollapseSubtitle');
+      if (subtitle) {
+        const labels = { white: 'White Noise', rain: 'Rain', lofi: 'Lo-fi Tone', off: 'Off' };
+        subtitle.textContent = labels[mode] || mode;
+      }
+      // sync volume slider display
+      const vol = APP.local.studySettings.ambientVolume || 30;
+      const slider = document.getElementById('ambientVolume');
+      if (slider) { slider.value = vol; slider.style.setProperty('--pct', vol + '%'); }
+      const volVal = document.getElementById('ambientVolumeVal');
+      if (volVal) volVal.textContent = vol + '%';
     }
 
     function setAmbientMode(mode) {
       APP.local.studySettings.ambientMode = mode;
       save();
+      // collapse the panel after selection
+      toggleAmbientPanel(true);
       stopAmbient();
       if (mode !== 'off') {
         const ctx = initAmbientContext();
@@ -1997,10 +2178,21 @@
     }
 
     function setAmbientVolume(value) {
-      APP.local.studySettings.ambientVolume = Number(value) || 30;
+      const vol = Number(value) || 30;
+      APP.local.studySettings.ambientVolume = vol;
       save();
+      // update live track fill and label without restarting audio
+      const slider = document.getElementById('ambientVolume');
+      if (slider) slider.style.setProperty('--pct', vol + '%');
+      const volVal = document.getElementById('ambientVolumeVal');
+      if (volVal) volVal.textContent = vol + '%';
       const mode = APP.local.studySettings.ambientMode;
-      if (mode && mode !== 'off') setAmbientMode(mode);
+      if (mode && mode !== 'off') {
+        // update gain live if nodes exist, else restart
+        if (typeof ambientNodes !== 'undefined' && ambientNodes.length) {
+          ambientNodes.forEach((n) => { if (n && n.gain) n.gain.value = vol / 100 * 0.1; });
+        }
+      }
     }
 
     function playStudyBeep() {
@@ -2136,6 +2328,7 @@
       if (workInput) workInput.value = String(APP.local.studySettings.workMins);
       if (breakInput) breakInput.value = String(APP.local.studySettings.breakMins);
       if (longInput) longInput.value = String(APP.local.studySettings.longBreakMins);
+      bindStudyIntervalSliders();
       const volume = document.getElementById('ambientVolume');
       if (volume) volume.value = String(APP.local.studySettings.ambientVolume || 30);
       const editor = document.getElementById('studyNoteEditor');
