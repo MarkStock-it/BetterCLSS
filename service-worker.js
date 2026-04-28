@@ -1,6 +1,6 @@
 /* global importScripts, firebase */
 
-const CACHE_NAME = 'betterclss-v3';
+const CACHE_NAME = 'betterclss-v4';
 const OFFLINE_URLS = ['./', './index.html', './StudentHub.html', './styles.css', './canvas-api.js', './config.js', './push-notifications.js'];
 
 function isHtmlRequest(request) {

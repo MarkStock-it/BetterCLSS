@@ -235,7 +235,7 @@ body {
   gap: 6px;
   border: none;
   width: 100%;
-  justify-content: space-between;
+  justify-content: flex-start;
   user-select: none;
 }
 .nav-tab:hover { color: var(--text); background: var(--surface-2); }
@@ -278,6 +278,7 @@ body {
   text-align: center;
   line-height: 1.6;
   flex-shrink: 0;
+  margin-left: auto;
 }
 .tab-count.alert { background: rgba(255, 79, 94, 0.15); color: var(--red); }
 .tab-count.active-count { background: rgba(96, 128, 255, 0.15); color: var(--accent); }
