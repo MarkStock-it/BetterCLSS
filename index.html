@@ -12,7 +12,8 @@
   <link rel="icon" href="icons/icon-192.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-192.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -230,94 +231,153 @@
       </div>
 
       <div class="page" id="page-study">
-        <div class="section-header">
-          <div>
-            <div class="section-title">Study Area</div>
-            <div class="section-subtitle">Timer, notes, tasks, sounds, and stats in one focus workspace</div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-secondary btn-sm" onclick="toggleStudyTheme()" id="studyThemeBtn">Study Theme: Dark</button>
-            <button class="btn btn-secondary btn-sm" onclick="toggleFocusMode()" id="focusModeBtn">Focus Mode</button>
-          </div>
-        </div>
-
-        <div class="study-grid" id="studyGrid">
-          <div class="card study-main-card">
-            <div class="study-section-head">
-              <div class="card-title">Pomodoro + Session</div>
-              <div class="study-inline-controls">
-                <label class="study-inline-label" for="sessionTagInput">Tag</label>
-                <input type="text" id="sessionTagInput" placeholder="Database, Networking..." style="max-width:180px">
-              </div>
+        <div class="study-container">
+          <div class="section-header study-header">
+            <div>
+              <div class="section-title">Study Area</div>
+              <div class="section-subtitle">Focus workspace for timer, notes, ambient audio, tasks, and analytics</div>
             </div>
+            <div class="study-header-actions">
+              <span class="study-shortcut-chip">Press F to toggle focus mode</span>
+              <button class="btn btn-secondary btn-sm" onclick="toggleStudyTheme()" id="studyThemeBtn">Study Theme: Dark</button>
+              <button class="btn btn-secondary btn-sm" onclick="toggleFocusMode()" id="focusModeBtn">Focus Mode</button>
+            </div>
+          </div>
 
-            <div class="study-preset-row" id="presetRow"></div>
+          <div class="study-grid" id="studyGrid">
+            <section class="card study-card study-hero-card" data-stagger="0">
+              <div class="study-section-head">
+                <div class="card-title">Pomodoro Session</div>
+                <div class="study-inline-controls">
+                  <label class="study-inline-label" for="sessionTagInput">Session Tags</label>
+                  <input type="text" id="sessionTagInput" placeholder="Database, Networking, Math">
+                </div>
+              </div>
 
-            <div class="study-timer-wrap" id="studyTimerWrap">
-              <div class="pomo-ring"><div class="pomo-time" id="studyTimerDisplay">25:00</div></div>
-              <div class="pomo-label" id="studyTimerLabel">Ready to focus?</div>
+              <div class="study-preset-row" id="presetRow"></div>
+
+              <div class="study-phase-segment" id="studyPhaseSegment">
+                <button type="button" class="phase-chip" data-phase="work" onclick="setStudyPhase('work')">🎯 Work</button>
+                <button type="button" class="phase-chip" data-phase="break" onclick="setStudyPhase('break')">☕ Break</button>
+                <button type="button" class="phase-chip" data-phase="long" onclick="setStudyPhase('long')">🌙 Long Break</button>
+              </div>
+
+              <div class="study-session-type" id="studySessionType">🎯 Work</div>
+
+              <div class="study-ring-wrap" id="studyTimerWrap">
+                <svg class="study-ring" viewBox="0 0 240 240" aria-hidden="true">
+                  <circle class="ring-bg" cx="120" cy="120" r="104"></circle>
+                  <circle class="ring-progress" id="studyRingProgress" cx="120" cy="120" r="104"></circle>
+                </svg>
+                <div class="study-timer-display" id="studyTimerDisplay">25:00</div>
+              </div>
+
+              <div class="study-controls-row">
+                <button class="btn btn-primary study-pill-btn" id="studyStartPauseBtn" onclick="toggleStudyTimer()">Start</button>
+                <button class="btn btn-secondary study-pill-btn" onclick="resetStudyTimer()">Reset</button>
+              </div>
+
               <div class="study-interval-row">
-                <label>Work <input type="number" id="workInterval" min="10" max="180" value="25"></label>
-                <label>Break <input type="number" id="breakInterval" min="3" max="60" value="5"></label>
-                <label>Long <input type="number" id="longBreakInterval" min="10" max="90" value="15"></label>
+                <label>Work (min)<input type="number" id="workInterval" min="10" max="180" value="25"></label>
+                <label>Break (min)<input type="number" id="breakInterval" min="3" max="60" value="5"></label>
+                <label>Long (min)<input type="number" id="longBreakInterval" min="10" max="90" value="15"></label>
               </div>
-              <div class="pomo-controls">
-                <button class="btn btn-primary" id="studyStartPauseBtn" onclick="toggleStudyTimer()">Start</button>
-                <button class="btn btn-secondary" onclick="resetStudyTimer()">Reset</button>
-              </div>
-              <div class="study-progress-wrap">
-                <div class="study-meta"><span class="study-title">Today's Study Progress</span><span class="study-val" id="studyProgressLabel">0h / 4h</span></div>
-                <div class="progress-bar"><div class="progress-fill" id="studyProgressFill" style="width:0%;background:var(--accent)"></div></div>
-              </div>
-            </div>
-          </div>
+            </section>
 
-          <div class="card study-side-card">
-            <div class="study-section-head"><div class="card-title">Ambient Audio + Tasks</div></div>
-            <div class="study-audio-row">
-              <select id="ambientSelect" onchange="setAmbientMode(this.value)">
-                <option value="off">Ambient Off</option>
-                <option value="white">White Noise</option>
-                <option value="rain">Rain</option>
-                <option value="lofi">Lo-fi Tone</option>
-              </select>
-              <input type="range" id="ambientVolume" min="0" max="100" value="30" oninput="setAmbientVolume(this.value)">
-            </div>
-            <div class="study-task-row">
-              <input type="text" id="studyTaskInput" placeholder="Add quick task and press Enter">
-              <button class="btn btn-secondary btn-sm" onclick="addStudyTask()">Add</button>
-            </div>
-            <div id="studyTaskList" class="study-task-list"></div>
-          </div>
-
-          <div class="card study-main-card">
-            <div class="study-section-head">
-              <div class="card-title">Rich Notes</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <button class="btn btn-secondary btn-sm" onclick="exportStudyNote('md')">Export .md</button>
-                <button class="btn btn-secondary btn-sm" onclick="exportStudyNote('txt')">Export .txt</button>
-                <button class="btn btn-secondary btn-sm" onclick="exportStudyNote('pdf')">Export PDF</button>
+            <section class="card study-card study-notes-card" data-stagger="1">
+              <div class="study-section-head">
+                <div class="card-title">Notes Workspace</div>
+                <div class="study-export-actions">
+                  <button class="btn btn-secondary btn-sm" onclick="exportStudyNote('md')">Export .md</button>
+                  <button class="btn btn-secondary btn-sm" onclick="exportStudyNote('txt')">Export .txt</button>
+                  <button class="btn btn-secondary btn-sm" onclick="exportStudyNote('pdf')">Export PDF</button>
+                  <button class="btn btn-secondary btn-sm study-mobile-collapse-btn" onclick="toggleNotesPane()" id="notesCollapseBtn">Collapse</button>
+                </div>
               </div>
-            </div>
-            <div class="study-toolbar">
-              <button class="btn btn-secondary btn-sm" onclick="formatStudyNote('bold')"><strong>B</strong></button>
-              <button class="btn btn-secondary btn-sm" onclick="formatStudyNote('italic')"><em>I</em></button>
-              <button class="btn btn-secondary btn-sm" onclick="formatStudyNote('h2')">H2</button>
-              <button class="btn btn-secondary btn-sm" onclick="formatStudyNote('ul')">List</button>
-              <button class="btn btn-secondary btn-sm" onclick="insertCodeBlock()">Code</button>
-            </div>
-            <textarea id="studyNoteEditor" class="study-note-editor" placeholder="Write notes in markdown... (Ctrl+S to save, Ctrl+N new note)"></textarea>
-            <div class="study-note-preview-wrap">
-              <div class="section-subtitle" style="margin-bottom:8px">Markdown Preview</div>
-              <div id="studyNotePreview" class="study-note-preview"></div>
-            </div>
-          </div>
 
-          <div class="card study-side-card">
-            <div class="study-section-head"><div class="card-title">Stats + History</div></div>
-            <div id="studyStatsPanel" class="study-stats-panel"></div>
-            <div class="section-subtitle" style="margin:12px 0 8px">Session History</div>
-            <div id="studyHistoryList" class="study-history-list"></div>
+              <div class="study-toolbar" id="studyToolbar">
+                <button class="toolbar-btn" onclick="formatStudyNote('bold')" title="Bold">🅱️</button>
+                <button class="toolbar-btn" onclick="formatStudyNote('italic')" title="Italic">𝘐</button>
+                <button class="toolbar-btn" onclick="formatStudyNote('h2')" title="Header">H2</button>
+                <button class="toolbar-btn" onclick="formatStudyNote('ul')" title="Bullet List">• List</button>
+                <button class="toolbar-btn" onclick="insertCodeBlock()" title="Code Block">&lt;/&gt;</button>
+              </div>
+
+              <div class="study-split-wrap" id="studySplitWrap">
+                <div class="study-editor-pane" id="studyEditorPane">
+                  <div class="line-numbers" id="studyLineNumbers"></div>
+                  <textarea id="studyNoteEditor" class="study-note-editor" placeholder="Write notes in markdown... (Ctrl+S save, Ctrl+N new note)"></textarea>
+                </div>
+                <div class="study-splitter" id="studySplitter" role="separator" aria-orientation="vertical" aria-label="Resize notes panes"></div>
+                <div class="study-preview-pane">
+                  <div class="study-note-preview" id="studyNotePreview"></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="card study-card study-ambient-card" data-stagger="2">
+              <div class="study-section-head"><div class="card-title">Ambient + Tasks</div></div>
+
+              <div class="ambient-card-row" id="ambientCardRow">
+                <button class="ambient-card" data-mode="white" onclick="setAmbientMode('white')">🎵 White Noise</button>
+                <button class="ambient-card" data-mode="rain" onclick="setAmbientMode('rain')">🌧️ Rain</button>
+                <button class="ambient-card" data-mode="lofi" onclick="setAmbientMode('lofi')">🎹 Lo-fi Tone</button>
+                <button class="ambient-card" data-mode="off" onclick="setAmbientMode('off')">🔇 Off</button>
+              </div>
+
+              <div class="ambient-meta-row">
+                <div class="ambient-playing" id="ambientPlaying">
+                  <span class="eq-bars" aria-hidden="true"><span></span><span></span><span></span></span>
+                  <span id="ambientPlayingText">Not playing</span>
+                </div>
+                <div class="ambient-volume-wrap">
+                  <label for="ambientVolume">Volume</label>
+                  <input type="range" id="ambientVolume" min="0" max="100" value="30" oninput="setAmbientVolume(this.value)">
+                </div>
+              </div>
+
+              <div class="study-task-row">
+                <input type="text" id="studyTaskInput" placeholder="Add a task and press Enter">
+                <select id="studyTaskPriority" aria-label="Task priority">
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+              <div id="studyTaskList" class="study-task-list"></div>
+              <button class="study-fab" onclick="addStudyTask()" aria-label="Add task">＋</button>
+            </section>
+
+            <section class="card study-card study-stats-card" data-stagger="3">
+              <div class="study-section-head"><div class="card-title">Progress + History</div></div>
+
+              <div class="progress-card">
+                <div class="progress-head">
+                  <div>
+                    <div class="progress-title">Today's Study Progress</div>
+                    <div class="progress-time" id="studyProgressLabel">0h / 4h</div>
+                  </div>
+                  <div class="progress-microcopy" id="studyProgressMotivation">Keep going</div>
+                </div>
+                <div class="milestone-track">
+                  <div class="milestone-fill" id="studyProgressFill"></div>
+                  <span class="milestone-dot" style="left:25%">1h</span>
+                  <span class="milestone-dot" style="left:50%">2h</span>
+                  <span class="milestone-dot" style="left:75%">3h</span>
+                  <span class="milestone-dot" style="left:100%">4h</span>
+                </div>
+              </div>
+
+              <div id="studyStatsPanel" class="study-stats-panel"></div>
+
+              <div class="study-sparkline-wrap">
+                <div class="section-subtitle">Last 7 Days</div>
+                <svg id="studySparkline" viewBox="0 0 320 80" preserveAspectRatio="none"></svg>
+              </div>
+
+              <div class="section-subtitle" style="margin:10px 0 8px">Session Timeline</div>
+              <div id="studyHistoryList" class="study-history-list"></div>
+            </section>
           </div>
         </div>
       </div>
@@ -1421,9 +1481,11 @@
       APP.local.studySettings.ambientMode = APP.local.studySettings.ambientMode || 'off';
       APP.local.studySettings.ambientVolume = Number(APP.local.studySettings.ambientVolume) || 30;
       APP.local.studySettings.studyTheme = APP.local.studySettings.studyTheme || 'dark';
+      APP.local.studySettings.editorSplit = Number(APP.local.studySettings.editorSplit) || 50;
       APP.local.studyTasks = Array.isArray(APP.local.studyTasks) ? APP.local.studyTasks : [];
       APP.local.studyHistory = Array.isArray(APP.local.studyHistory) ? APP.local.studyHistory : [];
       APP.local.studyCurrentNote = APP.local.studyCurrentNote || { content: '', updatedAt: null };
+      APP.local.studyTasks = APP.local.studyTasks.map((t) => ({ ...t, priority: t.priority || 'medium' }));
     }
 
     function applyStudyTheme() {
@@ -1456,7 +1518,7 @@
       ];
       const row = document.getElementById('presetRow');
       if (!row) return;
-      row.innerHTML = presets.map((p) => '<button class="pomo-mode-btn" onclick="applyStudyPreset(\'' + p.key + '\')">' + p.label + '</button>').join('');
+      row.innerHTML = presets.map((p) => '<button class="preset-pill" onclick="applyStudyPreset(\'' + p.key + '\')">' + p.label + '</button>').join('');
     }
 
     function applyStudyPreset(key) {
@@ -1475,9 +1537,9 @@
       if (workInput) workInput.value = String(preset.work);
       if (breakInput) breakInput.value = String(preset.brk);
       if (longInput) longInput.value = String(preset.long);
+      setStudyPhase('work');
       resetStudyTimer();
       save();
-      toast('Preset applied: ' + (key === 'deep' ? 'Deep Work' : key === 'review' ? 'Review' : 'Quick Session'), 'info');
     }
 
     function syncStudyIntervalsFromUI() {
@@ -1490,36 +1552,60 @@
       save();
     }
 
+    function getPhaseMinutes(phase) {
+      if (phase === 'break') return APP.local.studySettings.breakMins;
+      if (phase === 'long') return APP.local.studySettings.longBreakMins;
+      return APP.local.studySettings.workMins;
+    }
+
+    function phaseLabel(phase) {
+      if (phase === 'break') return '☕ Break';
+      if (phase === 'long') return '🌙 Long Break';
+      return '🎯 Work';
+    }
+
+    function setStudyPhase(phase) {
+      studyPhase = phase;
+      const chips = document.querySelectorAll('.phase-chip');
+      chips.forEach((chip) => chip.classList.toggle('active', chip.getAttribute('data-phase') === phase));
+      const label = document.getElementById('studySessionType');
+      if (label) label.textContent = phaseLabel(phase);
+      studyTimerSecs = getPhaseMinutes(phase) * 60;
+      setStudyTimerDisplay();
+      updateStudyRing();
+      updateStudyLabel();
+    }
+
+    function updateStudyRing() {
+      const ring = document.getElementById('studyRingProgress');
+      if (!ring) return;
+      const radius = 104;
+      const circumference = 2 * Math.PI * radius;
+      ring.style.strokeDasharray = String(circumference);
+      const total = getPhaseMinutes(studyPhase) * 60;
+      const progress = total ? studyTimerSecs / total : 0;
+      ring.style.strokeDashoffset = String(circumference * (1 - Math.max(0, Math.min(1, progress))));
+    }
+
     function setStudyTimerDisplay() {
       const d = document.getElementById('studyTimerDisplay');
       if (!d) return;
       const m = String(Math.floor(studyTimerSecs / 60)).padStart(2, '0');
       const s = String(studyTimerSecs % 60).padStart(2, '0');
       d.textContent = m + ':' + s;
+      updateStudyRing();
     }
 
     function updateStudyLabel() {
-      const label = document.getElementById('studyTimerLabel');
-      if (!label) return;
-      if (!studyTimerRunning && studyPhase === 'work') {
-        label.textContent = 'Ready to focus?';
-        return;
-      }
-      if (!studyTimerRunning && studyPhase !== 'work') {
-        label.textContent = 'Ready for break';
-        return;
-      }
-      if (studyPhase === 'work') label.textContent = 'Focus session in progress';
-      if (studyPhase === 'break') label.textContent = 'Short break';
-      if (studyPhase === 'long') label.textContent = 'Long break after 4 cycles';
+      const hero = document.getElementById('studyTimerWrap');
+      if (hero) hero.classList.toggle('running', !!studyTimerRunning);
     }
 
     function resetStudyTimer() {
       syncStudyIntervalsFromUI();
       clearInterval(studyTimer);
       studyTimerRunning = false;
-      studyPhase = 'work';
-      studyTimerSecs = APP.local.studySettings.workMins * 60;
+      studyTimerSecs = getPhaseMinutes(studyPhase) * 60;
       const btn = document.getElementById('studyStartPauseBtn');
       if (btn) btn.textContent = 'Start';
       setStudyTimerDisplay();
@@ -1531,9 +1617,9 @@
       const wrap = document.getElementById('studyTimerWrap');
       if (wrap) {
         wrap.classList.add('study-flash');
-        setTimeout(() => wrap.classList.remove('study-flash'), 1000);
+        setTimeout(() => wrap.classList.remove('study-flash'), 900);
       }
-      toast(nextPhase === 'work' ? 'Break complete, back to focus.' : 'Timer complete. Next: ' + nextPhase + ' session.', 'success');
+      toast(nextPhase === 'work' ? 'Back to focus mode' : 'Switching to ' + phaseLabel(nextPhase), 'success');
     }
 
     function completeStudyPhase() {
@@ -1542,7 +1628,6 @@
         APP.local.pomoSessions += 1;
         const focusDurationMins = APP.local.studySettings.workMins;
         APP.local.studyHours = +(APP.local.studyHours + focusDurationMins / 60).toFixed(2);
-        sessionFocusSecs += focusDurationMins * 60;
         const content = (document.getElementById('studyNoteEditor') || {}).value || APP.local.studyCurrentNote.content || '';
         const tagsRaw = (document.getElementById('sessionTagInput') || {}).value || '';
         const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean);
@@ -1553,21 +1638,19 @@
           week: getWeekStartKey(new Date()),
           durationSecs: focusDurationMins * 60,
           tagList: tags,
-          notePreview: content.slice(0, 160)
+          notePreview: content.slice(0, 180),
+          noteFull: content
         });
-        APP.local.studyHistory = APP.local.studyHistory.slice(0, 120);
+        APP.local.studyHistory = APP.local.studyHistory.slice(0, 150);
+        if (APP.local.studyHours >= APP.local.studySettings.dailyGoalHours) celebrateGoal();
         const next = studyCompletedCycles % 4 === 0 ? 'long' : 'break';
-        studyPhase = next;
-        studyTimerSecs = (next === 'long' ? APP.local.studySettings.longBreakMins : APP.local.studySettings.breakMins) * 60;
+        setStudyPhase(next);
       } else {
-        studyPhase = 'work';
-        studyTimerSecs = APP.local.studySettings.workMins * 60;
+        setStudyPhase('work');
       }
       notifyStudyPhaseComplete(studyPhase);
       renderStudyStatsAndHistory();
       save();
-      setStudyTimerDisplay();
-      updateStudyLabel();
     }
 
     function toggleStudyTimer() {
@@ -1577,16 +1660,16 @@
         clearInterval(studyTimer);
         studyTimerRunning = false;
         if (btn) btn.textContent = 'Resume';
+        pulseButton(btn);
         updateStudyLabel();
         return;
       }
-      if (!sessionStartedAt) sessionStartedAt = Date.now();
       studyTimerRunning = true;
       if (btn) btn.textContent = 'Pause';
+      pulseButton(btn);
       updateStudyLabel();
       studyTimer = setInterval(() => {
         studyTimerSecs -= 1;
-        if (studyPhase === 'work') sessionFocusSecs += 1;
         setStudyTimerDisplay();
         if (studyTimerSecs <= 0) completeStudyPhase();
       }, 1000);
@@ -1604,26 +1687,12 @@
       return d.toISOString().slice(0, 10);
     }
 
-    function finalizeStudySession() {
-      if (!sessionStartedAt || sessionFocusSecs <= 0) return;
-      const now = new Date();
-      const content = (document.getElementById('studyNoteEditor') || {}).value || APP.local.studyCurrentNote.content || '';
-      const tagsRaw = (document.getElementById('sessionTagInput') || {}).value || '';
-      const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean);
-      APP.local.studyHistory.unshift({
-        id: uid(),
-        at: now.toISOString(),
-        date: now.toISOString().slice(0, 10),
-        week: getWeekStartKey(now),
-        durationSecs: sessionFocusSecs,
-        tagList: tags,
-        notePreview: content.slice(0, 160)
-      });
-      APP.local.studyHistory = APP.local.studyHistory.slice(0, 120);
-      sessionStartedAt = null;
-      sessionFocusSecs = 0;
-      save();
-      renderStudyStatsAndHistory();
+    function fmtDur(secs) {
+      const total = Math.round((secs || 0) / 60);
+      const h = Math.floor(total / 60);
+      const m = total % 60;
+      if (!h) return m + 'm';
+      return h + 'h ' + m + 'm';
     }
 
     function buildStudyStats() {
@@ -1633,32 +1702,47 @@
       const todaySecs = history.filter((h) => h.date === today).reduce((n, h) => n + (h.durationSecs || 0), 0);
       const weekSecs = history.filter((h) => h.week === week).reduce((n, h) => n + (h.durationSecs || 0), 0);
       const avgSecs = history.length ? Math.round(history.reduce((n, h) => n + (h.durationSecs || 0), 0) / history.length) : 0;
-      const days = new Set(history.map((h) => h.date)).size;
       const sortedDays = [...new Set(history.map((h) => h.date))].sort();
       let streak = 0;
       let longest = 0;
       let prev = null;
       sortedDays.forEach((day) => {
-        if (!prev) {
-          streak = 1;
-        } else {
-          const diff = (new Date(day) - new Date(prev)) / 86400000;
-          streak = diff === 1 ? streak + 1 : 1;
-        }
-        if (streak > longest) longest = streak;
+        if (!prev) streak = 1;
+        else streak = ((new Date(day) - new Date(prev)) / 86400000 === 1) ? streak + 1 : 1;
+        longest = Math.max(longest, streak);
         prev = day;
       });
-      return {
-        todaySecs,
-        weekSecs,
-        avgSecs,
-        longestStreak: longest,
-        activeDays: days
-      };
+      return { todaySecs, weekSecs, avgSecs, longestStreak: longest };
     }
 
-    function fmtMins(secs) {
-      return Math.round((secs || 0) / 60) + ' min';
+    function renderSparkline() {
+      const svg = document.getElementById('studySparkline');
+      if (!svg) return;
+      const points = [];
+      for (let i = 6; i >= 0; i -= 1) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        const secs = (APP.local.studyHistory || []).filter((h) => h.date === key).reduce((n, h) => n + (h.durationSecs || 0), 0);
+        points.push(Math.round(secs / 60));
+      }
+      const max = Math.max(1, ...points);
+      const coords = points.map((v, i) => {
+        const x = (i / 6) * 320;
+        const y = 72 - ((v / max) * 64);
+        return x + ',' + y;
+      }).join(' ');
+      svg.innerHTML = '<polyline points="' + coords + '" fill="none" stroke="url(#sparkGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>' +
+        '<defs><linearGradient id="sparkGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#667eea"/><stop offset="100%" stop-color="#764ba2"/></linearGradient></defs>';
+    }
+
+    function updateProgressMotivation(hours, goal) {
+      const node = document.getElementById('studyProgressMotivation');
+      if (!node) return;
+      if (hours >= goal) node.textContent = '🎉 Goal complete!';
+      else if (hours >= goal * 0.5) node.textContent = '🔥 Halfway there!';
+      else if (hours >= 1) node.textContent = '⚡ Momentum building';
+      else node.textContent = 'Keep going';
     }
 
     function renderStudyStatsAndHistory() {
@@ -1666,19 +1750,19 @@
       const statsPanel = document.getElementById('studyStatsPanel');
       if (statsPanel) {
         statsPanel.innerHTML =
-          '<div class="stat-line"><span>Today</span><strong>' + fmtMins(stats.todaySecs) + '</strong></div>' +
-          '<div class="stat-line"><span>This Week</span><strong>' + fmtMins(stats.weekSecs) + '</strong></div>' +
-          '<div class="stat-line"><span>Avg Session</span><strong>' + fmtMins(stats.avgSecs) + '</strong></div>' +
-          '<div class="stat-line"><span>Longest Streak</span><strong>' + stats.longestStreak + ' days</strong></div>';
+          '<div class="metric-card"><div class="metric-value">' + fmtDur(stats.todaySecs) + '</div><div class="metric-label">Today</div></div>' +
+          '<div class="metric-card"><div class="metric-value">' + fmtDur(stats.weekSecs) + '</div><div class="metric-label">This Week</div></div>' +
+          '<div class="metric-card"><div class="metric-value">' + fmtDur(stats.avgSecs) + '</div><div class="metric-label">Avg Session</div></div>' +
+          '<div class="metric-card"><div class="metric-value">' + stats.longestStreak + '</div><div class="metric-label">Streak (days)</div></div>';
       }
       const history = document.getElementById('studyHistoryList');
       if (history) {
         if (!APP.local.studyHistory.length) {
-          history.innerHTML = '<div class="empty-state"><div class="empty-text">No completed sessions yet</div></div>';
+          history.innerHTML = '<div class="empty-state"><div class="empty-text">No sessions yet</div></div>';
         } else {
           history.innerHTML = APP.local.studyHistory.slice(0, 20).map((item) => {
             const tags = (item.tagList || []).join(', ') || 'General';
-            return '<div class="study-history-item"><div class="study-history-top"><strong>' + fmtMins(item.durationSecs) + '</strong><span>' + esc(item.date) + '</span></div><div class="study-history-tags">' + esc(tags) + '</div><div class="study-history-note">' + esc(item.notePreview || 'No note preview') + '</div></div>';
+            return '<details class="timeline-item"><summary><span class="timeline-duration">' + fmtDur(item.durationSecs) + '</span><span class="timeline-date">' + esc(item.date) + '</span><span class="timeline-tags">' + esc(tags) + '</span></summary><div class="timeline-note">' + esc(item.noteFull || item.notePreview || '') + '</div></details>';
           }).join('');
         }
       }
@@ -1689,6 +1773,8 @@
       const pct = Math.max(0, Math.min(100, Math.round((todayHours / goal) * 100)));
       if (progressFill) progressFill.style.width = pct + '%';
       if (progressLabel) progressLabel.textContent = todayHours.toFixed(2) + 'h / ' + goal + 'h';
+      updateProgressMotivation(todayHours, goal);
+      renderSparkline();
     }
 
     function markdownToHtml(md) {
@@ -1698,12 +1784,21 @@
       out = out.replace(/^##\s(.+)$/gm, '<h2>$1</h2>');
       out = out.replace(/^#\s(.+)$/gm, '<h1>$1</h1>');
       out = out.replace(/^\-\s(.+)$/gm, '<li>$1</li>');
-      out = out.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+      out = out.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
       out = out.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
       out = out.replace(/\*(.+?)\*/g, '<em>$1</em>');
-      out = out.replace(/```([\s\S]*?)```/g, (_, code) => '<pre><code>' + code.replace(/\b(function|const|let|return|if|else|for|class)\b/g, '<span class="code-kw">$1</span>') + '</code></pre>');
+      out = out.replace(/```([\s\S]*?)```/g, (_, code) => '<pre><code>' + code.replace(/\b(function|const|let|return|if|else|for|class|import|export)\b/g, '<span class="code-kw">$1</span>') + '</code></pre>');
       out = out.replace(/\n/g, '<br>');
       return out;
+    }
+
+    function updateLineNumbers() {
+      const editor = document.getElementById('studyNoteEditor');
+      const gutter = document.getElementById('studyLineNumbers');
+      if (!editor || !gutter) return;
+      const lines = (editor.value.split('\n').length || 1);
+      gutter.innerHTML = Array.from({ length: lines }, (_, i) => '<span>' + (i + 1) + '</span>').join('');
+      gutter.scrollTop = editor.scrollTop;
     }
 
     function updateStudyPreview() {
@@ -1711,6 +1806,7 @@
       const preview = document.getElementById('studyNotePreview');
       if (!editor || !preview) return;
       preview.innerHTML = markdownToHtml(editor.value);
+      updateLineNumbers();
     }
 
     function saveStudyNote() {
@@ -1741,8 +1837,7 @@
     function insertCodeBlock() {
       const editor = document.getElementById('studyNoteEditor');
       if (!editor) return;
-      const block = '\n```\nconst example = true;\n```\n';
-      editor.setRangeText(block, editor.selectionStart, editor.selectionEnd, 'end');
+      editor.setRangeText('\n```\nconst example = true;\n```\n', editor.selectionStart, editor.selectionEnd, 'end');
       updateStudyPreview();
     }
 
@@ -1750,13 +1845,12 @@
       const note = (document.getElementById('studyNoteEditor') || {}).value || '';
       const now = new Date();
       const stats = buildStudyStats();
-      const meta = '\n\n---\nExported: ' + now.toISOString() + '\nSession Focus Time: ' + fmtMins(sessionFocusSecs) + '\nToday Total: ' + fmtMins(stats.todaySecs) + '\n';
+      const meta = '\n\n---\nExported: ' + now.toISOString() + '\nToday: ' + fmtDur(stats.todaySecs) + '\nSession Type: ' + phaseLabel(studyPhase) + '\n';
       if (kind === 'pdf') {
         const win = window.open('', '_blank');
         if (!win) return;
         win.document.write('<html><head><title>Study Note Export</title></head><body><pre style="white-space:pre-wrap;font-family:monospace">' + esc(note + meta) + '</pre></body></html>');
         win.document.close();
-        win.focus();
         win.print();
         return;
       }
@@ -1773,8 +1867,9 @@
 
     function addStudyTask() {
       const input = document.getElementById('studyTaskInput');
+      const prioritySelect = document.getElementById('studyTaskPriority');
       if (!input || !input.value.trim()) return;
-      APP.local.studyTasks.unshift({ id: uid(), text: input.value.trim(), done: false });
+      APP.local.studyTasks.unshift({ id: uid(), text: input.value.trim(), done: false, priority: (prioritySelect || {}).value || 'medium' });
       input.value = '';
       save();
       renderStudyTasks();
@@ -1794,6 +1889,28 @@
       renderStudyTasks();
     }
 
+    function dragStartTask(id) {
+      window.__dragTaskId = id;
+    }
+
+    function dragOverTask(e) {
+      e.preventDefault();
+    }
+
+    function dropTask(targetId) {
+      const dragId = window.__dragTaskId;
+      if (!dragId || dragId === targetId) return;
+      const list = APP.local.studyTasks;
+      const from = list.findIndex((t) => t.id === dragId);
+      const to = list.findIndex((t) => t.id === targetId);
+      if (from === -1 || to === -1) return;
+      const [moved] = list.splice(from, 1);
+      list.splice(to, 0, moved);
+      save();
+      renderStudyTasks();
+      window.__dragTaskId = null;
+    }
+
     function renderStudyTasks() {
       const list = document.getElementById('studyTaskList');
       if (!list) return;
@@ -1801,7 +1918,7 @@
         list.innerHTML = '<div class="empty-state"><div class="empty-text">No tasks yet</div></div>';
         return;
       }
-      list.innerHTML = APP.local.studyTasks.map((t) => '<div class="study-task-item ' + (t.done ? 'done' : '') + '"><button class="check-btn" onclick="toggleStudyTask(' + t.id + ')">' + (t.done ? '✓' : '') + '</button><span>' + esc(t.text) + '</span><button class="btn btn-danger btn-sm" onclick="removeStudyTask(' + t.id + ')">✕</button></div>').join('');
+      list.innerHTML = APP.local.studyTasks.map((t) => '<div class="study-task-item ' + (t.done ? 'done' : '') + '" draggable="true" ondragstart="dragStartTask(' + t.id + ')" ondragover="dragOverTask(event)" ondrop="dropTask(' + t.id + ')"><button class="check-btn" onclick="toggleStudyTask(' + t.id + ')">' + (t.done ? '✓' : '') + '</button><span class="priority-dot ' + (t.priority || 'medium') + '"></span><span class="task-text">' + esc(t.text) + '</span><button class="btn btn-danger btn-sm" onclick="removeStudyTask(' + t.id + ')">✕</button></div>').join('');
     }
 
     function initAmbientContext() {
@@ -1812,10 +1929,8 @@
 
     function stopAmbient() {
       ambientNodes.forEach((n) => {
-        try {
-          if (n.stop) n.stop();
-          if (n.disconnect) n.disconnect();
-        } catch (_) {}
+        try { if (n.stop) n.stop(); } catch (_) {}
+        try { if (n.disconnect) n.disconnect(); } catch (_) {}
       });
       ambientNodes = [];
     }
@@ -1840,27 +1955,38 @@
       ambientNodes.push(source, filter, gain);
     }
 
+    function syncAmbientUI() {
+      const mode = APP.local.studySettings.ambientMode || 'off';
+      document.querySelectorAll('.ambient-card').forEach((card) => card.classList.toggle('active', card.getAttribute('data-mode') === mode));
+      const text = document.getElementById('ambientPlayingText');
+      if (text) text.textContent = mode === 'off' ? 'Not playing' : 'Now playing: ' + mode;
+      const eq = document.querySelector('.eq-bars');
+      if (eq) eq.classList.toggle('active', mode !== 'off');
+    }
+
     function setAmbientMode(mode) {
       APP.local.studySettings.ambientMode = mode;
       save();
       stopAmbient();
-      if (mode === 'off') return;
-      const ctx = initAmbientContext();
-      const vol = (APP.local.studySettings.ambientVolume || 30) / 100;
-      if (mode === 'white') createNoiseSource(ctx, 0.08 * vol, 'highpass', 250);
-      if (mode === 'rain') createNoiseSource(ctx, 0.1 * vol, 'bandpass', 1200);
-      if (mode === 'lofi') {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.value = 110;
-        gain.gain.value = 0.03 * vol;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        ambientNodes.push(osc, gain);
-        createNoiseSource(ctx, 0.03 * vol, 'lowpass', 800);
+      if (mode !== 'off') {
+        const ctx = initAmbientContext();
+        const vol = (APP.local.studySettings.ambientVolume || 30) / 100;
+        if (mode === 'white') createNoiseSource(ctx, 0.08 * vol, 'highpass', 250);
+        if (mode === 'rain') createNoiseSource(ctx, 0.1 * vol, 'bandpass', 1100);
+        if (mode === 'lofi') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.value = 110;
+          gain.gain.value = 0.03 * vol;
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          ambientNodes.push(osc, gain);
+          createNoiseSource(ctx, 0.03 * vol, 'lowpass', 800);
+        }
       }
+      syncAmbientUI();
     }
 
     function setAmbientVolume(value) {
@@ -1877,26 +2003,104 @@
         const gain = ctx.createGain();
         osc.type = 'sine';
         osc.frequency.value = 880;
-        gain.gain.value = 0.08;
+        gain.gain.value = 0.09;
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start();
-        osc.stop(ctx.currentTime + 0.25);
+        osc.stop(ctx.currentTime + 0.2);
       } catch (_) {}
+    }
+
+    function pulseButton(btn) {
+      if (!btn) return;
+      btn.classList.add('pulse');
+      setTimeout(() => btn.classList.remove('pulse'), 260);
+    }
+
+    function initStudySplitter() {
+      const wrap = document.getElementById('studySplitWrap');
+      const splitter = document.getElementById('studySplitter');
+      if (!wrap || !splitter) return;
+      wrap.style.setProperty('--split', String(APP.local.studySettings.editorSplit || 50) + '%');
+      let dragging = false;
+      splitter.onmousedown = () => { dragging = true; document.body.classList.add('split-dragging'); };
+      window.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const rect = wrap.getBoundingClientRect();
+        const pct = ((e.clientX - rect.left) / rect.width) * 100;
+        const clamped = Math.max(30, Math.min(70, pct));
+        wrap.style.setProperty('--split', clamped + '%');
+        APP.local.studySettings.editorSplit = clamped;
+      });
+      window.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        document.body.classList.remove('split-dragging');
+        save();
+      });
+    }
+
+    function toggleNotesPane() {
+      const card = document.querySelector('.study-notes-card');
+      if (!card) return;
+      card.classList.toggle('collapsed-mobile');
+      const btn = document.getElementById('notesCollapseBtn');
+      if (btn) btn.textContent = card.classList.contains('collapsed-mobile') ? 'Expand' : 'Collapse';
+    }
+
+    function celebrateGoal() {
+      const root = document.getElementById('page-study');
+      if (!root) return;
+      const layer = document.createElement('div');
+      layer.className = 'confetti-layer';
+      for (let i = 0; i < 36; i += 1) {
+        const piece = document.createElement('span');
+        piece.className = 'confetti-piece';
+        piece.style.left = (Math.random() * 100) + '%';
+        piece.style.animationDelay = (Math.random() * 0.4) + 's';
+        piece.style.background = ['#6080ff', '#764ba2', '#3dd9a4', '#ffb84f'][i % 4];
+        layer.appendChild(piece);
+      }
+      root.appendChild(layer);
+      setTimeout(() => layer.remove(), 2200);
+    }
+
+    function initStudyRipple() {
+      document.body.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const ripple = document.createElement('span');
+        ripple.className = 'ripple';
+        const rect = btn.getBoundingClientRect();
+        ripple.style.left = (e.clientX - rect.left) + 'px';
+        ripple.style.top = (e.clientY - rect.top) + 'px';
+        btn.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 450);
+      });
+    }
+
+    function runStudyStaggerAnimation() {
+      document.querySelectorAll('.study-card').forEach((card) => {
+        const idx = Number(card.getAttribute('data-stagger') || 0);
+        card.style.animationDelay = (idx * 100) + 'ms';
+        card.classList.add('card-enter');
+      });
     }
 
     function setupStudyKeyboardShortcuts() {
       document.addEventListener('keydown', (e) => {
         const active = document.activeElement;
         const editable = active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT' || active.isContentEditable);
-        if (e.code === 'Space' && !editable) {
-          const activePage = (document.querySelector('.page.active') || {}).id;
-          if (activePage === 'page-study') {
-            e.preventDefault();
-            toggleStudyTimer();
-          }
+        const onStudy = ((document.querySelector('.page.active') || {}).id === 'page-study');
+        if (e.key.toLowerCase() === 'f' && !editable && onStudy) {
+          e.preventDefault();
+          toggleFocusMode();
         }
-        if (e.ctrlKey && e.key.toLowerCase() === 'n') {
+        if (e.code === 'Space' && !editable && onStudy) {
+          e.preventDefault();
+          toggleStudyTimer();
+        }
+        if (e.ctrlKey && e.key.toLowerCase() === 'n' && onStudy) {
           e.preventDefault();
           const editor = document.getElementById('studyNoteEditor');
           if (editor) {
@@ -1906,7 +2110,7 @@
             updateStudyPreview();
           }
         }
-        if (e.ctrlKey && e.key.toLowerCase() === 's') {
+        if (e.ctrlKey && e.key.toLowerCase() === 's' && onStudy) {
           e.preventDefault();
           saveStudyNote();
         }
@@ -1925,6 +2129,8 @@
       if (workInput) workInput.value = String(APP.local.studySettings.workMins);
       if (breakInput) breakInput.value = String(APP.local.studySettings.breakMins);
       if (longInput) longInput.value = String(APP.local.studySettings.longBreakMins);
+      const volume = document.getElementById('ambientVolume');
+      if (volume) volume.value = String(APP.local.studySettings.ambientVolume || 30);
       const editor = document.getElementById('studyNoteEditor');
       if (editor) {
         editor.value = APP.local.studyCurrentNote.content || '';
@@ -1932,6 +2138,7 @@
           APP.local.studyCurrentNote.content = editor.value;
           updateStudyPreview();
         };
+        editor.onscroll = () => updateLineNumbers();
       }
       const taskInput = document.getElementById('studyTaskInput');
       if (taskInput) {
@@ -1942,20 +2149,17 @@
           }
         };
       }
-      const ambientSelect = document.getElementById('ambientSelect');
-      const ambientVolume = document.getElementById('ambientVolume');
-      if (ambientSelect) ambientSelect.value = APP.local.studySettings.ambientMode || 'off';
-      if (ambientVolume) ambientVolume.value = String(APP.local.studySettings.ambientVolume || 30);
-      if (APP.local.studySettings.ambientMode && APP.local.studySettings.ambientMode !== 'off') {
-        setAmbientMode(APP.local.studySettings.ambientMode);
-      }
-      setStudyTimerDisplay();
-      updateStudyLabel();
+      syncAmbientUI();
+      if (APP.local.studySettings.ambientMode && APP.local.studySettings.ambientMode !== 'off') setAmbientMode(APP.local.studySettings.ambientMode);
+      setStudyPhase(studyPhase || 'work');
       updateStudyPreview();
+      initStudySplitter();
+      runStudyStaggerAnimation();
     }
 
     function setupStudyArea() {
       ensureStudyDefaults();
+      setStudyPhase('work');
       resetStudyTimer();
       if (noteAutosaveTimer) clearInterval(noteAutosaveTimer);
       noteAutosaveTimer = setInterval(() => {
@@ -1966,6 +2170,7 @@
         save();
       }, 30000);
       setupStudyKeyboardShortcuts();
+      initStudyRipple();
     }
 
     function setupMobileTouchGuards() {
