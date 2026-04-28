@@ -55,7 +55,7 @@ async function setupPushNotifications() {
         body: payload?.notification?.body || payload?.data?.body || 'You have a new update.',
         icon: 'icons/icon-192.svg',
         badge: 'icons/icon-192.svg',
-        data: { url: payload?.data?.url || './StudentHub.html' }
+        data: { url: payload?.data?.url || './index.html' }
       };
 
       if (Notification.permission === 'granted') {

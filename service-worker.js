@@ -1,6 +1,6 @@
 /* global importScripts, firebase */
 
-const CACHE_NAME = 'betterclss-v2';
+const CACHE_NAME = 'betterclss-v3';
 const OFFLINE_URLS = ['./', './index.html', './StudentHub.html', './styles.css', './canvas-api.js', './config.js', './push-notifications.js'];
 
 function isHtmlRequest(request) {
@@ -32,7 +32,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned)).catch(() => {});
           return networkResponse;
         })
-        .catch(() => caches.match(event.request).then((cached) => cached || caches.match('./StudentHub.html')))
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match('./index.html')))
     );
     return;
   }
@@ -47,7 +47,7 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         });
       })
-      .catch(() => caches.match('./StudentHub.html'))
+      .catch(() => caches.match('./index.html'))
   );
 });
 
@@ -72,7 +72,7 @@ messaging.onBackgroundMessage((payload) => {
     icon: 'icons/icon-192.svg',
     badge: 'icons/icon-192.svg',
     data: {
-      url: payload?.data?.url || './StudentHub.html'
+      url: payload?.data?.url || './index.html'
     }
   };
 
@@ -93,7 +93,7 @@ self.addEventListener('push', (event) => {
     icon: 'icons/icon-192.svg',
     badge: 'icons/icon-192.svg',
     data: {
-      url: payload?.data?.url || './StudentHub.html'
+      url: payload?.data?.url || './index.html'
     }
   };
 
@@ -102,7 +102,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification?.data?.url || './StudentHub.html';
+  const targetUrl = event.notification?.data?.url || './index.html';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {

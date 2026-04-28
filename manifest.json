@@ -1,7 +1,7 @@
 {
   "name": "BetterCLSS",
   "short_name": "BetterCLSS",
-  "start_url": "./StudentHub.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0d1117",

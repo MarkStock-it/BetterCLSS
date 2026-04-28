@@ -1,16 +1,1488 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=StudentHub.html">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#0d1117">
-  <title>BetterCLSS</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="BetterCLSS">
+  <title>BetterCLSS - USC Canvas</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <p>Redirecting to BetterCLSS...</p>
-  <p><a href="StudentHub.html">Open BetterCLSS</a></p>
+  <div class="toast-container" id="toastContainer"></div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modalContent"></div>
+  </div>
+
+
+
+  <!-- Mobile-only nav (hidden on desktop) -->
+  <nav class="nav-tabs">
+    <div class="nav-tab active" data-page="dashboard" onclick="switchPage('dashboard', this)">Dashboard</div>
+    <div class="nav-tab" data-page="assignments" onclick="switchPage('assignments', this)">Assignments</div>
+    <div class="nav-tab" data-page="calendar" onclick="switchPage('calendar', this)">Calendar</div>
+    <div class="nav-tab" data-page="grades" onclick="switchPage('grades', this)">Grades</div>
+    <div class="nav-tab" data-page="announcements" onclick="switchPage('announcements', this)">Announcements</div>
+    <div class="nav-tab" data-page="notes" onclick="switchPage('notes', this)">Notes</div>
+    <div class="nav-tab" data-page="pomodoro" onclick="switchPage('pomodoro', this)">Timer</div>
+    <div class="nav-tab" data-page="resources" onclick="switchPage('resources', this)">Links</div>
+    <div class="nav-tab" data-page="settings" onclick="switchPage('settings', this)">Settings</div>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <!-- Sidebar brand -->
+      <div class="sidebar-brand">
+        <svg class="sidebar-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 10 12 5 2 10 12 15 22 10"/>
+          <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+        </svg>
+        <span class="sidebar-brand-text">BetterCLSS</span>
+      </div>
+
+      <!-- Sidebar nav -->
+      <nav class="sidenav">
+        <div class="sidenav-section-label">Navigate</div>
+        <div class="nav-tab active" data-page="dashboard" onclick="switchPage('dashboard', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>Dashboard</span>
+        </div>
+        <div class="nav-tab" data-page="assignments" onclick="switchPage('assignments', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 12 2 2 4-4"/></svg>
+          <span>Assignments</span>
+          <span class="tab-count" id="badgePending">0</span>
+        </div>
+        <div class="nav-tab" data-page="calendar" onclick="switchPage('calendar', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          <span>Calendar</span>
+        </div>
+        <div class="nav-tab" data-page="grades" onclick="switchPage('grades', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+          <span>Grades</span>
+        </div>
+        <div class="nav-tab" data-page="announcements" onclick="switchPage('announcements', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span>Announcements</span>
+          <span class="tab-count alert" id="badgeAnnounce">0</span>
+        </div>
+        <div class="sidenav-sep"></div>
+        <div class="nav-tab" data-page="notes" onclick="switchPage('notes', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span>Notes</span>
+        </div>
+        <div class="nav-tab" data-page="pomodoro" onclick="switchPage('pomodoro', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>Timer</span>
+        </div>
+        <div class="nav-tab" data-page="resources" onclick="switchPage('resources', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <span>Links</span>
+        </div>
+        <div class="nav-tab" data-page="settings" onclick="switchPage('settings', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Settings</span>
+        </div>
+      </nav>
+
+      <div class="sidenav-sep"></div>
+
+      <div>
+        <div class="sidebar-label">Study Goal</div>
+        <div class="study-widget">
+          <div class="study-meta">
+            <span class="study-title">Today's Hours</span>
+            <span class="study-val" id="studyVal">0 / 4h</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="studyFill" style="width:0%;background:var(--accent)"></div>
+          </div>
+          <div class="study-btns">
+            <button class="study-btn" onclick="logStudy(0.5)">+30m</button>
+            <button class="study-btn" onclick="logStudy(1)">+1h</button>
+            <button class="study-btn" onclick="logStudy(-0.5)">-30m</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <button class="sidebar-courses-toggle" id="sidebarCoursesToggle" onclick="toggleSidebarCourses()">
+          <span class="sidebar-label sidebarlabelcourses" id="sidebarlabelcourses">Courses</span>
+          <span class="sidebar-caret" id="sidebarCoursesCaret">▾</span>
+        </button>
+        <div id="sidebarCoursesWrap" class="sidebar-courses-wrap">
+          <div id="sidebarCourses"><div style="font-size:0.75rem;color:var(--text-muted)">Not connected</div></div>
+        </div>
+      </div>
+
+      <!-- Sidebar bottom controls -->
+      <div class="sidebar-footer">
+        <div class="canvas-status" onclick="showCanvasSetup()" style="flex:1">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusLabel">Connect Canvas</span>
+        </div>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark mode">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="themeIcon"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page active" id="page-dashboard">
+        <div class="canvas-banner" id="connectBanner">
+          <div class="canvas-banner-icon">&#127891;</div>
+          <div class="canvas-banner-text">
+            <div class="canvas-banner-title">Connect your USC Canvas account <button class="btn btn-secondary btn-sm" style="margin-left:8px" onclick="openTutorialModal(true)">Watch Tutorial</button></div>
+            <div class="canvas-banner-desc">Pull assignments, grades, and announcements directly from Canvas.</div>
+          </div>
+          <div class="canvas-banner-actions">
+            <button class="btn btn-canvas" onclick="showCanvasSetup()">Connect Canvas</button>
+          </div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-card accent"><div class="stat-label">Pending</div><div class="stat-value" id="statPending">0</div><div class="stat-sub">assignments</div></div>
+          <div class="stat-card red"><div class="stat-label">Overdue</div><div class="stat-value" id="statOverdue">0</div><div class="stat-sub">need attention</div></div>
+          <div class="stat-card green"><div class="stat-label">Submitted</div><div class="stat-value" id="statDone">0</div><div class="stat-sub">assignments</div></div>
+          <div class="stat-card yellow"><div class="stat-label">Announcements</div><div class="stat-value" id="statAnnounce">0</div><div class="stat-sub">unread</div></div>
+        </div>
+
+        <div class="dash-grid">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Upcoming Deadlines</div>
+              <button class="btn btn-sm btn-secondary" onclick="syncCanvas()" id="syncBtn">Sync</button>
+            </div>
+            <div id="dashUpcoming"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Overdue / High Priority</div></div>
+            <div id="dashOverdue"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Current Grades</div></div>
+            <div id="dashGrades"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Latest Announcements</div></div>
+            <div id="dashAnnouncements"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-assignments">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Assignments</div>
+            <div class="section-subtitle">All assignments from Canvas and manually added</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary btn-sm" onclick="syncCanvas()">Sync</button>
+            <button class="btn btn-primary" onclick="openAddAssignment()">+ Add</button>
+          </div>
+        </div>
+
+        <div class="assign-filters">
+          <button class="filter-btn active" onclick="filterAssign('all', this)">All</button>
+          <button class="filter-btn" onclick="filterAssign('pending', this)">Pending</button>
+          <button class="filter-btn" onclick="filterAssign('overdue', this)">Overdue</button>
+          <button class="filter-btn" onclick="filterAssign('submitted', this)">Submitted</button>
+          <button class="filter-btn" onclick="filterAssign('high', this)">High</button>
+          <button class="filter-btn" onclick="filterAssign('canvas', this)">Canvas</button>
+        </div>
+
+        <div id="assignList"></div>
+      </div>
+
+      <div class="page" id="page-calendar">
+        <div class="section-header">
+          <div class="section-title">Calendar</div>
+          <button class="btn btn-primary" onclick="openAddEvent()">+ Add Event</button>
+        </div>
+        <div class="card">
+          <div class="cal-nav-row">
+            <div class="cal-month-label" id="calMonthLabel"></div>
+            <div class="cal-nav-btns">
+              <button onclick="changeMonth(-1)">&#8249;</button>
+              <button onclick="changeMonth(0)">Today</button>
+              <button onclick="changeMonth(1)">&#8250;</button>
+            </div>
+          </div>
+          <div class="cal-grid" id="calGrid"></div>
+          <div class="cal-events-panel" id="calPanel"></div>
+        </div>
+      </div>
+
+      <div class="page" id="page-grades">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Grades</div>
+            <div class="section-subtitle">Canvas live scores + manually logged grades</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary btn-sm" onclick="syncCanvas()">Sync</button>
+            <button class="btn btn-primary" onclick="openAddGrade()">+ Log Grade</button>
+          </div>
+        </div>
+        <div class="grades-overview" id="gradesOverview"></div>
+        <div class="card"><div class="card-title" style="margin-bottom:14px">Grade Log</div><div id="gradeLog"></div></div>
+      </div>
+
+      <div class="page" id="page-announcements">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Announcements</div>
+            <div class="section-subtitle">From Canvas + manually posted</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary btn-sm" onclick="syncCanvas()">Sync</button>
+            <button class="btn btn-primary" onclick="openAddAnnouncement()">+ Post</button>
+          </div>
+        </div>
+        <div id="announceList"></div>
+      </div>
+
+      <div class="page" id="page-notes">
+        <div class="section-header"><div class="section-title">Notes</div></div>
+        <div class="notes-grid" id="notesGrid"></div>
+      </div>
+
+      <div class="page" id="page-pomodoro">
+        <div class="section-title" style="margin-bottom:24px">Study Timer</div>
+        <div class="card pomo-wrap">
+          <div class="pomo-modes">
+            <button class="pomo-mode-btn active" onclick="setPomoMode('focus', 25, this)">Focus 25m</button>
+            <button class="pomo-mode-btn" onclick="setPomoMode('short', 5, this)">Break 5m</button>
+            <button class="pomo-mode-btn" onclick="setPomoMode('long', 15, this)">Long 15m</button>
+          </div>
+          <div class="pomo-ring" id="pomoRing"><div class="pomo-time" id="pomoTime">25:00</div></div>
+          <div class="pomo-label" id="pomoLabel">Ready to focus?</div>
+          <div class="pomo-controls">
+            <button class="btn btn-primary" id="pomoBtn" onclick="togglePomo()">Start</button>
+            <button class="btn btn-secondary" onclick="resetPomo()">Reset</button>
+          </div>
+          <div class="pomo-stats">Sessions today: <span id="pomoSessions">0</span></div>
+        </div>
+      </div>
+
+      <div class="page" id="page-resources">
+        <div class="section-header"><div class="section-title">Quick Links</div><button class="btn btn-primary" onclick="openAddLink()">+ Add Link</button></div>
+        <div class="links-grid" id="linksGrid"></div>
+      </div>
+
+      <div class="page" id="page-settings">
+        <div class="section-header"><div class="section-title">Settings</div></div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">App Install</div>
+          <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px">Install BetterCLSS as an app when your browser allows it.</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary" id="installAppBtn" onclick="installApp()">Install BetterCLSS</button>
+            <span id="installStatusText" style="font-size:0.78rem;color:var(--text-muted)">Checking install availability...</span>
+          </div>
+          <div id="iosInstallHint" style="display:none;margin-top:10px;font-size:0.78rem;color:var(--text-dim)">On iPhone Safari, tap Share then Add to Home Screen.</div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-title" style="margin-bottom:14px">Canvas Connection</div>
+          <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px">For safety, your Canvas token is locked after it is first saved. Disconnect Canvas to replace it.</div>
+          <button class="btn btn-canvas" onclick="showCanvasSetup()">Open Canvas Connection</button>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-title" style="margin-bottom:14px">Tutorial Video</div>
+          <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px">Built-in tutorial video only. Supported names: <strong>assets/tutorial/tutorial.mp4</strong> or <strong>assets/tutorial/tutorial.mov</strong>.</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" onclick="openTutorialModal(true)">Watch Tutorial</button>
+            <button class="btn btn-secondary btn-sm" onclick="resetTutorialSkip()">Show On Next Open</button>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-title" style="margin-bottom:14px">Accent Color</div>
+          <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px">Customize the highlight color used across the app UI.</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+            <input type="color" id="accentColorPicker" value="#6080ff" oninput="setAccentColor(this.value, false)" style="width:42px;height:34px;padding:0;border:none;background:transparent;cursor:pointer">
+            <span id="accentHexValue" style="font-size:0.78rem;color:var(--text-muted)">#6080ff</span>
+            <button class="btn btn-secondary btn-sm" onclick="resetAccentColor()">Reset</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <button data-accent="#6080ff" onclick="setAccentColor('#6080ff')" title="Blue" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#6080ff;cursor:pointer"></button>
+            <button data-accent="#3dd9a4" onclick="setAccentColor('#3dd9a4')" title="Mint" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#3dd9a4;cursor:pointer"></button>
+            <button data-accent="#ffb84f" onclick="setAccentColor('#ffb84f')" title="Amber" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#ffb84f;cursor:pointer"></button>
+            <button data-accent="#ff4f5e" onclick="setAccentColor('#ff4f5e')" title="Red" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#ff4f5e;cursor:pointer"></button>
+            <button data-accent="#b06fff" onclick="setAccentColor('#b06fff')" title="Purple" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#b06fff;cursor:pointer"></button>
+            <button data-accent="#06b6d4" onclick="setAccentColor('#06b6d4')" title="Cyan" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#06b6d4;cursor:pointer"></button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="assistant-shell" id="assistantShell">
+    <button class="assistant-toggle" id="assistantToggle" onclick="toggleAssistant()">Ask AI</button>
+    <div class="assistant-panel" id="assistantPanel">
+      <div class="assistant-head">
+        <div class="assistant-title">BetterCLSS AI</div>
+        <button class="assistant-key-btn" title="Set your own AI API key" onclick="toggleAiKeyRow()">⚙</button>
+        <button class="assistant-close" onclick="toggleAssistant(false)">×</button>
+      </div>
+      <div class="assistant-key-row" id="assistantKeyRow" style="display:none">
+        <input type="password" id="aiKeyInput" placeholder="Paste your AI API key (optional)" autocomplete="off" oninput="saveAiApiKey()" />
+        <span class="assistant-key-hint">Stored locally on this device only. Leave blank to use the shared key.</span>
+      </div>
+      <div class="assistant-messages" id="assistantMessages"></div>
+      <div class="assistant-input-row">
+        <input type="text" id="assistantInput" placeholder="Ask about your dashboard..." />
+        <button class="btn btn-primary btn-sm" id="assistantSend" onclick="sendAssistantMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="canvas-api.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+  <script src="push-notifications.js"></script>
+  <script>
+    const APP = {
+      local: {
+        assignments: [],
+        grades: [],
+        notes: [],
+        events: [],
+        announcements: [],
+        canvasOverrides: {},
+        links: [
+          { id: 1, name: 'USC Canvas', url: 'https://usc.instructure.com', icon: '🎓' },
+          { id: 2, name: 'USC Email', url: 'https://mail.usc.edu', icon: '📧' },
+          { id: 3, name: 'Google Drive', url: 'https://drive.google.com', icon: '📁' }
+        ],
+        studyHours: 0,
+        studyGoal: 4,
+        pomoSessions: 0,
+        nextId: 100
+      },
+      canvas: {
+        assignments: [],
+        announcements: [],
+        grades: [],
+        courses: [],
+        connected: false,
+        syncing: false
+      },
+      ui: {
+        assignFilter: 'all',
+        searchQuery: '',
+        calMonth: new Date().getMonth(),
+        calYear: new Date().getFullYear(),
+        selectedDate: null
+      },
+      ai: {
+        open: false,
+        sending: false,
+        messages: []
+      }
+    };
+
+    let pomoTimer = null;
+    let pomoSecs = 25 * 60;
+    let pomoMode = 'focus';
+    let pomoRunning = false;
+    let deferredInstallPrompt = null;
+    let sidebarCoursesCollapsed = false;
+    const ACCENT_STORAGE_KEY = 'bclss_accent';
+    const TUTORIAL_SKIP_KEY = 'bclss_tutorial_skip';
+    const BUILT_IN_TUTORIAL_VIDEO_URLS = [
+      'assets/tutorial/tutorial.mp4',
+      'assets/tutorial/tutorial.mov',
+      'assets/tutorial/Screen Recording 2026-04-28 at 10.57.01 AM.mov',
+      'assets/tutorial/Screen Recording 2026-04-28 at 10.57.01 AM.mov'
+    ];
+    const DEFAULT_ACCENT = '#6080ff';
+    const MOBILE_PAGE_ORDER = ['dashboard', 'assignments', 'calendar', 'grades', 'announcements', 'notes', 'pomodoro', 'resources', 'settings'];
+
+    function save() { localStorage.setItem('bclss_local', JSON.stringify(APP.local)); }
+    function load() { try { const raw = localStorage.getItem('bclss_local'); if (raw) APP.local = { ...APP.local, ...JSON.parse(raw) }; } catch (_) {} }
+    function toggleTheme() {
+      const root = document.documentElement;
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('bclss_theme', next);
+      setThemeIcon(next);
+    }
+    function setThemeIcon(theme) {
+      const icon = document.getElementById('themeIcon');
+      if (!icon) return;
+      if (theme === 'light') {
+        // moon icon for switching to dark
+        icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+      } else {
+        // sun icon for switching to light
+        icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+      }
+    }
+    function initTheme() {
+      const saved = localStorage.getItem('bclss_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+      setThemeIcon(saved);
+    }
+    function normalizeAccent(value) {
+      const v = String(value || '').trim();
+      if (/^#[0-9a-fA-F]{6}$/.test(v)) return v.toLowerCase();
+      if (/^#[0-9a-fA-F]{3}$/.test(v)) return ('#' + v[1] + v[1] + v[2] + v[2] + v[3] + v[3]).toLowerCase();
+      return null;
+    }
+
+    function shadeColor(hex, percent) {
+      const clean = normalizeAccent(hex) || DEFAULT_ACCENT;
+      const num = parseInt(clean.slice(1), 16);
+      const amt = Math.round(2.55 * percent);
+      const r = Math.min(255, Math.max(0, (num >> 16) + amt));
+      const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amt));
+      const b = Math.min(255, Math.max(0, (num & 0x0000FF) + amt));
+      return '#' + (0x1000000 + (r * 0x10000) + (g * 0x100) + b).toString(16).slice(1);
+    }
+
+    function syncAccentControls() {
+      const current = normalizeAccent(localStorage.getItem(ACCENT_STORAGE_KEY)) || DEFAULT_ACCENT;
+      const picker = document.getElementById('accentColorPicker');
+      const hex = document.getElementById('accentHexValue');
+      if (picker) picker.value = current;
+      if (hex) hex.textContent = current;
+
+      document.querySelectorAll('[data-accent]').forEach((btn) => {
+        const swatch = normalizeAccent(btn.getAttribute('data-accent'));
+        btn.style.borderColor = swatch === current ? 'var(--text)' : 'var(--border)';
+      });
+    }
+
+    function applyAccentColor(accent) {
+      const root = document.documentElement;
+      const clean = normalizeAccent(accent) || DEFAULT_ACCENT;
+      root.style.setProperty('--accent', clean);
+      root.style.setProperty('--accent-hover', shadeColor(clean, -12));
+    }
+
+    function setAccentColor(accent, showToast = true) {
+      const clean = normalizeAccent(accent);
+      if (!clean) return;
+      localStorage.setItem(ACCENT_STORAGE_KEY, clean);
+      applyAccentColor(clean);
+      syncAccentControls();
+      if (showToast) toast('Accent updated', 'success');
+    }
+
+    function resetAccentColor() {
+      localStorage.removeItem(ACCENT_STORAGE_KEY);
+      applyAccentColor(DEFAULT_ACCENT);
+      syncAccentControls();
+      toast('Accent reset', 'info');
+    }
+
+    function initAccentTheme() {
+      const saved = normalizeAccent(localStorage.getItem(ACCENT_STORAGE_KEY)) || DEFAULT_ACCENT;
+      applyAccentColor(saved);
+      localStorage.setItem(ACCENT_STORAGE_KEY, saved);
+      syncAccentControls();
+    }
+    async function installApp() {
+      if (!deferredInstallPrompt) {
+        toast('Install is not available yet on this browser/page.', 'info');
+        return;
+      }
+
+      deferredInstallPrompt.prompt();
+      const result = await deferredInstallPrompt.userChoice;
+      if (result && result.outcome === 'accepted') {
+        toast('BetterCLSS installed.', 'success');
+      } else {
+        toast('Install canceled.', 'warn');
+      }
+
+      deferredInstallPrompt = null;
+      updateInstallButtonState();
+    }
+
+    function isIosSafari() {
+      const ua = navigator.userAgent || '';
+      const isIOS = /iPhone|iPad|iPod/i.test(ua);
+      const isWebKit = /WebKit/i.test(ua);
+      const isOtherIOSBrowser = /CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
+      return isIOS && isWebKit && !isOtherIOSBrowser;
+    }
+
+    function updateInstallButtonState() {
+      const installBtn = document.getElementById('installAppBtn');
+      const status = document.getElementById('installStatusText');
+      const iosHint = document.getElementById('iosInstallHint');
+      if (!installBtn) return;
+
+      const inStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      if (inStandalone) {
+        installBtn.disabled = true;
+        installBtn.textContent = 'Installed';
+        if (status) status.textContent = 'App is already installed on this device.';
+        if (iosHint) iosHint.style.display = 'none';
+        return;
+      }
+
+      if (isIosSafari()) {
+        installBtn.disabled = true;
+        installBtn.textContent = 'Install BetterCLSS';
+        if (status) status.textContent = 'Use Safari Share menu to install.';
+        if (iosHint) iosHint.style.display = 'block';
+        return;
+      }
+
+      if (iosHint) iosHint.style.display = 'none';
+
+      if (deferredInstallPrompt) {
+        installBtn.disabled = false;
+        installBtn.textContent = 'Install BetterCLSS';
+        if (status) status.textContent = 'Install is ready.';
+      } else {
+        installBtn.disabled = true;
+        installBtn.textContent = 'Install BetterCLSS';
+        if (status) status.textContent = 'Install prompt not available yet. Use HTTPS and refresh once.';
+      }
+    }
+
+    function setSidebarCoursesCollapsed(collapsed) {
+      sidebarCoursesCollapsed = !!collapsed;
+      localStorage.setItem('bclss_courses_collapsed', sidebarCoursesCollapsed ? '1' : '0');
+
+      const wrap = document.getElementById('sidebarCoursesWrap');
+      const caret = document.getElementById('sidebarCoursesCaret');
+      if (wrap) wrap.style.display = sidebarCoursesCollapsed ? 'none' : '';
+      if (caret) caret.textContent = sidebarCoursesCollapsed ? '▸' : '▾';
+    }
+
+    function toggleSidebarCourses() {
+      setSidebarCoursesCollapsed(!sidebarCoursesCollapsed);
+    }
+
+    function setupInstallPrompt() {
+      window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        updateInstallButtonState();
+      });
+
+      window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        updateInstallButtonState();
+      });
+      updateInstallButtonState();
+    }
+
+    function resetTutorialSkip() {
+      localStorage.removeItem(TUTORIAL_SKIP_KEY);
+      toast('Tutorial will show on next app open.', 'info');
+    }
+
+    function skipTutorial() {
+      localStorage.setItem(TUTORIAL_SKIP_KEY, '1');
+      closeModal();
+    }
+
+    function hasCanvasConnection() {
+      return !!APP.canvas.connected;
+    }
+
+    async function firstReachableTutorialUrl() {
+      for (const path of BUILT_IN_TUTORIAL_VIDEO_URLS) {
+        const url = encodeURI(path);
+        try {
+          const resp = await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-1' } });
+          if (resp.ok || resp.status === 206) return url;
+        } catch (_) {
+          // Continue trying fallbacks.
+        }
+      }
+      return null;
+    }
+
+    async function initTutorialVideoPlayback() {
+      const video = document.getElementById('tutorialVideo');
+      const hint = document.getElementById('tutorialVideoHint');
+      if (!video || !hint) return;
+
+      const url = await firstReachableTutorialUrl();
+      if (!url) {
+        hint.textContent = 'Tutorial file not found. Add assets/tutorial/tutorial.mp4 for best compatibility.';
+        hint.style.display = 'block';
+        return;
+      }
+
+      hint.style.display = 'none';
+      video.addEventListener('error', () => {
+        hint.textContent = 'Video file was found but this browser could not decode it. Convert it to H.264 .mp4 and save as assets/tutorial/tutorial.mp4.';
+        hint.style.display = 'block';
+      }, { once: true });
+
+      video.src = url;
+      video.load();
+    }
+
+    function openTutorialModal(forceOpen = false) {
+      const connected = hasCanvasConnection();
+
+      if (!forceOpen) {
+        // Auto show every app open while Canvas is not connected.
+        if (!connected) {
+          localStorage.removeItem(TUTORIAL_SKIP_KEY);
+        } else {
+          // Once Canvas is connected, suppress auto tutorial.
+          return;
+        }
+      }
+
+      const videoMarkup = '<video id="tutorialVideo" class="tutorial-video" controls playsinline preload="metadata">Your browser does not support embedded video.</video><div id="tutorialVideoHint" class="tutorial-empty" style="display:none;margin-top:10px"></div>';
+
+      openModal('<div class="modal-title">Welcome Tutorial</div><div class="tutorial-copy">Watch this quick walkthrough to get started.</div>' + videoMarkup + '<div class="modal-footer tutorial-actions"><button class="btn btn-secondary" onclick="skipTutorial()">Skip Tutorial</button><button class="btn btn-primary" onclick="closeModal()">Close</button></div>', { className: 'tutorial-modal' });
+      initTutorialVideoPlayback();
+    }
+
+    function getAiApiKey() { return localStorage.getItem('bclss_ai_key') || ''; }
+    function saveAiApiKey() { const v = (document.getElementById('aiKeyInput') || {}).value || ''; if (v.trim()) { localStorage.setItem('bclss_ai_key', v.trim()); } else { localStorage.removeItem('bclss_ai_key'); } }
+    function toggleAiKeyRow() { const row = document.getElementById('assistantKeyRow'); if (!row) return; const open = row.style.display === 'none'; row.style.display = open ? '' : 'none'; if (open) { const inp = document.getElementById('aiKeyInput'); if (inp) { inp.value = getAiApiKey(); inp.focus(); } } }
+    function uid() { APP.local.nextId += 1; return APP.local.nextId; }
+    function todayISO() { return new Date().toISOString().split('T')[0]; }
+    function daysFromToday(days) { const d = new Date(); d.setDate(d.getDate() + days); return d.toISOString().split('T')[0]; }
+    function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function jsQuote(s) { return String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+
+    function toast(msg, type = 'info') {
+      const c = document.getElementById('toastContainer');
+      const t = document.createElement('div');
+      t.className = 'toast ' + type;
+      t.textContent = msg;
+      c.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+
+    function addAssistantMessage(role, content) {
+      APP.ai.messages.push({ role, content: String(content || '') });
+      if (APP.ai.messages.length > 30) APP.ai.messages = APP.ai.messages.slice(-30);
+      renderAssistantMessages();
+    }
+
+    function renderAssistantMessages() {
+      const box = document.getElementById('assistantMessages');
+      if (!box) return;
+
+      if (!APP.ai.messages.length) {
+        box.innerHTML = '<div class="assistant-empty">Ask things like: "What is due soon?" or "How do I catch up this week?"</div>';
+        return;
+      }
+
+      box.innerHTML = APP.ai.messages.map((m) => {
+        const cls = m.role === 'assistant' ? 'assistant-msg assistant' : 'assistant-msg user';
+        return '<div class="' + cls + '">' + esc(m.content).replace(/\n/g, '<br>') + '</div>';
+      }).join('');
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function toggleAssistant(forceState) {
+      APP.ai.open = typeof forceState === 'boolean' ? forceState : !APP.ai.open;
+      const shell = document.getElementById('assistantShell');
+      if (!shell) return;
+      shell.classList.toggle('open', APP.ai.open);
+
+      if (APP.ai.open) {
+        renderAssistantMessages();
+        const input = document.getElementById('assistantInput');
+        if (input) input.focus();
+      }
+    }
+
+    function buildAssistantContext() {
+      const all = allAssignments();
+      const pending = all.filter((a) => !a.done);
+      const overdue = pending.filter((a) => dueDays(a.due) !== null && dueDays(a.due) < 0);
+      const dueSoon = pending.filter((a) => {
+        const d = dueDays(a.due);
+        return d !== null && d >= 0 && d <= 7;
+      }).slice(0, 20).map((a) => ({
+        title: a.title,
+        subject: a.subject,
+        due: a.due,
+        dueInDays: dueDays(a.due),
+        source: a.source,
+        priority: a.priority,
+      }));
+
+      const upcomingEvents = APP.local.events
+        .filter((e) => e && e.date)
+        .map((e) => ({
+          title: e.title,
+          date: e.date,
+          type: e.type || 'Event',
+          dueInDays: dueDays(e.date),
+        }))
+        .filter((e) => e.dueInDays === null || e.dueInDays >= 0)
+        .sort((a, b) => {
+          const av = a.dueInDays == null ? 9999 : a.dueInDays;
+          const bv = b.dueInDays == null ? 9999 : b.dueInDays;
+          return av - bv;
+        })
+        .slice(0, 12);
+
+      const recentAnnouncements = [...APP.canvas.announcements, ...APP.local.announcements]
+        .slice(0, 12)
+        .map((a) => ({
+          title: a.title,
+          course: a.courseName || a.time || 'General',
+          messagePreview: (a.message || a.body || '').slice(0, 180),
+        }));
+
+      const upcomingAssignments = pending
+        .filter((a) => dueDays(a.due) === null || dueDays(a.due) >= 0)
+        .slice(0, 20)
+        .map((a) => ({
+          title: a.title,
+          subject: a.subject,
+          due: a.due,
+          dueInDays: dueDays(a.due),
+          priority: a.priority,
+          source: a.source,
+        }));
+
+      const overdueAssignments = overdue
+        .slice(0, 20)
+        .map((a) => ({
+          title: a.title,
+          subject: a.subject,
+          due: a.due,
+          overdueByDays: Math.abs(dueDays(a.due) || 0),
+          priority: a.priority,
+          source: a.source,
+        }));
+
+      const localGradeLog = APP.local.grades.slice(-20).map((g) => ({
+        subject: g.subject,
+        activity: g.label,
+        score: g.score,
+        total: g.total,
+      }));
+
+      return {
+        contextVersion: 2,
+        now: new Date().toISOString(),
+        activePage: (document.querySelector('.page.active') || {}).id || 'page-dashboard',
+        canvasConnected: !!APP.canvas.connected,
+        canvasSyncing: !!APP.canvas.syncing,
+        aiKeyMode: getAiApiKey() ? 'user' : 'shared',
+        totals: {
+          assignmentsTotal: all.length,
+          pending: pending.length,
+          overdue: overdue.length,
+          submitted: all.filter((a) => a.done).length,
+          announcements: APP.canvas.announcements.length + APP.local.announcements.length,
+          courses: APP.canvas.courses.length,
+          events: APP.local.events.length,
+          notes: APP.local.notes.length,
+        },
+        dueSoon,
+        upcomingAssignments,
+        overdueAssignments,
+        grades: APP.canvas.grades.slice(0, 12).map((g) => ({
+          course: g.courseCode || g.courseName,
+          score: g.currentScore,
+          finalScore: g.finalScore,
+          grade: g.currentGrade,
+        })),
+        localGradeLog,
+        recentAnnouncements,
+        upcomingEvents,
+        notes: APP.local.notes.slice(-10).map((n) => ({
+          title: n.title,
+          color: n.color,
+          preview: String(n.content || '').slice(0, 180),
+        })),
+        study: {
+          hoursToday: APP.local.studyHours,
+          dailyGoalHours: APP.local.studyGoal,
+          pomodoroSessionsToday: APP.local.pomoSessions,
+        },
+      };
+    }
+
+    async function sendAssistantMessage() {
+      if (APP.ai.sending) return;
+
+      const input = document.getElementById('assistantInput');
+      const btn = document.getElementById('assistantSend');
+      const message = (input && input.value ? input.value : '').trim();
+      if (!message) return;
+
+      addAssistantMessage('user', message);
+      input.value = '';
+      APP.ai.sending = true;
+      if (btn) btn.textContent = '...';
+
+      try {
+        const history = APP.ai.messages.slice(-12).map((m) => ({ role: m.role, content: m.content }));
+        const aiKey = getAiApiKey();
+        const reqHeaders = { 'Content-Type': 'application/json' };
+        if (aiKey) reqHeaders['x-ai-key'] = aiKey;
+        const response = await fetch(CanvasAPI.apiUrl('/api/assistant/chat'), {
+          method: 'POST',
+          headers: reqHeaders,
+          body: JSON.stringify({
+            message,
+            history,
+            context: buildAssistantContext(),
+          }),
+        });
+
+        if (!response.ok) {
+          let detail = '';
+          try {
+            const err = await response.json();
+            detail = err.message || err.error || '';
+          } catch (_) {}
+          throw new Error(detail || ('HTTP ' + response.status));
+        }
+        const data = await response.json();
+        addAssistantMessage('assistant', data.reply || 'No reply from model.');
+      } catch (err) {
+        const text = err && err.message ? err.message : 'Unknown assistant error';
+        addAssistantMessage('assistant', 'AI backend error: ' + text + '. Check your backend URL and deployed environment variables.');
+      } finally {
+        APP.ai.sending = false;
+        if (btn) btn.textContent = 'Send';
+      }
+    }
+
+    function openModal(html, options = {}) {
+      const modal = document.getElementById('modalContent');
+      modal.className = 'modal';
+      if (options.className) modal.classList.add(options.className);
+      modal.innerHTML = html;
+      document.getElementById('modalOverlay').classList.add('open');
+    }
+    function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+
+    function dueDays(dateStr) {
+      if (!dateStr) return null;
+      const t = new Date(); t.setHours(0, 0, 0, 0);
+      const d = new Date(dateStr.length === 10 ? dateStr + 'T00:00:00' : dateStr);
+      d.setHours(0, 0, 0, 0);
+      return Math.round((d - t) / 86400000);
+    }
+
+    function dueChip(d) {
+      if (d === null) return { cls: 'ok', text: 'No due date' };
+      if (d < 0) return { cls: 'overdue', text: Math.abs(d) + 'd overdue' };
+      if (d === 0) return { cls: 'urgent', text: 'Due today' };
+      if (d <= 2) return { cls: 'soon', text: d + 'd left' };
+      return { cls: 'ok', text: d + 'd left' };
+    }
+
+    function priorityForDate(dateStr) {
+      const d = dueDays(dateStr);
+      if (d === null) return 'low';
+      if (d <= 1) return 'high';
+      if (d <= 3) return 'medium';
+      return 'low';
+    }
+
+    function autoCanvasDone(a) {
+      const state = String(a.submissionState || '').toLowerCase();
+      if (a.graded || a.submitted) return true;
+      if (a.submittedAt) return true;
+      if (state === 'submitted' || state === 'graded' || state === 'pending_review' || state === 'complete') return true;
+      return false;
+    }
+
+    function allAssignments() {
+      const local = APP.local.assignments.map(a => ({ id: 'l_' + a.id, source: 'local', localId: a.id, title: a.title, subject: a.subject, due: a.due, done: !!a.done, priority: a.priority || priorityForDate(a.due), url: null }));
+      const overrides = APP.local.canvasOverrides || {};
+      const canvas = APP.canvas.assignments
+        .map((a) => {
+          const override = overrides[a.id] || {};
+          const done = typeof override.done === 'boolean' ? override.done : autoCanvasDone(a);
+          return {
+            id: a.id,
+            source: 'canvas',
+            title: a.title,
+            subject: a.courseName || a.courseCode || 'Canvas',
+            due: a.dueAt ? a.dueAt.split('T')[0] : null,
+            done,
+            manualDone: typeof override.done === 'boolean',
+            priority: priorityForDate(a.dueAt || ''),
+            url: a.canvasUrl,
+          };
+        });
+      const all = [...canvas, ...local];
+      all.sort((a, b) => {
+        if (!a.due && !b.due) return 0;
+        if (!a.due) return 1;
+        if (!b.due) return -1;
+        return new Date(a.due) - new Date(b.due);
+      });
+      return all;
+    }
+
+    function updateConnectionStatus() {
+      const dot = document.getElementById('statusDot');
+      const label = document.getElementById('statusLabel');
+      const banner = document.getElementById('connectBanner');
+      if (APP.canvas.syncing) {
+        dot.className = 'status-dot';
+        label.textContent = 'Syncing...';
+      } else if (APP.canvas.connected) {
+        dot.className = 'status-dot connected';
+        label.textContent = 'Canvas Connected';
+        banner.style.display = 'none';
+      } else {
+        dot.className = 'status-dot';
+        label.textContent = 'Connect Canvas';
+        banner.style.display = '';
+      }
+    }
+
+    function showCanvasSetup() {
+      const domain = CanvasAPI.getDomain() || 'usc.instructure.com';
+      const token = CanvasAPI.getToken() || '';
+      const apiBase = CanvasAPI.getApiBase() || '';
+      const tokenLocked = !!token;
+      const tokenHelp = tokenLocked
+        ? 'Token is locked. Disconnect Canvas to replace it.'
+        : 'Token is stored only in your browser on this device.';
+      const tokenAttrs = tokenLocked ? 'readonly aria-readonly="true"' : '';
+      const tokenPlaceholder = tokenLocked ? 'Token is locked' : 'Paste your token';
+      const saveLabel = tokenLocked ? 'Test Connection' : 'Save & Test';
+
+      openModal('<div class="modal-title">Connect Canvas</div><div class="form-group"><label class="form-label">Canvas Domain</label><input id="canvasDomainInput" type="text" value="' + esc(domain) + '" placeholder="usc.instructure.com"></div><div class="form-group"><label class="form-label">Canvas Access Token</label><input id="canvasTokenInput" type="password" value="' + esc(token) + '" placeholder="' + esc(tokenPlaceholder) + '" ' + tokenAttrs + '></div><div class="form-group"><label class="form-label">Backend API URL (optional for static hosting)</label><input id="apiBaseInput" type="text" value="' + esc(apiBase) + '" placeholder="https://your-backend.onrender.com"></div><div class="form-group"><div style="font-size:0.78rem;color:var(--text-dim);line-height:1.5">' + esc(tokenHelp) + '</div></div><div class="modal-footer"><button class="btn btn-danger" onclick="disconnectCanvas()">Disconnect</button><button class="btn btn-secondary" onclick="closeModal()">Close</button><button class="btn btn-canvas" onclick="connectCanvas()">' + esc(saveLabel) + '</button></div>');
+    }
+
+    async function connectCanvas() {
+      const tokenInput = document.getElementById('canvasTokenInput');
+      const domainInput = document.getElementById('canvasDomainInput');
+      const apiBaseInput = document.getElementById('apiBaseInput');
+      const existingToken = CanvasAPI.getToken() || '';
+      const token = existingToken || (tokenInput ? tokenInput.value.trim() : '');
+      const domain = domainInput ? domainInput.value.trim() : 'usc.instructure.com';
+      const apiBase = apiBaseInput ? apiBaseInput.value.trim() : '';
+      if (!token) {
+        toast('Paste your Canvas token first.', 'warn');
+        return;
+      }
+
+      CanvasAPI.saveCredentials(token, domain);
+      CanvasAPI.setApiBase(apiBase);
+
+      try {
+        const profile = await CanvasAPI.testConnection();
+        closeModal();
+        toast('Connected as ' + profile.name, 'success');
+        await syncCanvas();
+      } catch (err) {
+        const details = err && err.message ? err.message : 'Unknown connection error';
+        toast('Connection failed: ' + details, 'error');
+      }
+    }
+
+    function disconnectCanvas() {
+      CanvasAPI.clearCredentials();
+      APP.canvas.connected = false;
+      APP.canvas.assignments = [];
+      APP.canvas.announcements = [];
+      APP.canvas.grades = [];
+      APP.canvas.courses = [];
+      closeModal();
+      renderAll();
+      toast('Canvas disconnected on this device.', 'info');
+    }
+
+    async function syncCanvas(fromStartup = false) {
+      if (!CanvasAPI.getToken()) {
+        if (!fromStartup) showCanvasSetup();
+        return false;
+      }
+      if (APP.canvas.syncing) return false;
+
+      APP.canvas.syncing = true;
+      updateConnectionStatus();
+      const syncBtn = document.getElementById('syncBtn');
+      if (syncBtn) syncBtn.textContent = 'Syncing...';
+
+      try {
+        const [assignments, announcements, grades] = await Promise.all([CanvasAPI.getAllAssignments(), CanvasAPI.getAllAnnouncements(), CanvasAPI.getGrades()]);
+        APP.canvas.assignments = assignments;
+        APP.canvas.announcements = announcements;
+        APP.canvas.grades = grades;
+        APP.canvas.courses = [...new Map(assignments.map(a => [a.courseId, { name: a.courseName || a.courseCode || 'Course' }])).values()];
+        APP.canvas.connected = true;
+        toast('Canvas sync complete', 'success');
+        return true;
+      } catch (_) {
+        APP.canvas.connected = false;
+        toast('Canvas sync failed. Reconnect token.', 'error');
+        if (fromStartup) openTutorialModal();
+        return false;
+      } finally {
+        APP.canvas.syncing = false;
+        if (syncBtn) syncBtn.textContent = 'Sync';
+        renderAll();
+      }
+    }
+
+    function switchPage(page, tab) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('page-' + page).classList.add('active');
+      if (tab) tab.classList.add('active');
+      document.querySelectorAll('[data-page="' + page + '"]').forEach((navTab) => navTab.classList.add('active'));
+
+      const mobileTab = document.querySelector('.nav-tabs [data-page="' + page + '"]');
+      if (mobileTab && mobileTab.scrollIntoView) {
+        mobileTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+
+      renderPage(page);
+    }
+
+    function swipeToPage(direction) {
+      const activeId = ((document.querySelector('.page.active') || {}).id || 'page-dashboard').replace('page-', '');
+      const currentIndex = MOBILE_PAGE_ORDER.indexOf(activeId);
+      if (currentIndex === -1) return;
+
+      const nextIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
+      if (nextIndex < 0 || nextIndex >= MOBILE_PAGE_ORDER.length) return;
+
+      const nextPage = MOBILE_PAGE_ORDER[nextIndex];
+      const nextTab = document.querySelector('[data-page="' + nextPage + '"]');
+      switchPage(nextPage, nextTab || undefined);
+    }
+
+    function renderPage(page) {
+      if (page === 'dashboard') renderDashboard();
+      if (page === 'assignments') renderAssignments();
+      if (page === 'calendar') renderCalendar();
+      if (page === 'grades') renderGrades();
+      if (page === 'announcements') renderAnnouncements();
+      if (page === 'notes') renderNotes();
+      if (page === 'resources') renderLinks();
+      if (page === 'pomodoro') updatePomoDisplay();
+      if (page === 'settings') {
+        updateInstallButtonState();
+        syncAccentControls();
+      }
+    }
+
+    function renderAll() {
+      updateConnectionStatus();
+      updateBadges();
+      renderSidebar();
+      const active = (document.querySelector('.page.active') || {}).id || 'page-dashboard';
+      renderPage(active.replace('page-', ''));
+    }
+
+    function updateBadges() {
+      const all = allAssignments();
+      const pending = all.filter(a => !a.done).length;
+      const overdue = all.filter(a => !a.done && dueDays(a.due) !== null && dueDays(a.due) < 0).length;
+      const done = all.filter(a => a.done).length;
+      const ann = APP.canvas.announcements.length + APP.local.announcements.length;
+      document.getElementById('badgePending').textContent = pending;
+      document.getElementById('badgeAnnounce').textContent = ann;
+      document.getElementById('statPending').textContent = pending;
+      document.getElementById('statOverdue').textContent = overdue;
+      document.getElementById('statDone').textContent = done;
+      document.getElementById('statAnnounce').textContent = ann;
+    }
+
+    function renderSidebar() {
+      const due = allAssignments().filter(a => !a.done).slice(0, 6);
+      const sidebarDue = document.getElementById('sidebarDue');
+      if (sidebarDue) {
+        sidebarDue.innerHTML = due.length ? due.map(a => { const chip = dueChip(dueDays(a.due)); return '<div class="mini-item"><div class="priority-dot ' + a.priority + '"></div><div class="mini-item-info"><div class="mini-item-title">' + esc(a.title) + '</div><div class="mini-item-due">' + chip.text + ' · ' + esc(a.subject) + '</div></div></div>'; }).join('') : '<div style="font-size:0.75rem;color:var(--text-muted)">Nothing pending</div>';
+      }
+      const sidebarCourses = document.getElementById('sidebarCourses');
+      if (sidebarCourses) {
+        sidebarCourses.innerHTML = APP.canvas.courses.length ? APP.canvas.courses.map(c => '<div style="font-size:0.78rem;color:var(--text-dim);padding:4px 0">' + esc(c.name) + '</div>').join('') : '<div style="font-size:0.75rem;color:var(--text-muted)">Not connected</div>';
+      }
+      const pct = Math.min(100, Math.round((APP.local.studyHours / APP.local.studyGoal) * 100));
+      const studyVal = document.getElementById('studyVal');
+      if (studyVal) studyVal.textContent = APP.local.studyHours.toFixed(1) + ' / ' + APP.local.studyGoal + 'h';
+      const studyFill = document.getElementById('studyFill');
+      if (studyFill) studyFill.style.width = pct + '%';
+    }
+
+    function dashboardFeed(items) {
+      if (!items.length) return '<div class="empty-state"><div class="empty-text">Nothing to show</div></div>';
+      return items.map(a => { const chip = dueChip(dueDays(a.due)); return '<div class="feed-item"><div class="priority-dot ' + a.priority + '"></div><div class="feed-info"><div class="feed-title">' + esc(a.title) + '</div><div class="feed-meta">' + esc(a.subject) + '</div></div><div class="due-chip ' + chip.cls + '">' + chip.text + '</div></div>'; }).join('');
+    }
+
+    function renderDashboard() {
+      const all = allAssignments();
+      const upcoming = all.filter(a => !a.done && (dueDays(a.due) === null || dueDays(a.due) >= 0)).slice(0, 6);
+      const urgent = all.filter(a => !a.done && (a.priority === 'high' || (dueDays(a.due) !== null && dueDays(a.due) < 0))).slice(0, 6);
+      document.getElementById('dashUpcoming').innerHTML = dashboardFeed(upcoming);
+      document.getElementById('dashOverdue').innerHTML = dashboardFeed(urgent);
+      const grades = APP.canvas.grades;
+      document.getElementById('dashGrades').innerHTML = grades.length ? grades.slice(0, 6).map(g => '<div class="feed-item"><div class="feed-info"><div class="feed-title">' + esc(g.courseName || g.courseCode || 'Course') + '</div><div class="feed-meta">' + esc(g.courseCode || '') + '</div></div><div class="grade-val">' + (g.currentScore == null ? '--' : Math.round(g.currentScore) + '%') + '</div></div>').join('') : '<div class="empty-state"><div class="empty-text">No grade data</div></div>';
+      const ann = [...APP.canvas.announcements, ...APP.local.announcements].slice(0, 4);
+      document.getElementById('dashAnnouncements').innerHTML = ann.length ? ann.map(a => '<div class="feed-item"><div class="feed-info"><div class="feed-title">' + esc(a.title) + '</div><div class="feed-meta">' + esc(a.courseName || a.time || '') + '</div></div></div>').join('') : '<div class="empty-state"><div class="empty-text">No announcements</div></div>';
+    }
+
+    function filterAssign(filter, btn) {
+      APP.ui.assignFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderAssignments();
+    }
+
+    function renderAssignments() {
+      let list = allAssignments();
+      const filter = APP.ui.assignFilter;
+      const q = APP.ui.searchQuery.toLowerCase();
+      if (filter === 'pending') list = list.filter(a => !a.done);
+      if (filter === 'overdue') list = list.filter(a => !a.done && dueDays(a.due) !== null && dueDays(a.due) < 0);
+      if (filter === 'submitted') list = list.filter(a => a.done);
+      if (filter === 'high') list = list.filter(a => a.priority === 'high');
+      if (filter === 'canvas') list = list.filter(a => a.source === 'canvas');
+      if (q) list = list.filter(a => a.title.toLowerCase().includes(q) || a.subject.toLowerCase().includes(q));
+
+      const el = document.getElementById('assignList');
+      if (!list.length) { el.innerHTML = '<div class="empty-state"><div class="empty-text">Nothing here</div></div>'; return; }
+
+      el.innerHTML = list.map(a => {
+        const chip = dueChip(dueDays(a.due));
+        const toggle = a.source === 'local'
+          ? '<button class="check-btn" onclick="toggleLocalDone(' + a.localId + ')">' + (a.done ? '✓' : '') + '</button>'
+          : '<button class="check-btn" onclick="toggleCanvasDone(\'' + jsQuote(a.id) + '\',' + (a.done ? 'true' : 'false') + ')">' + (a.done ? '✓' : '') + '</button>';
+        const del = a.source === 'local' ? '<button class="btn btn-sm btn-danger" onclick="deleteLocalAssign(' + a.localId + ')">✕</button>' : '';
+        const link = a.url ? '<a class="btn btn-sm btn-secondary" target="_blank" rel="noopener" href="' + a.url + '">Open</a>' : '';
+        return '<div class="assign-item ' + (a.done ? 'done' : '') + '"><div class="priority-dot ' + a.priority + '"></div><div class="assign-info"><div class="assign-title">' + esc(a.title) + '</div><div class="assign-sub">' + esc(a.subject) + (a.due ? ' · Due ' + esc(a.due) : '') + (a.source === 'canvas' && a.manualDone ? ' · Manual done' : '') + '</div></div><div class="assign-right"><span class="due-chip ' + chip.cls + '">' + chip.text + '</span>' + link + toggle + del + '</div></div>';
+      }).join('');
+    }
+
+    function openAddAssignment() {
+      openModal('<div class="modal-title">Add Assignment</div><div class="form-group"><label class="form-label">Title *</label><input id="a-title" type="text"></div><div class="form-group"><label class="form-label">Subject *</label><input id="a-sub" type="text"></div><div class="form-row"><div class="form-group"><label class="form-label">Due *</label><input id="a-due" type="date"></div><div class="form-group"><label class="form-label">Priority</label><select id="a-pri"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitAssignment()">Add</button></div>');
+      document.getElementById('a-due').value = daysFromToday(7);
+    }
+
+    function submitAssignment() {
+      const title = document.getElementById('a-title').value.trim();
+      const subject = document.getElementById('a-sub').value.trim();
+      const due = document.getElementById('a-due').value;
+      const priority = document.getElementById('a-pri').value;
+      if (!title || !subject || !due) { toast('Please fill required fields', 'warn'); return; }
+      APP.local.assignments.push({ id: uid(), title, subject, due, priority, done: false });
+      save(); closeModal(); renderAll(); switchPage('assignments', document.querySelector('[data-page="assignments"]')); toast('Assignment added', 'success');
+    }
+
+    function toggleLocalDone(id) { const item = APP.local.assignments.find(a => a.id === id); if (item) { item.done = !item.done; save(); renderAll(); } }
+    function toggleCanvasDone(id, currentDone) {
+      if (!APP.local.canvasOverrides || typeof APP.local.canvasOverrides !== 'object') APP.local.canvasOverrides = {};
+      APP.local.canvasOverrides[id] = { ...(APP.local.canvasOverrides[id] || {}), done: !currentDone };
+      save();
+      renderAll();
+      toast(!currentDone ? 'Marked as done' : 'Marked as pending', 'info');
+    }
+    function deleteLocalAssign(id) { APP.local.assignments = APP.local.assignments.filter(a => a.id !== id); save(); renderAll(); toast('Assignment removed', 'warn'); }
+
+    function onSearch(value) {
+      APP.ui.searchQuery = value.trim();
+      if (APP.ui.searchQuery) {
+        switchPage('assignments', document.querySelector('[data-page="assignments"]'));
+      } else if ((document.querySelector('.page.active') || {}).id === 'page-assignments') {
+        renderAssignments();
+      }
+    }
+
+    function renderCalendar() {
+      const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      document.getElementById('calMonthLabel').textContent = monthNames[APP.ui.calMonth] + ' ' + APP.ui.calYear;
+      const first = new Date(APP.ui.calYear, APP.ui.calMonth, 1).getDay();
+      const total = new Date(APP.ui.calYear, APP.ui.calMonth + 1, 0).getDate();
+      const prevTotal = new Date(APP.ui.calYear, APP.ui.calMonth, 0).getDate();
+      const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const highlights = new Set([...APP.local.assignments.map(a => a.due), ...APP.canvas.assignments.filter(a => a.dueAt).map(a => a.dueAt.split('T')[0]), ...APP.local.events.map(e => e.date)].filter(Boolean));
+      let html = dayNames.map(d => '<div class="cal-day-name">' + d + '</div>').join('');
+      for (let i = 0; i < first; i += 1) html += '<div class="cal-day other-month">' + (prevTotal - first + i + 1) + '</div>';
+      for (let d = 1; d <= total; d += 1) {
+        const ds = APP.ui.calYear + '-' + String(APP.ui.calMonth + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        const isToday = ds === todayISO();
+        const hasDue = highlights.has(ds);
+        const selected = APP.ui.selectedDate === ds;
+        html += '<div class="cal-day ' + (isToday ? 'today' : '') + ' ' + (hasDue ? 'has-due' : '') + ' ' + (selected && !isToday ? 'selected' : '') + '" onclick="selectCalDay(\'' + ds + '\')">' + d + '</div>';
+      }
+      const remaining = (7 - ((first + total) % 7)) % 7;
+      for (let i = 1; i <= remaining; i += 1) html += '<div class="cal-day other-month">' + i + '</div>';
+      document.getElementById('calGrid').innerHTML = html;
+      renderCalPanel(APP.ui.selectedDate || todayISO());
+    }
+
+    function selectCalDay(day) { APP.ui.selectedDate = day; renderCalendar(); }
+
+    function renderCalPanel(day) {
+      const assign = allAssignments().filter(a => a.due === day);
+      const events = APP.local.events.filter(e => e.date === day);
+      const panel = document.getElementById('calPanel');
+      if (!assign.length && !events.length) { panel.innerHTML = '<div style="font-size:0.8rem;color:var(--text-muted)">No items on this day.</div>'; return; }
+      panel.innerHTML = assign.map(a => '<div class="cal-event-row"><div class="priority-dot ' + a.priority + '"></div><div style="flex:1">' + esc(a.title) + ' · ' + esc(a.subject) + '</div></div>').join('') + events.map(e => '<div class="cal-event-row"><div style="width:8px;height:8px;border-radius:50%;background:var(--yellow)"></div><div style="flex:1">' + esc(e.title) + ' · ' + esc(e.type) + '</div><button class="btn btn-sm btn-danger" onclick="deleteEvent(' + e.id + ')">✕</button></div>').join('');
+    }
+
+    function changeMonth(direction) {
+      if (direction === 0) {
+        APP.ui.calMonth = new Date().getMonth();
+        APP.ui.calYear = new Date().getFullYear();
+      } else {
+        APP.ui.calMonth += direction;
+        if (APP.ui.calMonth < 0) { APP.ui.calMonth = 11; APP.ui.calYear -= 1; }
+        if (APP.ui.calMonth > 11) { APP.ui.calMonth = 0; APP.ui.calYear += 1; }
+      }
+      APP.ui.selectedDate = null;
+      renderCalendar();
+    }
+
+    function openAddEvent() {
+      openModal('<div class="modal-title">Add Event</div><div class="form-group"><label class="form-label">Title *</label><input id="e-title" type="text"></div><div class="form-group"><label class="form-label">Date *</label><input id="e-date" type="date"></div><div class="form-group"><label class="form-label">Type</label><select id="e-type"><option>Event</option><option>Exam</option><option>Meeting</option></select></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitEvent()">Add</button></div>');
+      document.getElementById('e-date').value = APP.ui.selectedDate || daysFromToday(1);
+    }
+
+    function submitEvent() {
+      const title = document.getElementById('e-title').value.trim();
+      const date = document.getElementById('e-date').value;
+      const type = document.getElementById('e-type').value;
+      if (!title || !date) { toast('Please fill required fields', 'warn'); return; }
+      APP.local.events.push({ id: uid(), title, date, type });
+      save(); closeModal(); renderCalendar(); toast('Event added', 'success');
+    }
+
+    function deleteEvent(id) { APP.local.events = APP.local.events.filter(e => e.id !== id); save(); renderCalendar(); }
+
+    function renderGrades() {
+      const overview = document.getElementById('gradesOverview');
+      const log = document.getElementById('gradeLog');
+      const live = APP.canvas.grades;
+      overview.innerHTML = live.length ? live.map(g => { const score = g.currentScore == null ? '--' : Math.round(g.currentScore) + '%'; return '<div class="grade-card"><div class="grade-course">' + esc(g.courseCode || g.courseName || '') + '</div><div class="grade-val">' + score + '</div></div>'; }).join('') : '<div style="font-size:0.82rem;color:var(--text-muted)">Sync Canvas to see live grades.</div>';
+      if (!APP.local.grades.length) { log.innerHTML = '<div class="empty-state"><div class="empty-text">No manually logged grades yet</div></div>'; return; }
+      log.innerHTML = '<table class="grade-table"><thead><tr><th>Course</th><th>Activity</th><th style="text-align:right">Score</th><th></th></tr></thead><tbody>' + APP.local.grades.map(g => '<tr><td>' + esc(g.subject) + '</td><td>' + esc(g.label) + '</td><td style="text-align:right">' + g.score + '/' + g.total + '</td><td style="text-align:right"><button class="btn btn-sm btn-danger" onclick="deleteLocalGrade(' + g.id + ')">✕</button></td></tr>').join('') + '</tbody></table>';
+    }
+
+    function openAddGrade() {
+      openModal('<div class="modal-title">Log Grade</div><div class="form-group"><label class="form-label">Course *</label><input id="g-sub" type="text"></div><div class="form-group"><label class="form-label">Activity</label><input id="g-label" type="text"></div><div class="form-row"><div class="form-group"><label class="form-label">Score *</label><input id="g-score" type="text"></div><div class="form-group"><label class="form-label">Out of *</label><input id="g-total" type="text"></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitGrade()">Log</button></div>');
+    }
+
+    function submitGrade() {
+      const subject = document.getElementById('g-sub').value.trim();
+      const label = document.getElementById('g-label').value.trim() || 'Grade';
+      const score = parseFloat(document.getElementById('g-score').value);
+      const total = parseFloat(document.getElementById('g-total').value);
+      if (!subject || Number.isNaN(score) || Number.isNaN(total) || total <= 0) { toast('Please fill fields correctly', 'warn'); return; }
+      APP.local.grades.push({ id: uid(), subject, label, score, total });
+      save(); closeModal(); renderGrades(); toast('Grade logged', 'success');
+    }
+
+    function deleteLocalGrade(id) { APP.local.grades = APP.local.grades.filter(g => g.id !== id); save(); renderGrades(); }
+
+    function renderAnnouncements() {
+      const list = [...APP.canvas.announcements.map(a => ({ ...a, canvas: true })), ...APP.local.announcements.map(a => ({ ...a, canvas: false }))];
+      const el = document.getElementById('announceList');
+      if (!list.length) { el.innerHTML = '<div class="empty-state"><div class="empty-text">No announcements yet</div></div>'; return; }
+      el.innerHTML = list.map(a => '<div class="announce-card"><div class="announce-icon">' + (a.canvas ? '🎓' : '📌') + '</div><div class="announce-body-wrap"><div class="announce-title">' + esc(a.title) + '</div><div class="announce-body">' + esc(a.message || a.body || '') + '</div><div class="announce-time">' + esc(a.courseName || a.time || '') + '</div></div>' + (a.canvas ? '' : '<button class="btn btn-sm btn-danger" onclick="deleteLocalAnnouncement(' + a.id + ')">✕</button>') + '</div>').join('');
+    }
+
+    function openAddAnnouncement() {
+      openModal('<div class="modal-title">Post Announcement</div><div class="form-group"><label class="form-label">Title *</label><input id="n-title" type="text"></div><div class="form-group"><label class="form-label">Message</label><textarea id="n-body"></textarea></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitAnnouncement()">Post</button></div>');
+    }
+
+    function submitAnnouncement() {
+      const title = document.getElementById('n-title').value.trim();
+      const body = document.getElementById('n-body').value.trim();
+      if (!title) { toast('Title required', 'warn'); return; }
+      APP.local.announcements.unshift({ id: uid(), title, body, time: 'Just now' });
+      save(); closeModal(); renderAnnouncements(); updateBadges();
+    }
+
+    function deleteLocalAnnouncement(id) { APP.local.announcements = APP.local.announcements.filter(a => a.id !== id); save(); renderAnnouncements(); updateBadges(); }
+
+    function renderNotes() {
+      const el = document.getElementById('notesGrid');
+      el.innerHTML = APP.local.notes.map(n => '<div class="note-card ' + n.color + '"><button class="note-del-btn" onclick="deleteNote(' + n.id + ')">✕</button><div class="note-title">' + esc(n.title) + '</div><div class="note-body">' + esc(n.content) + '</div><div class="note-date">' + esc(n.date || '') + '</div></div>').join('') + '<div class="add-note-card" onclick="openAddNote()"><div class="plus">+</div><div>Add Note</div></div>';
+    }
+
+    function openAddNote() {
+      openModal('<div class="modal-title">New Note</div><div class="form-group"><label class="form-label">Title *</label><input id="note-title" type="text"></div><div class="form-group"><label class="form-label">Content</label><textarea id="note-body"></textarea></div><div class="form-group"><label class="form-label">Color</label><select id="note-color"><option value="yellow">Yellow</option><option value="blue">Blue</option><option value="pink">Pink</option><option value="green">Green</option></select></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitNote()">Save</button></div>');
+    }
+
+    function submitNote() {
+      const title = document.getElementById('note-title').value.trim();
+      const content = document.getElementById('note-body').value.trim();
+      const color = document.getElementById('note-color').value;
+      if (!title) { toast('Title required', 'warn'); return; }
+      APP.local.notes.push({ id: uid(), title, content, color, date: 'Just now' });
+      save(); closeModal(); renderNotes();
+    }
+
+    function deleteNote(id) { APP.local.notes = APP.local.notes.filter(n => n.id !== id); save(); renderNotes(); }
+
+    function renderLinks() {
+      const el = document.getElementById('linksGrid');
+      el.innerHTML = APP.local.links.map(l => '<a class="link-card" href="' + l.url + '" target="_blank" rel="noopener noreferrer"><div class="link-icon-box">' + l.icon + '</div><div><div class="link-name">' + esc(l.name) + '</div><div class="link-host">' + esc(l.url.replace(/^https?:\/\//, '').split('/')[0]) + '</div></div></a>').join('') + '<div class="link-card" style="cursor:pointer;border-style:dashed" onclick="openAddLink()"><div class="link-icon-box">+</div><div><div class="link-name">Add Link</div></div></div>';
+    }
+
+    function openAddLink() {
+      openModal('<div class="modal-title">Add Resource Link</div><div class="form-group"><label class="form-label">Name *</label><input id="l-name" type="text"></div><div class="form-group"><label class="form-label">URL *</label><input id="l-url" type="url"></div><div class="form-group"><label class="form-label">Icon</label><input id="l-icon" type="text" value="🌐"></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitLink()">Add</button></div>');
+    }
+
+    function submitLink() {
+      const name = document.getElementById('l-name').value.trim();
+      let url = document.getElementById('l-url').value.trim();
+      const icon = document.getElementById('l-icon').value.trim() || '🌐';
+      if (!name || !url) { toast('Name and URL required', 'warn'); return; }
+      if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+      APP.local.links.push({ id: uid(), name, url, icon });
+      save(); closeModal(); renderLinks();
+    }
+
+    function logStudy(hours) {
+      APP.local.studyHours = Math.max(0, +(APP.local.studyHours + hours).toFixed(1));
+      save(); renderSidebar();
+      if (APP.local.studyHours >= APP.local.studyGoal) toast('Daily study goal reached', 'success');
+    }
+
+    function setPomoMode(mode, mins, btn) {
+      document.querySelectorAll('.pomo-mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      pomoMode = mode;
+      pomoSecs = mins * 60;
+      pomoRunning = false;
+      clearInterval(pomoTimer);
+      document.getElementById('pomoBtn').textContent = 'Start';
+      document.getElementById('pomoLabel').textContent = 'Ready to focus?';
+      updatePomoDisplay();
+    }
+
+    function updatePomoDisplay() {
+      const m = String(Math.floor(pomoSecs / 60)).padStart(2, '0');
+      const s = String(pomoSecs % 60).padStart(2, '0');
+      document.getElementById('pomoTime').textContent = m + ':' + s;
+    }
+
+    function togglePomo() {
+      if (pomoRunning) {
+        clearInterval(pomoTimer);
+        pomoRunning = false;
+        document.getElementById('pomoBtn').textContent = 'Resume';
+        document.getElementById('pomoLabel').textContent = 'Paused';
+        return;
+      }
+
+      pomoRunning = true;
+      document.getElementById('pomoBtn').textContent = 'Pause';
+      document.getElementById('pomoLabel').textContent = pomoMode === 'focus' ? 'Stay focused' : 'Take a break';
+
+      pomoTimer = setInterval(() => {
+        pomoSecs -= 1;
+        updatePomoDisplay();
+        if (pomoSecs <= 0) {
+          clearInterval(pomoTimer);
+          pomoRunning = false;
+          document.getElementById('pomoBtn').textContent = 'Start';
+          if (pomoMode === 'focus') {
+            APP.local.pomoSessions += 1;
+            document.getElementById('pomoSessions').textContent = APP.local.pomoSessions;
+            save();
+          }
+          toast('Timer complete', 'success');
+        }
+      }, 1000);
+    }
+
+    function resetPomo() {
+      clearInterval(pomoTimer);
+      pomoRunning = false;
+      const mins = { focus: 25, short: 5, long: 15 };
+      pomoSecs = mins[pomoMode] * 60;
+      document.getElementById('pomoBtn').textContent = 'Start';
+      document.getElementById('pomoLabel').textContent = 'Ready to focus?';
+      updatePomoDisplay();
+    }
+
+    function setupMobileTouchGuards() {
+      if (window.innerWidth > 900) return;
+
+      const mainContent = document.querySelector('.main-content');
+      if (!mainContent) return;
+
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let touchTarget = null;
+
+      mainContent.addEventListener('touchstart', (event) => {
+        if (!event.touches || event.touches.length !== 1) return;
+        touchStartX = event.touches[0].clientX;
+        touchStartY = event.touches[0].clientY;
+        touchTarget = event.target;
+      }, { passive: true });
+
+      mainContent.addEventListener('touchend', (event) => {
+        if (!touchTarget || !event.changedTouches || event.changedTouches.length !== 1) return;
+
+        if (touchTarget.closest && touchTarget.closest('input, textarea, select, button, a, .assistant-shell, .modal-overlay, .nav-tabs, .cal-nav-btns, .study-btns, .pomo-controls')) {
+          touchTarget = null;
+          return;
+        }
+
+        const deltaX = event.changedTouches[0].clientX - touchStartX;
+        const deltaY = event.changedTouches[0].clientY - touchStartY;
+
+        touchTarget = null;
+
+        if (Math.abs(deltaY) > 60) return;
+        if (Math.abs(deltaX) < 70) return;
+
+        if (deltaX < 0) swipeToPage('right');
+        if (deltaX > 0) swipeToPage('left');
+      }, { passive: true });
+    }
+
+    function init() {
+      initTheme();
+      initAccentTheme();
+      load();
+      sidebarCoursesCollapsed = localStorage.getItem('bclss_courses_collapsed') === '1';
+      setSidebarCoursesCollapsed(sidebarCoursesCollapsed);
+      setupPushNotifications();
+      setupInstallPrompt();
+      setupMobileTouchGuards();
+      const topDate = document.getElementById('topDate');
+      if (topDate) topDate.textContent = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      document.getElementById('pomoSessions').textContent = APP.local.pomoSessions;
+      document.getElementById('modalOverlay').addEventListener('click', (e) => { if (e.target.id === 'modalOverlay') closeModal(); });
+      const assistantInput = document.getElementById('assistantInput');
+      if (assistantInput) {
+        assistantInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendAssistantMessage();
+          }
+        });
+      }
+      addAssistantMessage('assistant', 'Hi, I can see your BetterCLSS dashboard context. Ask me what to prioritize, what is due soon, or how to study this week.');
+      renderAll();
+      if (CanvasAPI.getToken()) {
+        syncCanvas(true);
+      } else {
+        openTutorialModal();
+      }
+    }
+
+    init();
+  </script>
 </body>
 </html>
