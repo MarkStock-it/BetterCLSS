@@ -1,7 +1,12 @@
 /* global importScripts, firebase */
 
-const CACHE_NAME = 'betterclss-v1';
-const OFFLINE_URLS = ['./','./index.html','./StudentHub.html','./styles.css','./canvas-api.js','./config.js','./push-notifications.js'];
+const CACHE_NAME = 'betterclss-v2';
+const OFFLINE_URLS = ['./', './index.html', './StudentHub.html', './styles.css', './canvas-api.js', './config.js', './push-notifications.js'];
+
+function isHtmlRequest(request) {
+  const accept = request.headers.get('accept') || '';
+  return request.mode === 'navigate' || accept.includes('text/html');
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -18,15 +23,31 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  // Always prefer fresh HTML so UI/script updates are not stuck behind old cached pages.
+  if (isHtmlRequest(event.request)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          const cloned = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned)).catch(() => {});
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match('./StudentHub.html')))
+    );
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) return cachedResponse;
-      return fetch(event.request).then((networkResponse) => {
-        const cloned = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned)).catch(() => {});
-        return networkResponse;
-      });
-    }).catch(() => caches.match('./StudentHub.html'))
+    caches.match(event.request)
+      .then((cachedResponse) => {
+        if (cachedResponse) return cachedResponse;
+        return fetch(event.request).then((networkResponse) => {
+          const cloned = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned)).catch(() => {});
+          return networkResponse;
+        });
+      })
+      .catch(() => caches.match('./StudentHub.html'))
   );
 });
 

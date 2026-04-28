@@ -18,7 +18,8 @@ async function setupPushNotifications() {
   }
 
   try {
-    const swRegistration = await navigator.serviceWorker.register('./service-worker.js');
+    const swRegistration = await navigator.serviceWorker.register('./service-worker.js?v=2');
+    await swRegistration.update().catch(() => {});
     console.log('Service worker registered:', swRegistration.scope);
 
     const permission = await Notification.requestPermission();

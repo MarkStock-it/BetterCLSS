@@ -61,6 +61,11 @@ const MIME = {
   '.js': 'application/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.mp4': 'video/mp4',
+  '.mov': 'video/quicktime',
+  '.m4v': 'video/mp4',
+  '.webm': 'video/webm',
+  '.ogv': 'video/ogg',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
@@ -686,14 +691,58 @@ function serveStatic(req, res) {
     return;
   }
 
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
+  fs.stat(filePath, (statErr, stats) => {
+    if (statErr || !stats.isFile()) {
       json(res, 404, { error: 'not_found' });
       return;
     }
+
     const ext = path.extname(filePath).toLowerCase();
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
-    res.end(data);
+    const contentType = MIME[ext] || 'application/octet-stream';
+    const range = req.headers.range;
+    const isVideo = contentType.startsWith('video/');
+
+    // Browsers often request byte ranges for embedded video.
+    if (isVideo && range) {
+      const match = range.match(/bytes=(\d*)-(\d*)/);
+      if (!match) {
+        res.writeHead(416, {
+          'Content-Range': `bytes */${stats.size}`,
+        });
+        res.end();
+        return;
+      }
+
+      const start = match[1] ? Number(match[1]) : 0;
+      const end = match[2] ? Number(match[2]) : stats.size - 1;
+
+      if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end >= stats.size || start > end) {
+        res.writeHead(416, {
+          'Content-Range': `bytes */${stats.size}`,
+        });
+        res.end();
+        return;
+      }
+
+      res.writeHead(206, {
+        'Content-Type': contentType,
+        'Content-Length': end - start + 1,
+        'Content-Range': `bytes ${start}-${end}/${stats.size}`,
+        'Accept-Ranges': 'bytes',
+      });
+
+      fs.createReadStream(filePath, { start, end }).pipe(res);
+      return;
+    }
+
+    const headers = {
+      'Content-Type': contentType,
+      'Content-Length': stats.size,
+    };
+    if (isVideo) headers['Accept-Ranges'] = 'bytes';
+
+    res.writeHead(200, headers);
+    fs.createReadStream(filePath).pipe(res);
   });
 }
 

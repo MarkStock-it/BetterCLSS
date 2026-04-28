@@ -139,7 +139,7 @@
         <div class="canvas-banner" id="connectBanner">
           <div class="canvas-banner-icon">&#127891;</div>
           <div class="canvas-banner-text">
-            <div class="canvas-banner-title">Connect your USC Canvas account</div>
+            <div class="canvas-banner-title">Connect your USC Canvas account <button class="btn btn-secondary btn-sm" style="margin-left:8px" onclick="openTutorialModal(true)">Watch Tutorial</button></div>
             <div class="canvas-banner-desc">Pull assignments, grades, and announcements directly from Canvas.</div>
           </div>
           <div class="canvas-banner-actions">
@@ -292,6 +292,19 @@
           <div id="iosInstallHint" style="display:none;margin-top:10px;font-size:0.78rem;color:var(--text-dim)">On iPhone Safari, tap Share then Add to Home Screen.</div>
         </div>
         <div class="card" style="margin-top:12px">
+          <div class="card-title" style="margin-bottom:14px">Canvas Connection</div>
+          <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px">For safety, your Canvas token is locked after it is first saved. Disconnect Canvas to replace it.</div>
+          <button class="btn btn-canvas" onclick="showCanvasSetup()">Open Canvas Connection</button>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-title" style="margin-bottom:14px">Tutorial Video</div>
+          <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px">Built-in tutorial video only. Supported names: <strong>assets/tutorial/tutorial.mp4</strong> or <strong>assets/tutorial/tutorial.mov</strong>.</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" onclick="openTutorialModal(true)">Watch Tutorial</button>
+            <button class="btn btn-secondary btn-sm" onclick="resetTutorialSkip()">Show On Next Open</button>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px">
           <div class="card-title" style="margin-bottom:14px">Accent Color</div>
           <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px">Customize the highlight color used across the app UI.</div>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
@@ -385,6 +398,13 @@
     let deferredInstallPrompt = null;
     let sidebarCoursesCollapsed = false;
     const ACCENT_STORAGE_KEY = 'bclss_accent';
+    const TUTORIAL_SKIP_KEY = 'bclss_tutorial_skip';
+    const BUILT_IN_TUTORIAL_VIDEO_URLS = [
+      'assets/tutorial/tutorial.mp4',
+      'assets/tutorial/tutorial.mov',
+      'assets/tutorial/Screen Recording 2026-04-28 at 10.57.01 AM.mov',
+      'assets/tutorial/Screen Recording 2026-04-28 at 10.57.01 AM.mov'
+    ];
     const DEFAULT_ACCENT = '#6080ff';
     const MOBILE_PAGE_ORDER = ['dashboard', 'assignments', 'calendar', 'grades', 'announcements', 'notes', 'pomodoro', 'resources', 'settings'];
 
@@ -559,9 +579,77 @@
         deferredInstallPrompt = null;
         updateInstallButtonState();
       });
-
       updateInstallButtonState();
     }
+
+    function resetTutorialSkip() {
+      localStorage.removeItem(TUTORIAL_SKIP_KEY);
+      toast('Tutorial will show on next app open.', 'info');
+    }
+
+    function skipTutorial() {
+      localStorage.setItem(TUTORIAL_SKIP_KEY, '1');
+      closeModal();
+    }
+
+    function hasCanvasConnection() {
+      return !!APP.canvas.connected;
+    }
+
+    async function firstReachableTutorialUrl() {
+      for (const path of BUILT_IN_TUTORIAL_VIDEO_URLS) {
+        const url = encodeURI(path);
+        try {
+          const resp = await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-1' } });
+          if (resp.ok || resp.status === 206) return url;
+        } catch (_) {
+          // Continue trying fallbacks.
+        }
+      }
+      return null;
+    }
+
+    async function initTutorialVideoPlayback() {
+      const video = document.getElementById('tutorialVideo');
+      const hint = document.getElementById('tutorialVideoHint');
+      if (!video || !hint) return;
+
+      const url = await firstReachableTutorialUrl();
+      if (!url) {
+        hint.textContent = 'Tutorial file not found. Add assets/tutorial/tutorial.mp4 for best compatibility.';
+        hint.style.display = 'block';
+        return;
+      }
+
+      hint.style.display = 'none';
+      video.addEventListener('error', () => {
+        hint.textContent = 'Video file was found but this browser could not decode it. Convert it to H.264 .mp4 and save as assets/tutorial/tutorial.mp4.';
+        hint.style.display = 'block';
+      }, { once: true });
+
+      video.src = url;
+      video.load();
+    }
+
+    function openTutorialModal(forceOpen = false) {
+      const connected = hasCanvasConnection();
+
+      if (!forceOpen) {
+        // Auto show every app open while Canvas is not connected.
+        if (!connected) {
+          localStorage.removeItem(TUTORIAL_SKIP_KEY);
+        } else {
+          // Once Canvas is connected, suppress auto tutorial.
+          return;
+        }
+      }
+
+      const videoMarkup = '<video id="tutorialVideo" class="tutorial-video" controls playsinline preload="metadata">Your browser does not support embedded video.</video><div id="tutorialVideoHint" class="tutorial-empty" style="display:none;margin-top:10px"></div>';
+
+      openModal('<div class="modal-title">Welcome Tutorial</div><div class="tutorial-copy">Watch this quick walkthrough to get started.</div>' + videoMarkup + '<div class="modal-footer tutorial-actions"><button class="btn btn-secondary" onclick="skipTutorial()">Skip Tutorial</button><button class="btn btn-primary" onclick="closeModal()">Close</button></div>', { className: 'tutorial-modal' });
+      initTutorialVideoPlayback();
+    }
+
     function getAiApiKey() { return localStorage.getItem('bclss_ai_key') || ''; }
     function saveAiApiKey() { const v = (document.getElementById('aiKeyInput') || {}).value || ''; if (v.trim()) { localStorage.setItem('bclss_ai_key', v.trim()); } else { localStorage.removeItem('bclss_ai_key'); } }
     function toggleAiKeyRow() { const row = document.getElementById('assistantKeyRow'); if (!row) return; const open = row.style.display === 'none'; row.style.display = open ? '' : 'none'; if (open) { const inp = document.getElementById('aiKeyInput'); if (inp) { inp.value = getAiApiKey(); inp.focus(); } } }
@@ -774,7 +862,13 @@
       }
     }
 
-    function openModal(html) { document.getElementById('modalContent').innerHTML = html; document.getElementById('modalOverlay').classList.add('open'); }
+    function openModal(html, options = {}) {
+      const modal = document.getElementById('modalContent');
+      modal.className = 'modal';
+      if (options.className) modal.classList.add(options.className);
+      modal.innerHTML = html;
+      document.getElementById('modalOverlay').classList.add('open');
+    }
     function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
 
     function dueDays(dateStr) {
@@ -860,14 +954,23 @@
       const domain = CanvasAPI.getDomain() || 'usc.instructure.com';
       const token = CanvasAPI.getToken() || '';
       const apiBase = CanvasAPI.getApiBase() || '';
-      openModal('<div class="modal-title">Connect Canvas</div><div class="form-group"><label class="form-label">Canvas Domain</label><input id="canvasDomainInput" type="text" value="' + esc(domain) + '" placeholder="usc.instructure.com"></div><div class="form-group"><label class="form-label">Canvas Access Token</label><input id="canvasTokenInput" type="password" value="' + esc(token) + '" placeholder="Paste your token"></div><div class="form-group"><label class="form-label">Backend API URL (optional for static hosting)</label><input id="apiBaseInput" type="text" value="' + esc(apiBase) + '" placeholder="https://your-backend.onrender.com"></div><div class="form-group"><div style="font-size:0.78rem;color:var(--text-dim);line-height:1.5">Token is stored only in your browser on this device.</div></div><div class="modal-footer"><button class="btn btn-danger" onclick="disconnectCanvas()">Disconnect</button><button class="btn btn-secondary" onclick="closeModal()">Close</button><button class="btn btn-canvas" onclick="connectCanvas()">Save & Test</button></div>');
+      const tokenLocked = !!token;
+      const tokenHelp = tokenLocked
+        ? 'Token is locked. Disconnect Canvas to replace it.'
+        : 'Token is stored only in your browser on this device.';
+      const tokenAttrs = tokenLocked ? 'readonly aria-readonly="true"' : '';
+      const tokenPlaceholder = tokenLocked ? 'Token is locked' : 'Paste your token';
+      const saveLabel = tokenLocked ? 'Test Connection' : 'Save & Test';
+
+      openModal('<div class="modal-title">Connect Canvas</div><div class="form-group"><label class="form-label">Canvas Domain</label><input id="canvasDomainInput" type="text" value="' + esc(domain) + '" placeholder="usc.instructure.com"></div><div class="form-group"><label class="form-label">Canvas Access Token</label><input id="canvasTokenInput" type="password" value="' + esc(token) + '" placeholder="' + esc(tokenPlaceholder) + '" ' + tokenAttrs + '></div><div class="form-group"><label class="form-label">Backend API URL (optional for static hosting)</label><input id="apiBaseInput" type="text" value="' + esc(apiBase) + '" placeholder="https://your-backend.onrender.com"></div><div class="form-group"><div style="font-size:0.78rem;color:var(--text-dim);line-height:1.5">' + esc(tokenHelp) + '</div></div><div class="modal-footer"><button class="btn btn-danger" onclick="disconnectCanvas()">Disconnect</button><button class="btn btn-secondary" onclick="closeModal()">Close</button><button class="btn btn-canvas" onclick="connectCanvas()">' + esc(saveLabel) + '</button></div>');
     }
 
     async function connectCanvas() {
       const tokenInput = document.getElementById('canvasTokenInput');
       const domainInput = document.getElementById('canvasDomainInput');
       const apiBaseInput = document.getElementById('apiBaseInput');
-      const token = tokenInput ? tokenInput.value.trim() : '';
+      const existingToken = CanvasAPI.getToken() || '';
+      const token = existingToken || (tokenInput ? tokenInput.value.trim() : '');
       const domain = domainInput ? domainInput.value.trim() : 'usc.instructure.com';
       const apiBase = apiBaseInput ? apiBaseInput.value.trim() : '';
       if (!token) {
@@ -901,9 +1004,12 @@
       toast('Canvas disconnected on this device.', 'info');
     }
 
-    async function syncCanvas() {
-      if (!CanvasAPI.getToken()) { showCanvasSetup(); return; }
-      if (APP.canvas.syncing) return;
+    async function syncCanvas(fromStartup = false) {
+      if (!CanvasAPI.getToken()) {
+        if (!fromStartup) showCanvasSetup();
+        return false;
+      }
+      if (APP.canvas.syncing) return false;
 
       APP.canvas.syncing = true;
       updateConnectionStatus();
@@ -918,9 +1024,12 @@
         APP.canvas.courses = [...new Map(assignments.map(a => [a.courseId, { name: a.courseName || a.courseCode || 'Course' }])).values()];
         APP.canvas.connected = true;
         toast('Canvas sync complete', 'success');
+        return true;
       } catch (_) {
         APP.canvas.connected = false;
         toast('Canvas sync failed. Reconnect token.', 'error');
+        if (fromStartup) openTutorialModal();
+        return false;
       } finally {
         APP.canvas.syncing = false;
         if (syncBtn) syncBtn.textContent = 'Sync';
@@ -1366,7 +1475,11 @@
       }
       addAssistantMessage('assistant', 'Hi, I can see your BetterCLSS dashboard context. Ask me what to prioritize, what is due soon, or how to study this week.');
       renderAll();
-      if (CanvasAPI.getToken()) syncCanvas();
+      if (CanvasAPI.getToken()) {
+        syncCanvas(true);
+      } else {
+        openTutorialModal();
+      }
     }
 
     init();
