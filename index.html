@@ -238,7 +238,7 @@
               <div class="section-subtitle">Focus workspace for timer, notes, ambient audio, tasks, and analytics</div>
             </div>
             <div class="study-header-actions">
-              <span class="study-shortcut-chip">Press F to toggle focus mode</span>
+              <span class="study-shortcut-chip">Press <kbd>F</kbd> to toggle focus mode</span>
               <button class="btn btn-secondary btn-sm" onclick="toggleStudyTheme()" id="studyThemeBtn">Study Theme: Dark</button>
               <button class="btn btn-secondary btn-sm" onclick="toggleFocusMode()" id="focusModeBtn">Focus Mode</button>
             </div>
@@ -266,6 +266,13 @@
 
               <div class="study-ring-wrap" id="studyTimerWrap">
                 <svg class="study-ring" viewBox="0 0 240 240" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="studyRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#6d88ff"></stop>
+                      <stop offset="55%" stop-color="#8f6fff"></stop>
+                      <stop offset="100%" stop-color="#3dd9a4"></stop>
+                    </linearGradient>
+                  </defs>
                   <circle class="ring-bg" cx="120" cy="120" r="104"></circle>
                   <circle class="ring-progress" id="studyRingProgress" cx="120" cy="120" r="104"></circle>
                 </svg>
