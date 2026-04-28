@@ -31,8 +31,7 @@
     <div class="nav-tab" data-page="calendar" onclick="switchPage('calendar', this)">Calendar</div>
     <div class="nav-tab" data-page="grades" onclick="switchPage('grades', this)">Grades</div>
     <div class="nav-tab" data-page="announcements" onclick="switchPage('announcements', this)">Announcements</div>
-    <div class="nav-tab" data-page="notes" onclick="switchPage('notes', this)">Notes</div>
-    <div class="nav-tab" data-page="pomodoro" onclick="switchPage('pomodoro', this)">Timer</div>
+    <div class="nav-tab" data-page="study" onclick="switchPage('study', this)">Study Area</div>
     <div class="nav-tab" data-page="resources" onclick="switchPage('resources', this)">Links</div>
     <div class="nav-tab" data-page="settings" onclick="switchPage('settings', this)">Settings</div>
   </nav>
@@ -74,13 +73,9 @@
           <span class="tab-count alert" id="badgeAnnounce">0</span>
         </div>
         <div class="sidenav-sep"></div>
-        <div class="nav-tab" data-page="notes" onclick="switchPage('notes', this)">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          <span>Notes</span>
-        </div>
-        <div class="nav-tab" data-page="pomodoro" onclick="switchPage('pomodoro', this)">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span>Timer</span>
+        <div class="nav-tab" data-page="study" onclick="switchPage('study', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span>Study Area</span>
         </div>
         <div class="nav-tab" data-page="resources" onclick="switchPage('resources', this)">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
@@ -93,24 +88,6 @@
       </nav>
 
       <div class="sidenav-sep"></div>
-
-      <div>
-        <div class="sidebar-label">Study Goal</div>
-        <div class="study-widget">
-          <div class="study-meta">
-            <span class="study-title">Today's Hours</span>
-            <span class="study-val" id="studyVal">0 / 4h</span>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" id="studyFill" style="width:0%;background:var(--accent)"></div>
-          </div>
-          <div class="study-btns">
-            <button class="study-btn" onclick="logStudy(0.5)">+30m</button>
-            <button class="study-btn" onclick="logStudy(1)">+1h</button>
-            <button class="study-btn" onclick="logStudy(-0.5)">-30m</button>
-          </div>
-        </div>
-      </div>
 
       <div>
         <button class="sidebar-courses-toggle" id="sidebarCoursesToggle" onclick="toggleSidebarCourses()">
@@ -252,26 +229,96 @@
         <div id="announceList"></div>
       </div>
 
-      <div class="page" id="page-notes">
-        <div class="section-header"><div class="section-title">Notes</div></div>
-        <div class="notes-grid" id="notesGrid"></div>
-      </div>
+      <div class="page" id="page-study">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Study Area</div>
+            <div class="section-subtitle">Timer, notes, tasks, sounds, and stats in one focus workspace</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-secondary btn-sm" onclick="toggleStudyTheme()" id="studyThemeBtn">Study Theme: Dark</button>
+            <button class="btn btn-secondary btn-sm" onclick="toggleFocusMode()" id="focusModeBtn">Focus Mode</button>
+          </div>
+        </div>
 
-      <div class="page" id="page-pomodoro">
-        <div class="section-title" style="margin-bottom:24px">Study Timer</div>
-        <div class="card pomo-wrap">
-          <div class="pomo-modes">
-            <button class="pomo-mode-btn active" onclick="setPomoMode('focus', 25, this)">Focus 25m</button>
-            <button class="pomo-mode-btn" onclick="setPomoMode('short', 5, this)">Break 5m</button>
-            <button class="pomo-mode-btn" onclick="setPomoMode('long', 15, this)">Long 15m</button>
+        <div class="study-grid" id="studyGrid">
+          <div class="card study-main-card">
+            <div class="study-section-head">
+              <div class="card-title">Pomodoro + Session</div>
+              <div class="study-inline-controls">
+                <label class="study-inline-label" for="sessionTagInput">Tag</label>
+                <input type="text" id="sessionTagInput" placeholder="Database, Networking..." style="max-width:180px">
+              </div>
+            </div>
+
+            <div class="study-preset-row" id="presetRow"></div>
+
+            <div class="study-timer-wrap" id="studyTimerWrap">
+              <div class="pomo-ring"><div class="pomo-time" id="studyTimerDisplay">25:00</div></div>
+              <div class="pomo-label" id="studyTimerLabel">Ready to focus?</div>
+              <div class="study-interval-row">
+                <label>Work <input type="number" id="workInterval" min="10" max="180" value="25"></label>
+                <label>Break <input type="number" id="breakInterval" min="3" max="60" value="5"></label>
+                <label>Long <input type="number" id="longBreakInterval" min="10" max="90" value="15"></label>
+              </div>
+              <div class="pomo-controls">
+                <button class="btn btn-primary" id="studyStartPauseBtn" onclick="toggleStudyTimer()">Start</button>
+                <button class="btn btn-secondary" onclick="resetStudyTimer()">Reset</button>
+              </div>
+              <div class="study-progress-wrap">
+                <div class="study-meta"><span class="study-title">Today's Study Progress</span><span class="study-val" id="studyProgressLabel">0h / 4h</span></div>
+                <div class="progress-bar"><div class="progress-fill" id="studyProgressFill" style="width:0%;background:var(--accent)"></div></div>
+              </div>
+            </div>
           </div>
-          <div class="pomo-ring" id="pomoRing"><div class="pomo-time" id="pomoTime">25:00</div></div>
-          <div class="pomo-label" id="pomoLabel">Ready to focus?</div>
-          <div class="pomo-controls">
-            <button class="btn btn-primary" id="pomoBtn" onclick="togglePomo()">Start</button>
-            <button class="btn btn-secondary" onclick="resetPomo()">Reset</button>
+
+          <div class="card study-side-card">
+            <div class="study-section-head"><div class="card-title">Ambient Audio + Tasks</div></div>
+            <div class="study-audio-row">
+              <select id="ambientSelect" onchange="setAmbientMode(this.value)">
+                <option value="off">Ambient Off</option>
+                <option value="white">White Noise</option>
+                <option value="rain">Rain</option>
+                <option value="lofi">Lo-fi Tone</option>
+              </select>
+              <input type="range" id="ambientVolume" min="0" max="100" value="30" oninput="setAmbientVolume(this.value)">
+            </div>
+            <div class="study-task-row">
+              <input type="text" id="studyTaskInput" placeholder="Add quick task and press Enter">
+              <button class="btn btn-secondary btn-sm" onclick="addStudyTask()">Add</button>
+            </div>
+            <div id="studyTaskList" class="study-task-list"></div>
           </div>
-          <div class="pomo-stats">Sessions today: <span id="pomoSessions">0</span></div>
+
+          <div class="card study-main-card">
+            <div class="study-section-head">
+              <div class="card-title">Rich Notes</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn btn-secondary btn-sm" onclick="exportStudyNote('md')">Export .md</button>
+                <button class="btn btn-secondary btn-sm" onclick="exportStudyNote('txt')">Export .txt</button>
+                <button class="btn btn-secondary btn-sm" onclick="exportStudyNote('pdf')">Export PDF</button>
+              </div>
+            </div>
+            <div class="study-toolbar">
+              <button class="btn btn-secondary btn-sm" onclick="formatStudyNote('bold')"><strong>B</strong></button>
+              <button class="btn btn-secondary btn-sm" onclick="formatStudyNote('italic')"><em>I</em></button>
+              <button class="btn btn-secondary btn-sm" onclick="formatStudyNote('h2')">H2</button>
+              <button class="btn btn-secondary btn-sm" onclick="formatStudyNote('ul')">List</button>
+              <button class="btn btn-secondary btn-sm" onclick="insertCodeBlock()">Code</button>
+            </div>
+            <textarea id="studyNoteEditor" class="study-note-editor" placeholder="Write notes in markdown... (Ctrl+S to save, Ctrl+N new note)"></textarea>
+            <div class="study-note-preview-wrap">
+              <div class="section-subtitle" style="margin-bottom:8px">Markdown Preview</div>
+              <div id="studyNotePreview" class="study-note-preview"></div>
+            </div>
+          </div>
+
+          <div class="card study-side-card">
+            <div class="study-section-head"><div class="card-title">Stats + History</div></div>
+            <div id="studyStatsPanel" class="study-stats-panel"></div>
+            <div class="section-subtitle" style="margin:12px 0 8px">Session History</div>
+            <div id="studyHistoryList" class="study-history-list"></div>
+          </div>
         </div>
       </div>
 
@@ -356,6 +403,21 @@
         assignments: [],
         grades: [],
         notes: [],
+        studyTasks: [],
+        studyHistory: [],
+        studyCurrentNote: {
+          content: '',
+          updatedAt: null
+        },
+        studySettings: {
+          workMins: 25,
+          breakMins: 5,
+          longBreakMins: 15,
+          dailyGoalHours: 4,
+          ambientMode: 'off',
+          ambientVolume: 30,
+          studyTheme: 'dark'
+        },
         events: [],
         announcements: [],
         canvasOverrides: {},
@@ -391,12 +453,19 @@
       }
     };
 
-    let pomoTimer = null;
-    let pomoSecs = 25 * 60;
-    let pomoMode = 'focus';
-    let pomoRunning = false;
+    let studyTimer = null;
+    let studyTimerSecs = 25 * 60;
+    let studyTimerRunning = false;
+    let studyPhase = 'work';
+    let studyCompletedCycles = 0;
+    let sessionStartedAt = null;
+    let sessionFocusSecs = 0;
+    let noteAutosaveTimer = null;
+    let ambientContext = null;
+    let ambientNodes = [];
     let deferredInstallPrompt = null;
     let sidebarCoursesCollapsed = false;
+    let studyFocusMode = false;
     const ACCENT_STORAGE_KEY = 'bclss_accent';
     const TUTORIAL_SKIP_KEY = 'bclss_tutorial_skip';
     const BUILT_IN_TUTORIAL_VIDEO_URLS = [
@@ -406,7 +475,7 @@
       'assets/tutorial/Screen Recording 2026-04-28 at 10.57.01 AM.mov'
     ];
     const DEFAULT_ACCENT = '#6080ff';
-    const MOBILE_PAGE_ORDER = ['dashboard', 'assignments', 'calendar', 'grades', 'announcements', 'notes', 'pomodoro', 'resources', 'settings'];
+    const MOBILE_PAGE_ORDER = ['dashboard', 'assignments', 'calendar', 'grades', 'announcements', 'study', 'resources', 'settings'];
 
     function save() { localStorage.setItem('bclss_local', JSON.stringify(APP.local)); }
     function load() { try { const raw = localStorage.getItem('bclss_local'); if (raw) APP.local = { ...APP.local, ...JSON.parse(raw) }; } catch (_) {} }
@@ -1071,9 +1140,8 @@
       if (page === 'calendar') renderCalendar();
       if (page === 'grades') renderGrades();
       if (page === 'announcements') renderAnnouncements();
-      if (page === 'notes') renderNotes();
+      if (page === 'study') renderStudyArea();
       if (page === 'resources') renderLinks();
-      if (page === 'pomodoro') updatePomoDisplay();
       if (page === 'settings') {
         updateInstallButtonState();
         syncAccentControls();
@@ -1112,11 +1180,6 @@
       if (sidebarCourses) {
         sidebarCourses.innerHTML = APP.canvas.courses.length ? APP.canvas.courses.map(c => '<div style="font-size:0.78rem;color:var(--text-dim);padding:4px 0">' + esc(c.name) + '</div>').join('') : '<div style="font-size:0.75rem;color:var(--text-muted)">Not connected</div>';
       }
-      const pct = Math.min(100, Math.round((APP.local.studyHours / APP.local.studyGoal) * 100));
-      const studyVal = document.getElementById('studyVal');
-      if (studyVal) studyVal.textContent = APP.local.studyHours.toFixed(1) + ' / ' + APP.local.studyGoal + 'h';
-      const studyFill = document.getElementById('studyFill');
-      if (studyFill) studyFill.style.width = pct + '%';
     }
 
     function dashboardFeed(items) {
@@ -1349,68 +1412,560 @@
       save(); closeModal(); renderLinks();
     }
 
-    function logStudy(hours) {
-      APP.local.studyHours = Math.max(0, +(APP.local.studyHours + hours).toFixed(1));
-      save(); renderSidebar();
-      if (APP.local.studyHours >= APP.local.studyGoal) toast('Daily study goal reached', 'success');
+    function ensureStudyDefaults() {
+      APP.local.studySettings = APP.local.studySettings || {};
+      APP.local.studySettings.workMins = Number(APP.local.studySettings.workMins) || 25;
+      APP.local.studySettings.breakMins = Number(APP.local.studySettings.breakMins) || 5;
+      APP.local.studySettings.longBreakMins = Number(APP.local.studySettings.longBreakMins) || 15;
+      APP.local.studySettings.dailyGoalHours = Number(APP.local.studySettings.dailyGoalHours) || 4;
+      APP.local.studySettings.ambientMode = APP.local.studySettings.ambientMode || 'off';
+      APP.local.studySettings.ambientVolume = Number(APP.local.studySettings.ambientVolume) || 30;
+      APP.local.studySettings.studyTheme = APP.local.studySettings.studyTheme || 'dark';
+      APP.local.studyTasks = Array.isArray(APP.local.studyTasks) ? APP.local.studyTasks : [];
+      APP.local.studyHistory = Array.isArray(APP.local.studyHistory) ? APP.local.studyHistory : [];
+      APP.local.studyCurrentNote = APP.local.studyCurrentNote || { content: '', updatedAt: null };
     }
 
-    function setPomoMode(mode, mins, btn) {
-      document.querySelectorAll('.pomo-mode-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      pomoMode = mode;
-      pomoSecs = mins * 60;
-      pomoRunning = false;
-      clearInterval(pomoTimer);
-      document.getElementById('pomoBtn').textContent = 'Start';
-      document.getElementById('pomoLabel').textContent = 'Ready to focus?';
-      updatePomoDisplay();
+    function applyStudyTheme() {
+      const page = document.getElementById('page-study');
+      if (!page) return;
+      const isLight = APP.local.studySettings.studyTheme === 'light';
+      page.classList.toggle('study-theme-light', isLight);
+      const btn = document.getElementById('studyThemeBtn');
+      if (btn) btn.textContent = 'Study Theme: ' + (isLight ? 'Light' : 'Dark');
     }
 
-    function updatePomoDisplay() {
-      const m = String(Math.floor(pomoSecs / 60)).padStart(2, '0');
-      const s = String(pomoSecs % 60).padStart(2, '0');
-      document.getElementById('pomoTime').textContent = m + ':' + s;
+    function toggleStudyTheme() {
+      APP.local.studySettings.studyTheme = APP.local.studySettings.studyTheme === 'light' ? 'dark' : 'light';
+      applyStudyTheme();
+      save();
     }
 
-    function togglePomo() {
-      if (pomoRunning) {
-        clearInterval(pomoTimer);
-        pomoRunning = false;
-        document.getElementById('pomoBtn').textContent = 'Resume';
-        document.getElementById('pomoLabel').textContent = 'Paused';
+    function toggleFocusMode() {
+      studyFocusMode = !studyFocusMode;
+      document.body.classList.toggle('study-focus-mode', studyFocusMode);
+      const btn = document.getElementById('focusModeBtn');
+      if (btn) btn.textContent = studyFocusMode ? 'Exit Focus Mode' : 'Focus Mode';
+    }
+
+    function renderStudyPresets() {
+      const presets = [
+        { key: 'deep', label: 'Deep Work', work: 90, brk: 15, long: 20 },
+        { key: 'quick', label: 'Quick Session', work: 25, brk: 5, long: 15 },
+        { key: 'review', label: 'Review', work: 15, brk: 3, long: 10 }
+      ];
+      const row = document.getElementById('presetRow');
+      if (!row) return;
+      row.innerHTML = presets.map((p) => '<button class="pomo-mode-btn" onclick="applyStudyPreset(\'' + p.key + '\')">' + p.label + '</button>').join('');
+    }
+
+    function applyStudyPreset(key) {
+      const map = {
+        deep: { work: 90, brk: 15, long: 20 },
+        quick: { work: 25, brk: 5, long: 15 },
+        review: { work: 15, brk: 3, long: 10 }
+      };
+      const preset = map[key] || map.quick;
+      APP.local.studySettings.workMins = preset.work;
+      APP.local.studySettings.breakMins = preset.brk;
+      APP.local.studySettings.longBreakMins = preset.long;
+      const workInput = document.getElementById('workInterval');
+      const breakInput = document.getElementById('breakInterval');
+      const longInput = document.getElementById('longBreakInterval');
+      if (workInput) workInput.value = String(preset.work);
+      if (breakInput) breakInput.value = String(preset.brk);
+      if (longInput) longInput.value = String(preset.long);
+      resetStudyTimer();
+      save();
+      toast('Preset applied: ' + (key === 'deep' ? 'Deep Work' : key === 'review' ? 'Review' : 'Quick Session'), 'info');
+    }
+
+    function syncStudyIntervalsFromUI() {
+      const workInput = document.getElementById('workInterval');
+      const breakInput = document.getElementById('breakInterval');
+      const longInput = document.getElementById('longBreakInterval');
+      if (workInput) APP.local.studySettings.workMins = Math.max(10, Math.min(180, Number(workInput.value) || 25));
+      if (breakInput) APP.local.studySettings.breakMins = Math.max(3, Math.min(60, Number(breakInput.value) || 5));
+      if (longInput) APP.local.studySettings.longBreakMins = Math.max(10, Math.min(90, Number(longInput.value) || 15));
+      save();
+    }
+
+    function setStudyTimerDisplay() {
+      const d = document.getElementById('studyTimerDisplay');
+      if (!d) return;
+      const m = String(Math.floor(studyTimerSecs / 60)).padStart(2, '0');
+      const s = String(studyTimerSecs % 60).padStart(2, '0');
+      d.textContent = m + ':' + s;
+    }
+
+    function updateStudyLabel() {
+      const label = document.getElementById('studyTimerLabel');
+      if (!label) return;
+      if (!studyTimerRunning && studyPhase === 'work') {
+        label.textContent = 'Ready to focus?';
         return;
       }
+      if (!studyTimerRunning && studyPhase !== 'work') {
+        label.textContent = 'Ready for break';
+        return;
+      }
+      if (studyPhase === 'work') label.textContent = 'Focus session in progress';
+      if (studyPhase === 'break') label.textContent = 'Short break';
+      if (studyPhase === 'long') label.textContent = 'Long break after 4 cycles';
+    }
 
-      pomoRunning = true;
-      document.getElementById('pomoBtn').textContent = 'Pause';
-      document.getElementById('pomoLabel').textContent = pomoMode === 'focus' ? 'Stay focused' : 'Take a break';
+    function resetStudyTimer() {
+      syncStudyIntervalsFromUI();
+      clearInterval(studyTimer);
+      studyTimerRunning = false;
+      studyPhase = 'work';
+      studyTimerSecs = APP.local.studySettings.workMins * 60;
+      const btn = document.getElementById('studyStartPauseBtn');
+      if (btn) btn.textContent = 'Start';
+      setStudyTimerDisplay();
+      updateStudyLabel();
+    }
 
-      pomoTimer = setInterval(() => {
-        pomoSecs -= 1;
-        updatePomoDisplay();
-        if (pomoSecs <= 0) {
-          clearInterval(pomoTimer);
-          pomoRunning = false;
-          document.getElementById('pomoBtn').textContent = 'Start';
-          if (pomoMode === 'focus') {
-            APP.local.pomoSessions += 1;
-            document.getElementById('pomoSessions').textContent = APP.local.pomoSessions;
-            save();
-          }
-          toast('Timer complete', 'success');
-        }
+    function notifyStudyPhaseComplete(nextPhase) {
+      playStudyBeep();
+      const wrap = document.getElementById('studyTimerWrap');
+      if (wrap) {
+        wrap.classList.add('study-flash');
+        setTimeout(() => wrap.classList.remove('study-flash'), 1000);
+      }
+      toast(nextPhase === 'work' ? 'Break complete, back to focus.' : 'Timer complete. Next: ' + nextPhase + ' session.', 'success');
+    }
+
+    function completeStudyPhase() {
+      if (studyPhase === 'work') {
+        studyCompletedCycles += 1;
+        APP.local.pomoSessions += 1;
+        const focusDurationMins = APP.local.studySettings.workMins;
+        APP.local.studyHours = +(APP.local.studyHours + focusDurationMins / 60).toFixed(2);
+        sessionFocusSecs += focusDurationMins * 60;
+        const content = (document.getElementById('studyNoteEditor') || {}).value || APP.local.studyCurrentNote.content || '';
+        const tagsRaw = (document.getElementById('sessionTagInput') || {}).value || '';
+        const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean);
+        APP.local.studyHistory.unshift({
+          id: uid(),
+          at: new Date().toISOString(),
+          date: getTodayKey(),
+          week: getWeekStartKey(new Date()),
+          durationSecs: focusDurationMins * 60,
+          tagList: tags,
+          notePreview: content.slice(0, 160)
+        });
+        APP.local.studyHistory = APP.local.studyHistory.slice(0, 120);
+        const next = studyCompletedCycles % 4 === 0 ? 'long' : 'break';
+        studyPhase = next;
+        studyTimerSecs = (next === 'long' ? APP.local.studySettings.longBreakMins : APP.local.studySettings.breakMins) * 60;
+      } else {
+        studyPhase = 'work';
+        studyTimerSecs = APP.local.studySettings.workMins * 60;
+      }
+      notifyStudyPhaseComplete(studyPhase);
+      renderStudyStatsAndHistory();
+      save();
+      setStudyTimerDisplay();
+      updateStudyLabel();
+    }
+
+    function toggleStudyTimer() {
+      syncStudyIntervalsFromUI();
+      const btn = document.getElementById('studyStartPauseBtn');
+      if (studyTimerRunning) {
+        clearInterval(studyTimer);
+        studyTimerRunning = false;
+        if (btn) btn.textContent = 'Resume';
+        updateStudyLabel();
+        return;
+      }
+      if (!sessionStartedAt) sessionStartedAt = Date.now();
+      studyTimerRunning = true;
+      if (btn) btn.textContent = 'Pause';
+      updateStudyLabel();
+      studyTimer = setInterval(() => {
+        studyTimerSecs -= 1;
+        if (studyPhase === 'work') sessionFocusSecs += 1;
+        setStudyTimerDisplay();
+        if (studyTimerSecs <= 0) completeStudyPhase();
       }, 1000);
     }
 
-    function resetPomo() {
-      clearInterval(pomoTimer);
-      pomoRunning = false;
-      const mins = { focus: 25, short: 5, long: 15 };
-      pomoSecs = mins[pomoMode] * 60;
-      document.getElementById('pomoBtn').textContent = 'Start';
-      document.getElementById('pomoLabel').textContent = 'Ready to focus?';
-      updatePomoDisplay();
+    function getTodayKey() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function getWeekStartKey(dateValue) {
+      const d = new Date(dateValue);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      d.setDate(diff);
+      return d.toISOString().slice(0, 10);
+    }
+
+    function finalizeStudySession() {
+      if (!sessionStartedAt || sessionFocusSecs <= 0) return;
+      const now = new Date();
+      const content = (document.getElementById('studyNoteEditor') || {}).value || APP.local.studyCurrentNote.content || '';
+      const tagsRaw = (document.getElementById('sessionTagInput') || {}).value || '';
+      const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean);
+      APP.local.studyHistory.unshift({
+        id: uid(),
+        at: now.toISOString(),
+        date: now.toISOString().slice(0, 10),
+        week: getWeekStartKey(now),
+        durationSecs: sessionFocusSecs,
+        tagList: tags,
+        notePreview: content.slice(0, 160)
+      });
+      APP.local.studyHistory = APP.local.studyHistory.slice(0, 120);
+      sessionStartedAt = null;
+      sessionFocusSecs = 0;
+      save();
+      renderStudyStatsAndHistory();
+    }
+
+    function buildStudyStats() {
+      const today = getTodayKey();
+      const week = getWeekStartKey(new Date());
+      const history = APP.local.studyHistory || [];
+      const todaySecs = history.filter((h) => h.date === today).reduce((n, h) => n + (h.durationSecs || 0), 0);
+      const weekSecs = history.filter((h) => h.week === week).reduce((n, h) => n + (h.durationSecs || 0), 0);
+      const avgSecs = history.length ? Math.round(history.reduce((n, h) => n + (h.durationSecs || 0), 0) / history.length) : 0;
+      const days = new Set(history.map((h) => h.date)).size;
+      const sortedDays = [...new Set(history.map((h) => h.date))].sort();
+      let streak = 0;
+      let longest = 0;
+      let prev = null;
+      sortedDays.forEach((day) => {
+        if (!prev) {
+          streak = 1;
+        } else {
+          const diff = (new Date(day) - new Date(prev)) / 86400000;
+          streak = diff === 1 ? streak + 1 : 1;
+        }
+        if (streak > longest) longest = streak;
+        prev = day;
+      });
+      return {
+        todaySecs,
+        weekSecs,
+        avgSecs,
+        longestStreak: longest,
+        activeDays: days
+      };
+    }
+
+    function fmtMins(secs) {
+      return Math.round((secs || 0) / 60) + ' min';
+    }
+
+    function renderStudyStatsAndHistory() {
+      const stats = buildStudyStats();
+      const statsPanel = document.getElementById('studyStatsPanel');
+      if (statsPanel) {
+        statsPanel.innerHTML =
+          '<div class="stat-line"><span>Today</span><strong>' + fmtMins(stats.todaySecs) + '</strong></div>' +
+          '<div class="stat-line"><span>This Week</span><strong>' + fmtMins(stats.weekSecs) + '</strong></div>' +
+          '<div class="stat-line"><span>Avg Session</span><strong>' + fmtMins(stats.avgSecs) + '</strong></div>' +
+          '<div class="stat-line"><span>Longest Streak</span><strong>' + stats.longestStreak + ' days</strong></div>';
+      }
+      const history = document.getElementById('studyHistoryList');
+      if (history) {
+        if (!APP.local.studyHistory.length) {
+          history.innerHTML = '<div class="empty-state"><div class="empty-text">No completed sessions yet</div></div>';
+        } else {
+          history.innerHTML = APP.local.studyHistory.slice(0, 20).map((item) => {
+            const tags = (item.tagList || []).join(', ') || 'General';
+            return '<div class="study-history-item"><div class="study-history-top"><strong>' + fmtMins(item.durationSecs) + '</strong><span>' + esc(item.date) + '</span></div><div class="study-history-tags">' + esc(tags) + '</div><div class="study-history-note">' + esc(item.notePreview || 'No note preview') + '</div></div>';
+          }).join('');
+        }
+      }
+      const progressFill = document.getElementById('studyProgressFill');
+      const progressLabel = document.getElementById('studyProgressLabel');
+      const goal = APP.local.studySettings.dailyGoalHours || 4;
+      const todayHours = +(stats.todaySecs / 3600).toFixed(2);
+      const pct = Math.max(0, Math.min(100, Math.round((todayHours / goal) * 100)));
+      if (progressFill) progressFill.style.width = pct + '%';
+      if (progressLabel) progressLabel.textContent = todayHours.toFixed(2) + 'h / ' + goal + 'h';
+    }
+
+    function markdownToHtml(md) {
+      let out = String(md || '');
+      out = esc(out);
+      out = out.replace(/^###\s(.+)$/gm, '<h3>$1</h3>');
+      out = out.replace(/^##\s(.+)$/gm, '<h2>$1</h2>');
+      out = out.replace(/^#\s(.+)$/gm, '<h1>$1</h1>');
+      out = out.replace(/^\-\s(.+)$/gm, '<li>$1</li>');
+      out = out.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+      out = out.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      out = out.replace(/\*(.+?)\*/g, '<em>$1</em>');
+      out = out.replace(/```([\s\S]*?)```/g, (_, code) => '<pre><code>' + code.replace(/\b(function|const|let|return|if|else|for|class)\b/g, '<span class="code-kw">$1</span>') + '</code></pre>');
+      out = out.replace(/\n/g, '<br>');
+      return out;
+    }
+
+    function updateStudyPreview() {
+      const editor = document.getElementById('studyNoteEditor');
+      const preview = document.getElementById('studyNotePreview');
+      if (!editor || !preview) return;
+      preview.innerHTML = markdownToHtml(editor.value);
+    }
+
+    function saveStudyNote() {
+      const editor = document.getElementById('studyNoteEditor');
+      if (!editor) return;
+      APP.local.studyCurrentNote.content = editor.value;
+      APP.local.studyCurrentNote.updatedAt = new Date().toISOString();
+      save();
+      updateStudyPreview();
+      toast('Study note saved', 'info');
+    }
+
+    function formatStudyNote(type) {
+      const editor = document.getElementById('studyNoteEditor');
+      if (!editor) return;
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const selected = editor.value.slice(start, end) || 'text';
+      let wrap = selected;
+      if (type === 'bold') wrap = '**' + selected + '**';
+      if (type === 'italic') wrap = '*' + selected + '*';
+      if (type === 'h2') wrap = '## ' + selected;
+      if (type === 'ul') wrap = '- ' + selected;
+      editor.setRangeText(wrap, start, end, 'end');
+      updateStudyPreview();
+    }
+
+    function insertCodeBlock() {
+      const editor = document.getElementById('studyNoteEditor');
+      if (!editor) return;
+      const block = '\n```\nconst example = true;\n```\n';
+      editor.setRangeText(block, editor.selectionStart, editor.selectionEnd, 'end');
+      updateStudyPreview();
+    }
+
+    function exportStudyNote(kind) {
+      const note = (document.getElementById('studyNoteEditor') || {}).value || '';
+      const now = new Date();
+      const stats = buildStudyStats();
+      const meta = '\n\n---\nExported: ' + now.toISOString() + '\nSession Focus Time: ' + fmtMins(sessionFocusSecs) + '\nToday Total: ' + fmtMins(stats.todaySecs) + '\n';
+      if (kind === 'pdf') {
+        const win = window.open('', '_blank');
+        if (!win) return;
+        win.document.write('<html><head><title>Study Note Export</title></head><body><pre style="white-space:pre-wrap;font-family:monospace">' + esc(note + meta) + '</pre></body></html>');
+        win.document.close();
+        win.focus();
+        win.print();
+        return;
+      }
+      const content = kind === 'txt' ? note.replace(/[#*_`>-]/g, '') + meta : note + meta;
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'study-note-' + now.toISOString().slice(0, 10) + '.' + (kind === 'txt' ? 'txt' : 'md');
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function addStudyTask() {
+      const input = document.getElementById('studyTaskInput');
+      if (!input || !input.value.trim()) return;
+      APP.local.studyTasks.unshift({ id: uid(), text: input.value.trim(), done: false });
+      input.value = '';
+      save();
+      renderStudyTasks();
+    }
+
+    function toggleStudyTask(id) {
+      const task = APP.local.studyTasks.find((t) => t.id === id);
+      if (!task) return;
+      task.done = !task.done;
+      save();
+      renderStudyTasks();
+    }
+
+    function removeStudyTask(id) {
+      APP.local.studyTasks = APP.local.studyTasks.filter((t) => t.id !== id);
+      save();
+      renderStudyTasks();
+    }
+
+    function renderStudyTasks() {
+      const list = document.getElementById('studyTaskList');
+      if (!list) return;
+      if (!APP.local.studyTasks.length) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-text">No tasks yet</div></div>';
+        return;
+      }
+      list.innerHTML = APP.local.studyTasks.map((t) => '<div class="study-task-item ' + (t.done ? 'done' : '') + '"><button class="check-btn" onclick="toggleStudyTask(' + t.id + ')">' + (t.done ? '✓' : '') + '</button><span>' + esc(t.text) + '</span><button class="btn btn-danger btn-sm" onclick="removeStudyTask(' + t.id + ')">✕</button></div>').join('');
+    }
+
+    function initAmbientContext() {
+      if (!ambientContext) ambientContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (ambientContext.state === 'suspended') ambientContext.resume().catch(() => {});
+      return ambientContext;
+    }
+
+    function stopAmbient() {
+      ambientNodes.forEach((n) => {
+        try {
+          if (n.stop) n.stop();
+          if (n.disconnect) n.disconnect();
+        } catch (_) {}
+      });
+      ambientNodes = [];
+    }
+
+    function createNoiseSource(ctx, gainValue, filterType, filterFreq) {
+      const bufferSize = ctx.sampleRate * 2;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i += 1) data[i] = Math.random() * 2 - 1;
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      const filter = ctx.createBiquadFilter();
+      filter.type = filterType;
+      filter.frequency.value = filterFreq;
+      const gain = ctx.createGain();
+      gain.gain.value = gainValue;
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      source.start();
+      ambientNodes.push(source, filter, gain);
+    }
+
+    function setAmbientMode(mode) {
+      APP.local.studySettings.ambientMode = mode;
+      save();
+      stopAmbient();
+      if (mode === 'off') return;
+      const ctx = initAmbientContext();
+      const vol = (APP.local.studySettings.ambientVolume || 30) / 100;
+      if (mode === 'white') createNoiseSource(ctx, 0.08 * vol, 'highpass', 250);
+      if (mode === 'rain') createNoiseSource(ctx, 0.1 * vol, 'bandpass', 1200);
+      if (mode === 'lofi') {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = 110;
+        gain.gain.value = 0.03 * vol;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        ambientNodes.push(osc, gain);
+        createNoiseSource(ctx, 0.03 * vol, 'lowpass', 800);
+      }
+    }
+
+    function setAmbientVolume(value) {
+      APP.local.studySettings.ambientVolume = Number(value) || 30;
+      save();
+      const mode = APP.local.studySettings.ambientMode;
+      if (mode && mode !== 'off') setAmbientMode(mode);
+    }
+
+    function playStudyBeep() {
+      try {
+        const ctx = initAmbientContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 880;
+        gain.gain.value = 0.08;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.25);
+      } catch (_) {}
+    }
+
+    function setupStudyKeyboardShortcuts() {
+      document.addEventListener('keydown', (e) => {
+        const active = document.activeElement;
+        const editable = active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT' || active.isContentEditable);
+        if (e.code === 'Space' && !editable) {
+          const activePage = (document.querySelector('.page.active') || {}).id;
+          if (activePage === 'page-study') {
+            e.preventDefault();
+            toggleStudyTimer();
+          }
+        }
+        if (e.ctrlKey && e.key.toLowerCase() === 'n') {
+          e.preventDefault();
+          const editor = document.getElementById('studyNoteEditor');
+          if (editor) {
+            editor.value = '';
+            APP.local.studyCurrentNote.content = '';
+            save();
+            updateStudyPreview();
+          }
+        }
+        if (e.ctrlKey && e.key.toLowerCase() === 's') {
+          e.preventDefault();
+          saveStudyNote();
+        }
+      });
+    }
+
+    function renderStudyArea() {
+      ensureStudyDefaults();
+      applyStudyTheme();
+      renderStudyPresets();
+      renderStudyTasks();
+      renderStudyStatsAndHistory();
+      const workInput = document.getElementById('workInterval');
+      const breakInput = document.getElementById('breakInterval');
+      const longInput = document.getElementById('longBreakInterval');
+      if (workInput) workInput.value = String(APP.local.studySettings.workMins);
+      if (breakInput) breakInput.value = String(APP.local.studySettings.breakMins);
+      if (longInput) longInput.value = String(APP.local.studySettings.longBreakMins);
+      const editor = document.getElementById('studyNoteEditor');
+      if (editor) {
+        editor.value = APP.local.studyCurrentNote.content || '';
+        editor.oninput = () => {
+          APP.local.studyCurrentNote.content = editor.value;
+          updateStudyPreview();
+        };
+      }
+      const taskInput = document.getElementById('studyTaskInput');
+      if (taskInput) {
+        taskInput.onkeydown = (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            addStudyTask();
+          }
+        };
+      }
+      const ambientSelect = document.getElementById('ambientSelect');
+      const ambientVolume = document.getElementById('ambientVolume');
+      if (ambientSelect) ambientSelect.value = APP.local.studySettings.ambientMode || 'off';
+      if (ambientVolume) ambientVolume.value = String(APP.local.studySettings.ambientVolume || 30);
+      if (APP.local.studySettings.ambientMode && APP.local.studySettings.ambientMode !== 'off') {
+        setAmbientMode(APP.local.studySettings.ambientMode);
+      }
+      setStudyTimerDisplay();
+      updateStudyLabel();
+      updateStudyPreview();
+    }
+
+    function setupStudyArea() {
+      ensureStudyDefaults();
+      resetStudyTimer();
+      if (noteAutosaveTimer) clearInterval(noteAutosaveTimer);
+      noteAutosaveTimer = setInterval(() => {
+        const editor = document.getElementById('studyNoteEditor');
+        if (!editor) return;
+        APP.local.studyCurrentNote.content = editor.value;
+        APP.local.studyCurrentNote.updatedAt = new Date().toISOString();
+        save();
+      }, 30000);
+      setupStudyKeyboardShortcuts();
     }
 
     function setupMobileTouchGuards() {
@@ -1455,6 +2010,7 @@
       initTheme();
       initAccentTheme();
       load();
+      setupStudyArea();
       sidebarCoursesCollapsed = localStorage.getItem('bclss_courses_collapsed') === '1';
       setSidebarCoursesCollapsed(sidebarCoursesCollapsed);
       setupPushNotifications();
@@ -1462,7 +2018,6 @@
       setupMobileTouchGuards();
       const topDate = document.getElementById('topDate');
       if (topDate) topDate.textContent = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      document.getElementById('pomoSessions').textContent = APP.local.pomoSessions;
       document.getElementById('modalOverlay').addEventListener('click', (e) => { if (e.target.id === 'modalOverlay') closeModal(); });
       const assistantInput = document.getElementById('assistantInput');
       if (assistantInput) {
