@@ -1262,6 +1262,27 @@
       toast('Canvas disconnected on this device.', 'info');
     }
 
+    async function restoreUserSession() {
+      const token = CanvasAPI.getToken();
+      if (!token) return false;
+      const domain = CanvasAPI.getDomain();
+      const apiBase = CanvasAPI.getApiBase();
+
+      try {
+        const authResult = await UserAuth.authenticateUser(token, domain, apiBase);
+        APP.local = {
+          ...APP.local,
+          ...authResult.localData
+        };
+        APP.canvas = authResult.canvasData || APP.canvas;
+        APP.canvas.connected = true;
+        return true;
+      } catch (err) {
+        console.debug('User session restore failed:', err && err.message ? err.message : err);
+        return false;
+      }
+    }
+
     async function syncCanvas(fromStartup = false) {
       if (!CanvasAPI.getToken()) {
         if (!fromStartup) showCanvasSetup();
@@ -2472,7 +2493,7 @@
       }, { passive: true });
     }
 
-    function init() {
+    async function init() {
       initTheme();
       initAccentTheme();
       load();
@@ -2497,6 +2518,7 @@
       addAssistantMessage('assistant', 'Hi, I can see your BetterCLSS dashboard context. Ask me what to prioritize, what is due soon, or how to study this week.');
       renderAll();
       if (CanvasAPI.getToken()) {
+        await restoreUserSession();
         syncCanvas(true);
       } else {
         openTutorialModal();
