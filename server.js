@@ -922,7 +922,7 @@ async function handleApi(req, res) {
   // GET /api/user/data/:userId
   // Load user's saved data
   // Returns: { local, canvas, ui }
-  if (reqUrl.pathname.match(/^\/api\/user\/data\/\d+$/)) {
+  if (reqUrl.pathname.match(/^\/api\/user\/data\/\d+$/) && req.method === 'GET') {
     const userId = parseInt(reqUrl.pathname.split('/').pop());
     try {
       const userData = userStorage.loadOrCreateUser(userId);
@@ -989,17 +989,22 @@ async function handleApi(req, res) {
   // POST /api/user/logout/:userId
   // Delete user session and all saved data
   // Returns: { success }
-  if (reqUrl.pathname.match(/^\/api\/user\/logout\/\d+$/) && req.method === 'POST') {
-    const userId = parseInt(reqUrl.pathname.split('/').pop());
-    try {
-      userStorage.deleteUserData(userId);
-      json(res, 200, { success: true, message: 'User data deleted' });
-      return;
-    } catch (err) {
-      json(res, 502, { error: 'logout_error', message: err.message });
-      return;
-    }
+if (reqUrl.pathname.match(/^\/api\/user\/logout\/\d+$/) && req.method === 'POST') {
+  const userId = parseInt(reqUrl.pathname.split('/').pop());
+
+  try {
+    // Do NOT delete user data on logout
+    json(res, 200, {
+      success: true,
+      message: 'Logged out successfully'
+    });
+    return;
+
+  } catch (err) {
+    json(res, 502, { error: 'logout_error', message: err.message });
+    return;
   }
+}
 
   // ====================================================================
   // CANVAS API ENDPOINTS (Original Canvas API routes)
