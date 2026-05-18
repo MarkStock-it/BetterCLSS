@@ -191,6 +191,11 @@ const UserAuth = (() => {
     return { success: true };
   }
 
+  function clearSession() {
+    currentUser = { id: null, name: '', email: '', isNewUser: false };
+    return { success: true };
+  }
+
   /**
    * Load user's previously saved data from backend
    * Used when returning to app if already authenticated
@@ -231,6 +236,7 @@ const UserAuth = (() => {
     saveUserData,
     saveCanvasSync,
     logoutUser,
+    clearSession,
     loadUserData
   };
 })();

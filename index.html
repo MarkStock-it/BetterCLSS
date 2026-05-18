@@ -1245,9 +1245,6 @@
     }
 
     async function disconnectCanvas() {
-      // Get current user before clearing
-      const user = UserAuth.getCurrentUser();
-      
       CanvasAPI.clearCredentials();
       APP.canvas.connected = false;
       APP.canvas.assignments = [];
@@ -1255,17 +1252,8 @@
       APP.canvas.grades = [];
       APP.canvas.courses = [];
       
-      // ===== LOGOUT FLOW START =====
-      // Delete user session and all saved data from backend
-      if (user.id) {
-        try {
-          const apiBase = CanvasAPI.getApiBase();
-          await UserAuth.logoutUser(user.id, apiBase);
-        } catch (err) {
-          console.error('Logout error:', err.message);
-        }
-      }
-      // ===== LOGOUT FLOW END =====
+      // Clear only the local authenticated session, but keep saved user data intact.
+      UserAuth.clearSession();
       
       closeModal();
       renderAll();
