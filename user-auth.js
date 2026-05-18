@@ -229,7 +229,7 @@ const UserAuth = (() => {
     };
   }
 
-  return {
+  const exports = {
     isAuthenticated,
     getCurrentUser,
     authenticateUser,
@@ -239,4 +239,10 @@ const UserAuth = (() => {
     clearSession,
     loadUserData
   };
+
+  if (typeof window !== 'undefined') {
+    window.UserAuth = exports;
+  }
+
+  return exports;
 })();

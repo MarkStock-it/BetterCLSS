@@ -1253,7 +1253,9 @@
       APP.canvas.courses = [];
       
       // Clear only the local authenticated session, but keep saved user data intact.
-      UserAuth.clearSession();
+      if (typeof UserAuth !== 'undefined' && typeof UserAuth.clearSession === 'function') {
+        UserAuth.clearSession();
+      }
       
       closeModal();
       renderAll();
