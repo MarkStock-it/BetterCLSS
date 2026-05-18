@@ -4,6 +4,7 @@ const { URL } = require('url');
 const { spawn } = require('child_process');
 const express = require('express');
 const admin = require('firebase-admin');
+const userStorage = require('./user-storage');
 
 function loadEnv() {
   const envCandidates = [
@@ -861,6 +862,148 @@ async function handleApi(req, res) {
     }
   }
 
+  // ====================================================================
+  // USER AUTHENTICATION AND DATA PERSISTENCE ENDPOINTS
+  // These endpoints handle:
+  // 1. Verifying Canvas tokens and creating/loading user records
+  // 2. Saving and loading user-specific data (notes, tasks, settings)
+  // 3. User identification is based on Canvas user ID, not session tokens
+  // ====================================================================
+
+  // POST /api/user/authenticate
+  // Verify Canvas token and get/create user record
+  // Requires: x-canvas-token, x-canvas-domain headers
+  // Returns: { success, userId, name, email, localData, isNewUser }
+  if (reqUrl.pathname === '/api/user/authenticate' && req.method === 'POST') {
+    try {
+      const canvasAuth = resolveCanvasAuth(req);
+      
+      // Verify token by fetching Canvas profile
+      const profile = await canvasFetchOne('/users/self/profile', {}, canvasAuth);
+      if (!profile.id) {
+        json(res, 401, { error: 'invalid_profile', message: 'Canvas profile not found' });
+        return;
+      }
+
+      const userId = profile.id;
+      const filePath = path.join(__dirname, '.betterclss_data', `user_${userId}.json`);
+      const isNewUser = !fs.existsSync(filePath);
+
+      // Load or create user record
+      const userData = userStorage.loadOrCreateUser(userId, {
+        name: profile.name,
+        email: profile.primary_email || profile.email
+      });
+
+      json(res, 200, {
+        success: true,
+        userId: userId,
+        name: profile.name,
+        email: profile.primary_email || profile.email,
+        isNewUser: isNewUser,
+        localData: userData.local,
+        canvasData: userData.canvas
+      });
+      return;
+    } catch (err) {
+      if (err.message === 'MISSING_CANVAS_TOKEN') {
+        json(res, 400, { error: 'missing_canvas_token', message: 'Provide Canvas token.' });
+        return;
+      }
+      if (err.message === 'UNAUTHORIZED') {
+        json(res, 401, { error: 'unauthorized', message: 'Canvas token is invalid or expired.' });
+        return;
+      }
+      json(res, 502, { error: 'auth_error', message: err.message });
+      return;
+    }
+  }
+
+  // GET /api/user/data/:userId
+  // Load user's saved data
+  // Returns: { local, canvas, ui }
+  if (reqUrl.pathname.match(/^\/api\/user\/data\/\d+$/)) {
+    const userId = parseInt(reqUrl.pathname.split('/').pop());
+    try {
+      const userData = userStorage.loadOrCreateUser(userId);
+      json(res, 200, {
+        success: true,
+        userId: userId,
+        localData: userData.local,
+        canvasData: userData.canvas,
+        uiData: userData.ui
+      });
+      return;
+    } catch (err) {
+      json(res, 502, { error: 'load_error', message: err.message });
+      return;
+    }
+  }
+
+  // POST /api/user/data/:userId
+  // Save user's local (BetterCLSS) data
+  // Body: { local: { assignments, notes, tasks, ... } }
+  // Returns: { success, userId }
+  if (reqUrl.pathname.match(/^\/api\/user\/data\/\d+$/) && req.method === 'POST') {
+    const userId = parseInt(reqUrl.pathname.split('/').pop());
+    try {
+      const body = await parseRequestBody(req);
+      if (body.local && typeof body.local === 'object') {
+        userStorage.updateUserLocalData(userId, body.local);
+      }
+      if (body.ui && typeof body.ui === 'object') {
+        const userData = userStorage.loadOrCreateUser(userId);
+        userData.ui = { ...userData.ui, ...body.ui };
+        userStorage.saveUserData(userId, userData);
+      }
+      json(res, 200, { success: true, userId: userId });
+      return;
+    } catch (err) {
+      json(res, 502, { error: 'save_error', message: err.message });
+      return;
+    }
+  }
+
+  // POST /api/user/sync/:userId
+  // Save Canvas sync results
+  // Body: { assignments, announcements, grades, courses }
+  // Returns: { success, userId }
+  if (reqUrl.pathname.match(/^\/api\/user\/sync\/\d+$/) && req.method === 'POST') {
+    const userId = parseInt(reqUrl.pathname.split('/').pop());
+    try {
+      const body = await parseRequestBody(req);
+      userStorage.updateUserCanvasData(userId, {
+        assignments: Array.isArray(body.assignments) ? body.assignments : [],
+        announcements: Array.isArray(body.announcements) ? body.announcements : [],
+        grades: Array.isArray(body.grades) ? body.grades : [],
+        courses: Array.isArray(body.courses) ? body.courses : []
+      });
+      json(res, 200, { success: true, userId: userId });
+      return;
+    } catch (err) {
+      json(res, 502, { error: 'sync_error', message: err.message });
+      return;
+    }
+  }
+
+  // POST /api/user/logout/:userId
+  // Delete user session and all saved data
+  // Returns: { success }
+  if (reqUrl.pathname.match(/^\/api\/user\/logout\/\d+$/) && req.method === 'POST') {
+    const userId = parseInt(reqUrl.pathname.split('/').pop());
+    try {
+      userStorage.deleteUserData(userId);
+      json(res, 200, { success: true, message: 'User data deleted' });
+      return;
+    } catch (err) {
+      json(res, 502, { error: 'logout_error', message: err.message });
+      return;
+    }
+  }
+
+  // ====================================================================
+  // CANVAS API ENDPOINTS (Original Canvas API routes)
+  // ====================================================================
   try {
     const canvasAuth = resolveCanvasAuth(req);
 

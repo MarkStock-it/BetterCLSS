@@ -513,6 +513,7 @@
   </div>
 
   <script src="config.js"></script>
+  <script src="user-auth.js"></script>
   <script src="canvas-api.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
@@ -598,7 +599,26 @@
     const DEFAULT_ACCENT = '#6080ff';
     const MOBILE_PAGE_ORDER = ['dashboard', 'assignments', 'calendar', 'grades', 'announcements', 'study', 'resources', 'settings'];
 
-    function save() { localStorage.setItem('bclss_local', JSON.stringify(APP.local)); }
+    // Enhanced save function that saves to both localStorage and backend
+    function save() { 
+      // Always save locally first
+      localStorage.setItem('bclss_local', JSON.stringify(APP.local));
+      
+      // Also save to backend if user is authenticated
+      // This happens asynchronously in the background
+      const user = UserAuth.getCurrentUser();
+      if (user.id) {
+        (async () => {
+          try {
+            const apiBase = CanvasAPI.getApiBase();
+            await UserAuth.saveUserData(user.id, APP.local, apiBase);
+          } catch (err) {
+            // Silently fail - user data is still available locally
+            console.debug('Background save to backend failed:', err.message);
+          }
+        })();
+      }
+    }
     function load() { try { const raw = localStorage.getItem('bclss_local'); if (raw) APP.local = { ...APP.local, ...JSON.parse(raw) }; } catch (_) {} }
     function toggleTheme() {
       const root = document.documentElement;
@@ -1197,11 +1217,26 @@
 
       showModalLoading('Connecting to Canvas…');
       try {
-        const profile = await CanvasAPI.testConnection();
+        // ===== USER IDENTITY FLOW START =====
+        // 1. Authenticate user with Canvas token
+        // Backend verifies token and returns Canvas user ID
+        const authResult = await UserAuth.authenticateUser(token, domain, apiBase);
+        
+        // 2. User is now authenticated with Canvas identity
+        // Load their previously saved BetterCLSS data
+        APP.local = {
+          ...APP.local,
+          ...authResult.localData
+        };
+        APP.canvas = authResult.canvasData;
+        
         hideModalLoading();
         closeModal();
-        toast('Connected as ' + profile.name, 'success');
+        toast('Connected as ' + authResult.name, 'success');
+        
+        // 3. Auto-sync Canvas data and save to backend
         await syncCanvas();
+        // ===== USER IDENTITY FLOW END =====
       } catch (err) {
         hideModalLoading();
         const details = err && err.message ? err.message : 'Unknown connection error';
@@ -1209,13 +1244,29 @@
       }
     }
 
-    function disconnectCanvas() {
+    async function disconnectCanvas() {
+      // Get current user before clearing
+      const user = UserAuth.getCurrentUser();
+      
       CanvasAPI.clearCredentials();
       APP.canvas.connected = false;
       APP.canvas.assignments = [];
       APP.canvas.announcements = [];
       APP.canvas.grades = [];
       APP.canvas.courses = [];
+      
+      // ===== LOGOUT FLOW START =====
+      // Delete user session and all saved data from backend
+      if (user.id) {
+        try {
+          const apiBase = CanvasAPI.getApiBase();
+          await UserAuth.logoutUser(user.id, apiBase);
+        } catch (err) {
+          console.error('Logout error:', err.message);
+        }
+      }
+      // ===== LOGOUT FLOW END =====
+      
       closeModal();
       renderAll();
       toast('Canvas disconnected on this device.', 'info');
@@ -1240,6 +1291,26 @@
         APP.canvas.grades = grades;
         APP.canvas.courses = [...new Map(assignments.map(a => [a.courseId, { name: a.courseName || a.courseCode || 'Course' }])).values()];
         APP.canvas.connected = true;
+        
+        // ===== SAVE CANVAS SYNC TO BACKEND =====
+        // After successful sync, save Canvas data to user's backend record
+        const user = UserAuth.getCurrentUser();
+        if (user.id) {
+          try {
+            const apiBase = CanvasAPI.getApiBase();
+            await UserAuth.saveCanvasSync(user.id, {
+              assignments: APP.canvas.assignments,
+              announcements: APP.canvas.announcements,
+              grades: APP.canvas.grades,
+              courses: APP.canvas.courses
+            }, apiBase);
+          } catch (err) {
+            console.error('Failed to save Canvas sync to backend:', err.message);
+            // Continue anyway - user data is still available locally
+          }
+        }
+        // ===== END SAVE CANVAS SYNC =====
+        
         toast('Canvas sync complete', 'success');
         return true;
       } catch (_) {
