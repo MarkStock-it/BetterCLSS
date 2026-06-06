@@ -1,7 +1,7 @@
 # BetterCLSS
 
 BetterCLSS is a student dashboard for Canvas (USC) with assignments, grades, announcements, notes, calendar, and study timer.
-
+VISIT WEBSITE ON "https://markstock-it.github.io/BetterCLSS/index.html"
 ## Features
 
 - Canvas assignment sync
