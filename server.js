@@ -4,7 +4,8 @@ const crypto = require('crypto');
 const { URL } = require('url');
 const { spawn } = require('child_process');
 const express = require('express');
-const admin = require('firebase-admin');
+const { cert, getApps, initializeApp } = require('firebase-admin/app');
+const { getMessaging } = require('firebase-admin/messaging');
 const userStorage = require('./user-storage');
 
 function loadEnv() {
@@ -132,7 +133,7 @@ async function parseRequestBody(req) {
 }
 
 function initializeFirebaseAdmin() {
-  if (admin.apps.length) return true;
+  if (getApps().length) return true;
   if (!FIREBASE_SERVICE_ACCOUNT_JSON) {
     console.warn('FCM disabled: FIREBASE_SERVICE_ACCOUNT_JSON is missing.');
     return false;
@@ -140,8 +141,8 @@ function initializeFirebaseAdmin() {
 
   try {
     const serviceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT_JSON);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+    initializeApp({
+      credential: cert(serviceAccount),
     });
     return true;
   } catch (err) {
@@ -167,7 +168,7 @@ async function sendNotificationToAllTokens(payload) {
 
   for (const token of tokens) {
     try {
-      await admin.messaging().send({
+      await getMessaging().send({
         token,
         notification: {
           title: payload.title,

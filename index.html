@@ -1439,6 +1439,7 @@
         // Load their previously saved BetterCLSS data
         CanvasAPI.saveCredentials(token, domain);
         CanvasAPI.setApiBase(apiBase);
+        localStorage.setItem('bclss_student_name', authResult.name || '');
         mergeLocalData(authResult.localData);
         mergeCanvasData(authResult.canvasData);
         
@@ -1461,6 +1462,8 @@
       clearTimeout(remoteSaveTimer);
       remoteSavePending = false;
       CanvasAPI.clearCredentials();
+      localStorage.removeItem('bclss_canvas_cache');
+      localStorage.removeItem('bclss_student_name');
       APP.canvas.connected = false;
       APP.canvas.assignments = [];
       APP.canvas.announcements = [];
@@ -1485,6 +1488,7 @@
 
       try {
         const authResult = await UserAuth.authenticateUser(token, domain, apiBase);
+        localStorage.setItem('bclss_student_name', authResult.name || '');
         mergeLocalData(authResult.localData);
         mergeCanvasData(authResult.canvasData);
         APP.canvas.connected = true;
@@ -1517,6 +1521,17 @@
         APP.canvas.grades = grades;
         APP.canvas.courses = [...new Map(assignments.map(a => [a.courseId, { name: a.courseName || a.courseCode || 'Course' }])).values()];
         APP.canvas.connected = true;
+        try {
+          localStorage.setItem('bclss_canvas_cache', JSON.stringify({
+            assignments: APP.canvas.assignments,
+            announcements: APP.canvas.announcements,
+            grades: APP.canvas.grades,
+            courses: APP.canvas.courses,
+            savedAt: new Date().toISOString()
+          }));
+        } catch (cacheError) {
+          console.debug('Canvas browser cache could not be updated:', cacheError);
+        }
         
         // ===== SAVE CANVAS SYNC TO BACKEND =====
         // After successful sync, save Canvas data to user's backend record
@@ -2851,6 +2866,13 @@
       }
       addAssistantMessage('assistant', 'Hi, I can see your BetterCLSS dashboard context. Ask me what to prioritize, what is due soon, or how to study this week.');
       renderAll();
+      const launchParams = new URLSearchParams(window.location.search);
+      if (launchParams.get('connect') === '1') {
+        window.setTimeout(showCanvasSetup, 0);
+        launchParams.delete('connect');
+        const cleanQuery = launchParams.toString();
+        history.replaceState(null, '', `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ''}${window.location.hash}`);
+      }
       if (CanvasAPI.getToken()) {
         const restored = await restoreUserSession();
         renderAll();

@@ -3,14 +3,28 @@
   "version": "1.0.0",
   "private": true,
   "description": "BetterCLSS backend with Express + Firebase Cloud Messaging",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "check": "node scripts/check.js",
     "dev": "node server.js",
+    "studenthub:build": "vite build --config studenthub-app/vite.config.js",
+    "studenthub:dev": "vite --config studenthub-app/vite.config.js",
     "test": "npm run check",
     "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.21.2",
-    "firebase-admin": "^12.7.0"
+    "firebase-admin": "^13.10.0",
+    "motion": "^12.43.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.1.5"
   }
 }

@@ -77,4 +77,29 @@ assert(
   'Assignments must default to smart priority sorting'
 );
 
-console.log(`Checks passed: 6 JavaScript files, ${inlineScripts.length} inline script, ${ids.length} unique HTML ids.`);
+const studentHubRedirect = read('StudentHub.html');
+const studentHubSource = read('studenthub-app/src/StudentHubMobileDashboard.jsx');
+const packageConfig = JSON.parse(read('package.json'));
+
+assert(
+  studentHubRedirect.includes('./studenthub/index.html'),
+  'StudentHub.html must launch the React mobile dashboard'
+);
+assert(
+  studentHubSource.includes('handleEdgeMove') && studentHubSource.includes('LongPressTab'),
+  'StudentHub must include edge-swipe and long-press gesture navigation'
+);
+assert(
+  studentHubSource.includes("from 'motion/react'"),
+  'StudentHub gestures must use Motion for React'
+);
+assert(
+  packageConfig.scripts['studenthub:build'],
+  'package.json must expose the StudentHub production build'
+);
+assert(
+  fs.existsSync(path.join(root, 'studenthub', 'index.html')),
+  'The built StudentHub entrypoint is missing; run npm run studenthub:build'
+);
+
+console.log(`Checks passed: 6 JavaScript files, ${inlineScripts.length} inline script, ${ids.length} unique HTML ids, React StudentHub build.`);
