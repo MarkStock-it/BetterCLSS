@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
   <div class="toast-container" id="toastContainer"></div>
@@ -200,6 +200,24 @@
           <button class="filter-btn" onclick="filterAssign('submitted', this)">Submitted</button>
           <button class="filter-btn" onclick="filterAssign('high', this)">High</button>
           <button class="filter-btn" onclick="filterAssign('canvas', this)">Canvas</button>
+        </div>
+
+        <div class="assign-tools">
+          <div class="assign-results">
+            <strong id="assignResultCount">0 assignments</strong>
+            <span id="assignSortHint">Overdue and upcoming work first</span>
+          </div>
+          <label class="assign-sort-control" for="assignSortSelect">
+            <span>Sort by</span>
+            <select id="assignSortSelect" onchange="setAssignmentSort(this.value)">
+              <option value="smart">Smart priority</option>
+              <option value="due">Due date</option>
+              <option value="priority">Priority</option>
+              <option value="status">Status</option>
+              <option value="course">Course</option>
+              <option value="title">Title</option>
+            </select>
+          </label>
         </div>
 
         <div id="assignList"></div>
@@ -549,10 +567,10 @@
     </div>
   </div>
 
-  <script src="config.js"></script>
-  <script src="user-auth.js"></script>
-  <script src="canvas-api.js"></script>
-  <script src="push-notifications.js"></script>
+  <script src="config.js?v=6"></script>
+  <script src="user-auth.js?v=6"></script>
+  <script src="canvas-api.js?v=6"></script>
+  <script src="push-notifications.js?v=6"></script>
   <script>
     const APP = {
       local: {
@@ -597,6 +615,7 @@
       },
       ui: {
         assignFilter: 'all',
+        assignSort: 'smart',
         searchQuery: '',
         calMonth: new Date().getMonth(),
         calYear: new Date().getFullYear(),
@@ -724,6 +743,12 @@
       root.setAttribute('data-theme', next);
       localStorage.setItem('bclss_theme', next);
       setThemeIcon(next);
+      updateThemeChrome(next);
+    }
+    function updateThemeChrome(theme) {
+      const themeColor = document.querySelector('meta[name="theme-color"]');
+      if (themeColor) themeColor.setAttribute('content', theme === 'light' ? '#f1f3fb' : '#0c0e18');
+      document.documentElement.style.colorScheme = theme;
     }
     function setThemeIcon(theme) {
       const icon = document.getElementById('themeIcon');
@@ -740,6 +765,7 @@
       const saved = localStorage.getItem('bclss_theme') || 'dark';
       document.documentElement.setAttribute('data-theme', saved);
       setThemeIcon(saved);
+      updateThemeChrome(saved);
     }
     function normalizeAccent(value) {
       const v = String(value || '').trim();
@@ -1266,6 +1292,72 @@
       return all;
     }
 
+    function assignmentDateValue(assignment) {
+      if (!assignment.due) return Number.POSITIVE_INFINITY;
+      const value = new Date(assignment.due + (assignment.due.length === 10 ? 'T00:00:00' : '')).getTime();
+      return Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;
+    }
+
+    function assignmentStatusBucket(assignment) {
+      if (assignment.done) return 5;
+      const days = dueDays(assignment.due);
+      if (days !== null && days < 0) return 0;
+      if (days === 0) return 1;
+      if (days !== null && days <= 3) return 2;
+      if (days !== null) return 3;
+      return 4;
+    }
+
+    function sortAssignments(assignments, mode = 'smart') {
+      const priorityRank = { high: 0, medium: 1, low: 2 };
+      const rank = (assignment) => priorityRank[assignment.priority] ?? 3;
+      const byDate = (a, b) => assignmentDateValue(a) - assignmentDateValue(b);
+      const byTitle = (a, b) => String(a.title || '').localeCompare(String(b.title || ''), undefined, { sensitivity: 'base' });
+      const byDone = (a, b) => Number(!!a.done) - Number(!!b.done);
+
+      return [...assignments].sort((a, b) => {
+        if (mode === 'title') return byTitle(a, b);
+        if (mode === 'course') {
+          return String(a.subject || '').localeCompare(String(b.subject || ''), undefined, { sensitivity: 'base' })
+            || byDone(a, b)
+            || byDate(a, b)
+            || byTitle(a, b);
+        }
+        if (mode === 'priority') {
+          return byDone(a, b) || rank(a) - rank(b) || byDate(a, b) || byTitle(a, b);
+        }
+        if (mode === 'due') {
+          return byDone(a, b) || byDate(a, b) || rank(a) - rank(b) || byTitle(a, b);
+        }
+        if (mode === 'status') {
+          return assignmentStatusBucket(a) - assignmentStatusBucket(b)
+            || byDate(a, b)
+            || rank(a) - rank(b)
+            || byTitle(a, b);
+        }
+
+        // Smart order: unfinished overdue work, today, next three days,
+        // later work, undated work, and finally completed work.
+        const statusDifference = assignmentStatusBucket(a) - assignmentStatusBucket(b);
+        if (statusDifference) return statusDifference;
+        if (assignmentStatusBucket(a) <= 1) {
+          return byDate(a, b) || rank(a) - rank(b) || byTitle(a, b);
+        }
+        return rank(a) - rank(b) || byDate(a, b) || byTitle(a, b);
+      });
+    }
+
+    function allAnnouncements() {
+      const timestamp = (announcement) => {
+        const value = Date.parse(announcement.postedAt || announcement.createdAt || '');
+        return Number.isFinite(value) ? value : 0;
+      };
+      return [
+        ...APP.canvas.announcements.map((announcement) => ({ ...announcement, canvas: true })),
+        ...APP.local.announcements.map((announcement) => ({ ...announcement, canvas: false }))
+      ].sort((a, b) => timestamp(b) - timestamp(a));
+    }
+
     function updateConnectionStatus() {
       const dot = document.getElementById('statusDot');
       const label = document.getElementById('statusLabel');
@@ -1592,7 +1684,8 @@
       }
       const sidebarCourses = document.getElementById('sidebarCourses');
       if (sidebarCourses) {
-        sidebarCourses.innerHTML = APP.canvas.courses.length ? APP.canvas.courses.map(c => '<div style="font-size:0.78rem;color:var(--text-dim);padding:4px 0">' + esc(c.name) + '</div>').join('') : '<div style="font-size:0.75rem;color:var(--text-muted)">Not connected</div>';
+        const courses = [...APP.canvas.courses].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
+        sidebarCourses.innerHTML = courses.length ? courses.map(c => '<div style="font-size:0.78rem;color:var(--text-dim);padding:4px 0">' + esc(c.name) + '</div>').join('') : '<div style="font-size:0.75rem;color:var(--text-muted)">Not connected</div>';
       }
     }
 
@@ -1625,9 +1718,9 @@
       const urgent = all.filter(a => !a.done && (a.priority === 'high' || (dueDays(a.due) !== null && dueDays(a.due) < 0))).slice(0, 6);
       document.getElementById('dashUpcoming').innerHTML = dashboardFeed(upcoming);
       document.getElementById('dashOverdue').innerHTML = dashboardFeed(urgent);
-      const grades = APP.canvas.grades;
+      const grades = [...APP.canvas.grades].sort((a, b) => String(a.courseName || a.courseCode || '').localeCompare(String(b.courseName || b.courseCode || ''), undefined, { sensitivity: 'base' }));
       document.getElementById('dashGrades').innerHTML = grades.length ? grades.slice(0, 6).map(g => '<div class="feed-item"><div class="feed-info"><div class="feed-title">' + esc(g.courseName || g.courseCode || 'Course') + '</div><div class="feed-meta">' + esc(g.courseCode || '') + '</div></div><div class="grade-val">' + (g.currentScore == null ? '--' : Math.round(g.currentScore) + '%') + '</div></div>').join('') : '<div class="empty-state"><div class="empty-text">No grade data</div></div>';
-      const ann = [...APP.canvas.announcements, ...APP.local.announcements].slice(0, 4);
+      const ann = allAnnouncements().slice(0, 4);
       document.getElementById('dashAnnouncements').innerHTML = ann.length ? ann.map(a => '<div class="feed-item"><div class="feed-info"><div class="feed-title">' + esc(a.title) + '</div><div class="feed-meta">' + esc(a.courseName || a.time || '') + '</div></div></div>').join('') : '<div class="empty-state"><div class="empty-text">No announcements</div></div>';
     }
 
@@ -1635,6 +1728,13 @@
       APP.ui.assignFilter = filter;
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
+      renderAssignments();
+    }
+
+    function setAssignmentSort(mode) {
+      const allowed = ['smart', 'due', 'priority', 'status', 'course', 'title'];
+      APP.ui.assignSort = allowed.includes(mode) ? mode : 'smart';
+      localStorage.setItem('bclss_assign_sort', APP.ui.assignSort);
       renderAssignments();
     }
 
@@ -1648,8 +1748,23 @@
       if (filter === 'high') list = list.filter(a => a.priority === 'high');
       if (filter === 'canvas') list = list.filter(a => a.source === 'canvas');
       if (q) list = list.filter(a => a.title.toLowerCase().includes(q) || a.subject.toLowerCase().includes(q));
+      list = sortAssignments(list, APP.ui.assignSort);
 
       const el = document.getElementById('assignList');
+      const count = document.getElementById('assignResultCount');
+      const sortSelect = document.getElementById('assignSortSelect');
+      const sortHint = document.getElementById('assignSortHint');
+      const hintByMode = {
+        smart: 'Overdue and upcoming work first',
+        due: 'Earliest deadlines first',
+        priority: 'High priority work first',
+        status: 'Overdue, pending, then completed',
+        course: 'Grouped alphabetically by course',
+        title: 'Alphabetical by assignment name'
+      };
+      if (count) count.textContent = list.length + (list.length === 1 ? ' assignment' : ' assignments');
+      if (sortSelect) sortSelect.value = APP.ui.assignSort;
+      if (sortHint) sortHint.textContent = hintByMode[APP.ui.assignSort] || hintByMode.smart;
       if (!list.length) { el.innerHTML = '<div class="empty-state"><div class="empty-text">Nothing here</div></div>'; return; }
 
       el.innerHTML = list.map(a => {
@@ -1763,7 +1878,7 @@
     function renderGrades() {
       const overview = document.getElementById('gradesOverview');
       const log = document.getElementById('gradeLog');
-      const live = APP.canvas.grades;
+      const live = [...APP.canvas.grades].sort((a, b) => String(a.courseName || a.courseCode || '').localeCompare(String(b.courseName || b.courseCode || ''), undefined, { sensitivity: 'base' }));
       overview.innerHTML = live.length ? live.map(g => { const score = g.currentScore == null ? '--' : Math.round(g.currentScore) + '%'; return '<div class="grade-card"><div class="grade-course">' + esc(g.courseCode || g.courseName || '') + '</div><div class="grade-val">' + score + '</div></div>'; }).join('') : '<div style="font-size:0.82rem;color:var(--text-muted)">Sync Canvas to see live grades.</div>';
       if (!APP.local.grades.length) { log.innerHTML = '<div class="empty-state"><div class="empty-text">No manually logged grades yet</div></div>'; return; }
       log.innerHTML = '<table class="grade-table"><thead><tr><th>Course</th><th>Activity</th><th style="text-align:right">Score</th><th></th></tr></thead><tbody>' + APP.local.grades.map(g => '<tr><td>' + esc(g.subject) + '</td><td>' + esc(g.label) + '</td><td style="text-align:right">' + g.score + '/' + g.total + '</td><td style="text-align:right"><button class="btn btn-sm btn-danger" onclick="deleteLocalGrade(' + g.id + ')">✕</button></td></tr>').join('') + '</tbody></table>';
@@ -1786,7 +1901,7 @@
     function deleteLocalGrade(id) { APP.local.grades = APP.local.grades.filter(g => g.id !== id); save(); renderGrades(); }
 
     function renderAnnouncements() {
-      const list = [...APP.canvas.announcements.map(a => ({ ...a, canvas: true })), ...APP.local.announcements.map(a => ({ ...a, canvas: false }))];
+      const list = allAnnouncements();
       const el = document.getElementById('announceList');
       if (!list.length) { el.innerHTML = '<div class="empty-state"><div class="empty-text">No announcements yet</div></div>'; return; }
       el.innerHTML = list.map(a => '<div class="announce-card"><div class="announce-icon">' + (a.canvas ? '🎓' : '📌') + '</div><div class="announce-body-wrap"><div class="announce-title">' + esc(a.title) + '</div><div class="announce-body">' + esc(a.message || a.body || '') + '</div><div class="announce-time">' + esc(a.courseName || a.time || '') + '</div></div>' + (a.canvas ? '' : '<button class="btn btn-sm btn-danger" onclick="deleteLocalAnnouncement(' + a.id + ')">✕</button>') + '</div>').join('');
@@ -1800,7 +1915,7 @@
       const title = document.getElementById('n-title').value.trim();
       const body = document.getElementById('n-body').value.trim();
       if (!title) { toast('Title required', 'warn'); return; }
-      APP.local.announcements.unshift({ id: uid(), title, body, time: 'Just now' });
+      APP.local.announcements.unshift({ id: uid(), title, body, time: 'Just now', createdAt: new Date().toISOString() });
       save(); closeModal(); renderAnnouncements(); updateBadges();
     }
 
@@ -2707,6 +2822,7 @@
       initTheme();
       initAccentTheme();
       load();
+      APP.ui.assignSort = localStorage.getItem('bclss_assign_sort') || 'smart';
       // The dashboard is always the first visible route. Authentication restores
       // unobtrusively after the app has rendered.
       switchPage('dashboard');

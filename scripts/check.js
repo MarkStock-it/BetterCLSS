@@ -46,7 +46,9 @@ assert(duplicates.length === 0, `Duplicate HTML id(s): ${[...new Set(duplicates)
   'modalOverlay',
   'notificationEnableBtn',
   'mobileMoreTab',
-  'badgePendingMobile'
+  'badgePendingMobile',
+  'assignResultCount',
+  'assignSortSelect'
 ].forEach((id) => assert(ids.includes(id), `Missing required element #${id}`));
 
 assert(
@@ -63,8 +65,16 @@ assert(
   'Startup sync failures must not cover the dashboard with a modal'
 );
 assert(
-  read('service-worker.js').includes("'./user-auth.js'"),
+  read('service-worker.js').includes("'./user-auth.js?v=6'"),
   'The offline cache must include user-auth.js'
+);
+assert(
+  read('service-worker.js').includes("requestUrl.pathname.includes('/api/')"),
+  'The service worker must bypass its cache for API requests'
+);
+assert(
+  html.includes("assignSort: 'smart'"),
+  'Assignments must default to smart priority sorting'
 );
 
 console.log(`Checks passed: 6 JavaScript files, ${inlineScripts.length} inline script, ${ids.length} unique HTML ids.`);

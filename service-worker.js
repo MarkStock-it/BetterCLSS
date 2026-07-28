@@ -1,15 +1,15 @@
 /* global importScripts, firebase */
 
-const CACHE_NAME = 'betterclss-v5';
+const CACHE_NAME = 'betterclss-v6';
 const OFFLINE_URLS = [
   './',
   './index.html',
   './StudentHub.html',
-  './styles.css',
-  './canvas-api.js',
-  './user-auth.js',
-  './config.js',
-  './push-notifications.js',
+  './styles.css?v=6',
+  './canvas-api.js?v=6',
+  './user-auth.js?v=6',
+  './config.js?v=6',
+  './push-notifications.js?v=6',
   './manifest.json',
   './icons/icon-192.svg',
   './icons/icon-512.svg'
@@ -34,6 +34,17 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  const requestUrl = new URL(event.request.url);
+
+  // Authentication and Canvas responses must always come from the network.
+  // Never place user-specific API data in the shared app-shell cache.
+  if (
+    requestUrl.pathname.includes('/api/')
+    || requestUrl.pathname.endsWith('/register-token')
+    || requestUrl.pathname.endsWith('/send-notification')
+  ) {
+    return;
+  }
 
   // Always prefer fresh HTML so UI/script updates are not stuck behind old cached pages.
   if (isHtmlRequest(event.request)) {
@@ -49,6 +60,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Prefer fresh same-origin CSS/JS/assets. This prevents a newly deployed HTML
+  // file from being paired with an older cached stylesheet or script.
+  if (requestUrl.origin === self.location.origin) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse.ok) {
+            const cloned = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned)).catch(() => {});
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request).then((cached) => (
+          cached || new Response('', { status: 504, statusText: 'Offline' })
+        )))
+    );
+    return;
+  }
+
+  // Cache-first is reserved for immutable third-party resources such as fonts.
   event.respondWith(
     caches.match(event.request)
       .then((cachedResponse) => {
