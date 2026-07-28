@@ -94,6 +94,14 @@ assert(
   'StudentHub gestures must use Motion for React'
 );
 assert(
+  studentHubSource.includes('function StudySheet') && studentHubSource.includes('timer-primary-control'),
+  'The Study area must include bottom sheets and a focused timer workspace'
+);
+assert(
+  studentHubSource.includes('bclss_study_durations') && studentHubSource.includes('type="range"'),
+  'Study duration settings must be adjustable and persisted'
+);
+assert(
   packageConfig.scripts['studenthub:build'],
   'package.json must expose the StudentHub production build'
 );

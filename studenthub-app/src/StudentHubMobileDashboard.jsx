@@ -45,7 +45,15 @@ function Glyph({ name, className = 'h-5 w-5' }) {
     sync: <><path d="M20 7h-5V2" /><path d="M4 17h5v5" /><path d="M5.5 9a8 8 0 0 1 13-3L20 7M4 17l1.5 1A8 8 0 0 0 18.5 15" /></>,
     spark: <><path d="m4 15 4-4 4 3 7-8" /><path d="M15 6h4v4" /></>,
     chevron: <><path d="m6 9 6 6 6-6" /></>,
-    close: <><path d="m6 6 12 12M18 6 6 18" /></>
+    close: <><path d="m6 6 12 12M18 6 6 18" /></>,
+    play: <path d="m8 5 11 7-11 7V5Z" />,
+    pause: <><path d="M9 5v14M15 5v14" /></>,
+    reset: <><path d="M4 4v6h6" /><path d="M5.5 15a7.5 7.5 0 1 0 1.2-8.7L4 10" /></>,
+    clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+    notes: <><path d="M5 4h14v16H5z" /><path d="M8 8h8M8 12h8M8 16h5" /></>,
+    sliders: <><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></>,
+    tag: <><path d="M20 13 13 20 4 11V4h7l9 9Z" /><circle cx="8.5" cy="8.5" r="1.5" /></>,
+    progress: <><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" /></>
   };
 
   return (
@@ -624,29 +632,326 @@ function CalendarView({ calendarView, assignments }) {
   );
 }
 
-function StudyView({ studyMode }) {
+const DEFAULT_STUDY_DURATIONS = { work: 25, break: 5, long: 15 };
+
+function readStudyDurations() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('bclss_study_durations') || '{}');
+    return {
+      work: Number(stored.work) || DEFAULT_STUDY_DURATIONS.work,
+      break: Number(stored.break) || DEFAULT_STUDY_DURATIONS.break,
+      long: Number(stored.long) || DEFAULT_STUDY_DURATIONS.long
+    };
+  } catch {
+    return DEFAULT_STUDY_DURATIONS;
+  }
+}
+
+function StudySheet({ open, title, detail, onClose, children }) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          className="study-sheet-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) onClose();
+          }}
+        >
+          <motion.section
+            className="study-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={SPRING}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.34 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 85 || info.velocity.y > 650) onClose();
+            }}
+          >
+            <div className="sheet-handle" />
+            <header className="study-sheet-header">
+              <div>
+                <span className="eyebrow-mobile">Focus workspace</span>
+                <h2>{title}</h2>
+                <p>{detail}</p>
+              </div>
+              <button type="button" onClick={onClose} aria-label={`Close ${title}`}>
+                <Glyph name="close" className="h-5 w-5" />
+              </button>
+            </header>
+            {children}
+          </motion.section>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function StudyView({ studyMode, onRunningChange }) {
   const decks = {
     flashcards: ['Recently studied', '12 cards due', '78% recall'],
     database: ['Database Systems', '28 cards', 'Normalization · SQL'],
     algorithms: ['Algorithms', '34 cards', 'Graphs · Complexity']
   };
   const activeDeck = decks[studyMode];
+  const [activeTab, setActiveTab] = useState('timer');
+  const [activeMode, setActiveMode] = useState('work');
+  const [durations, setDurations] = useState(readStudyDurations);
+  const [timeLeft, setTimeLeft] = useState(() => readStudyDurations().work * 60);
+  const [running, setRunning] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sessionTitle, setSessionTitle] = useState('Deep work session');
+  const [sessionTag, setSessionTag] = useState('Coursework');
+  const [preset, setPreset] = useState('Deep Work');
+
+  const totalSeconds = durations[activeMode] * 60;
+  const remainingRatio = Math.max(0, Math.min(1, timeLeft / totalSeconds));
+  const formattedTime = `${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}`;
+
+  useEffect(() => {
+    localStorage.setItem('bclss_study_durations', JSON.stringify(durations));
+  }, [durations]);
+
+  useEffect(() => {
+    onRunningChange?.(running && studyMode === 'focus');
+  }, [onRunningChange, running, studyMode]);
+
+  useEffect(() => () => onRunningChange?.(false), [onRunningChange]);
+
+  useEffect(() => {
+    if (studyMode !== 'focus') setRunning(false);
+  }, [studyMode]);
+
+  useEffect(() => {
+    if (!running) return undefined;
+    const timer = window.setInterval(() => {
+      setTimeLeft((current) => {
+        if (current <= 1) {
+          window.clearInterval(timer);
+          setRunning(false);
+          navigator.vibrate?.([35, 50, 35]);
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [running]);
+
+  useEffect(() => {
+    if (!setupOpen && !settingsOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event) => {
+      if (event.key !== 'Escape') return;
+      setSetupOpen(false);
+      setSettingsOpen(false);
+    };
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [setupOpen, settingsOpen]);
+
+  const chooseMode = (mode) => {
+    setRunning(false);
+    setActiveMode(mode);
+    setTimeLeft(durations[mode] * 60);
+  };
+
+  const updateDuration = (mode, value) => {
+    const minutes = Number(value);
+    setDurations((current) => ({ ...current, [mode]: minutes }));
+    if (mode === activeMode && !running) setTimeLeft(minutes * 60);
+  };
+
+  const applyPreset = (nextPreset) => {
+    const presetData = {
+      'Deep Work': { title: 'Deep work session', tag: 'Coursework', work: 50 },
+      'Quick Session': { title: 'Quick focus sprint', tag: 'Quick win', work: 15 },
+      Review: { title: 'Review session', tag: 'Revision', work: 25 }
+    }[nextPreset];
+    setPreset(nextPreset);
+    setSessionTitle(presetData.title);
+    setSessionTag(presetData.tag);
+    updateDuration('work', presetData.work);
+  };
+
+  const toggleTimer = () => {
+    setActiveTab('timer');
+    setSetupOpen(false);
+    if (timeLeft <= 0) setTimeLeft(totalSeconds);
+    setRunning((current) => !current);
+  };
+
+  const resetTimer = () => {
+    setRunning(false);
+    setTimeLeft(totalSeconds);
+  };
+
+  const tabs = [
+    ['timer', 'Timer'],
+    ['notes', 'Notes'],
+    ['tasks', 'Tasks'],
+    ['progress', 'Progress']
+  ];
 
   return (
-    <motion.section key={`study-${studyMode}`} className="view-stack" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
-      <ViewHeading eyebrow="Deep work" title="Study" detail={studyMode === 'focus' ? 'Focus timer ready' : `${studyMode[0].toUpperCase()}${studyMode.slice(1)} selected`} />
-      <div className="gesture-context"><span className="gesture-context-dot" />Hold Study and slide to peek at subjects, decks, or the timer.</div>
+    <motion.section key={`study-${studyMode}`} className={`study-view ${running ? 'timer-running' : ''}`} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
+      <motion.header className="study-heading study-dimmable" animate={{ opacity: running ? 0.16 : 1, y: running ? -5 : 0 }} transition={SPRING}>
+        <div>
+          <span className="eyebrow-mobile">Deep work</span>
+          <h1>Study</h1>
+          <p>{studyMode === 'focus' ? 'One session. Zero noise.' : `${studyMode[0].toUpperCase()}${studyMode.slice(1)} selected`}</p>
+        </div>
+        <button type="button" className="study-settings-button" onClick={() => setSettingsOpen(true)} aria-label="Open study settings">
+          <Glyph name="settings" className="h-5 w-5" />
+        </button>
+      </motion.header>
+
+      <motion.div className="study-tabs study-dimmable" role="tablist" aria-label="Study area" animate={{ opacity: running ? 0.12 : 1 }} transition={SPRING}>
+        {tabs.map(([id, label]) => (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === id}
+            className={activeTab === id ? 'active' : ''}
+            key={id}
+            onClick={() => setActiveTab(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </motion.div>
+
       {studyMode === 'focus' ? (
-        <section className="focus-card">
-          <div className="focus-orbit">
-            <motion.div className="focus-ring" animate={{ rotate: 360 }} transition={{ duration: 18, repeat: Infinity, ease: 'linear' }} />
-            <div>
-              <strong>25:00</strong>
-              <span>Focus</span>
-            </div>
-          </div>
-          <button type="button" className="focus-start">Start session</button>
-        </section>
+        <AnimatePresence mode="wait">
+          {activeTab === 'timer' && (
+            <motion.div className="timer-workspace" key="study-timer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+              <motion.button
+                type="button"
+                className="session-setup-summary study-dimmable"
+                onClick={() => setSetupOpen(true)}
+                animate={{ opacity: running ? 0.1 : 1, scale: running ? 0.97 : 1 }}
+                transition={SPRING}
+                aria-label="Open session setup"
+              >
+                <span className="session-summary-icon"><Glyph name="tag" className="h-4 w-4" /></span>
+                <span>
+                  <strong>{sessionTitle}</strong>
+                  <small>{preset} · {sessionTag}</small>
+                </span>
+                <Glyph name="chevron" className="ml-auto h-4 w-4 -rotate-90" />
+              </motion.button>
+
+              <motion.div className="timer-mode-switch study-dimmable" animate={{ opacity: running ? 0.12 : 1 }} transition={SPRING}>
+                {[
+                  ['work', 'Work'],
+                  ['break', 'Break'],
+                  ['long', 'Long break']
+                ].map(([id, label]) => (
+                  <button type="button" className={activeMode === id ? 'active' : ''} onClick={() => chooseMode(id)} key={id}>
+                    {label}
+                  </button>
+                ))}
+              </motion.div>
+
+              <div className="timer-hero" aria-live="polite" aria-label={`${formattedTime} remaining`}>
+                <div className={`timer-aura ${running ? 'active' : ''}`} />
+                <svg className="timer-ring-svg" viewBox="0 0 320 320" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="focus-ring-gradient" x1="38" y1="42" x2="280" y2="286" gradientUnits="userSpaceOnUse">
+                      <stop stopColor="#9d6cff" />
+                      <stop offset=".52" stopColor="#718cff" />
+                      <stop offset="1" stopColor="#43dec0" />
+                    </linearGradient>
+                    <filter id="focus-ring-glow"><feGaussianBlur stdDeviation="7" /></filter>
+                  </defs>
+                  <circle className="timer-track" cx="160" cy="160" r="135" />
+                  <motion.circle
+                    className="timer-ring-glow"
+                    cx="160"
+                    cy="160"
+                    r="135"
+                    pathLength="1"
+                    initial={false}
+                    animate={{ pathLength: remainingRatio }}
+                    transition={{ duration: 0.55, ease: 'easeOut' }}
+                  />
+                  <motion.circle
+                    className="timer-ring-progress"
+                    cx="160"
+                    cy="160"
+                    r="135"
+                    pathLength="1"
+                    initial={false}
+                    animate={{ pathLength: remainingRatio }}
+                    transition={{ duration: 0.55, ease: 'easeOut' }}
+                  />
+                </svg>
+                <motion.div className="timer-readout" animate={{ scale: running ? 1.02 : 1 }} transition={SPRING}>
+                  <span>{running ? 'In focus' : activeMode === 'work' ? 'Ready' : 'Recovery'}</span>
+                  <strong>{formattedTime}</strong>
+                  <small>{activeMode === 'long' ? 'Long break' : activeMode}</small>
+                </motion.div>
+              </div>
+
+              <div className="timer-controls">
+                <motion.button type="button" className="timer-primary-control" onClick={toggleTimer} whileTap={{ scale: 0.96 }}>
+                  <Glyph name={running ? 'pause' : 'play'} className="h-5 w-5" />
+                  {running ? 'Pause' : timeLeft === totalSeconds ? 'Start' : 'Resume'}
+                </motion.button>
+                <motion.button type="button" className="timer-reset-control" onClick={resetTimer} whileTap={{ scale: 0.94 }} aria-label="Reset timer">
+                  <Glyph name="reset" className="h-5 w-5" />
+                </motion.button>
+              </div>
+
+            </motion.div>
+          )}
+
+          {activeTab === 'notes' && (
+            <motion.section className="study-secondary-panel" key="study-notes" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={SPRING}>
+              <span className="secondary-icon"><Glyph name="notes" className="h-5 w-5" /></span>
+              <h2>Session notes</h2>
+              <p>Capture only what matters. Notes remain on this device.</p>
+              <textarea aria-label="Session notes" placeholder="What are you working through?" />
+            </motion.section>
+          )}
+
+          {activeTab === 'tasks' && (
+            <motion.section className="study-secondary-panel" key="study-tasks" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={SPRING}>
+              <span className="secondary-icon"><Glyph name="tasks" className="h-5 w-5" /></span>
+              <h2>Focus queue</h2>
+              <p>Keep today’s target deliberately small.</p>
+              {['Review lecture notes', 'Finish practice set', 'Summarize key ideas'].map((task, index) => (
+                <label className="study-task-row" key={task}><input type="checkbox" defaultChecked={index === 0} /><span>{task}</span></label>
+              ))}
+            </motion.section>
+          )}
+
+          {activeTab === 'progress' && (
+            <motion.section className="study-secondary-panel" key="study-progress" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={SPRING}>
+              <span className="secondary-icon"><Glyph name="progress" className="h-5 w-5" /></span>
+              <h2>This week</h2>
+              <p>A quiet snapshot of your focused time.</p>
+              <div className="focus-metrics">
+                <div><strong>6</strong><span>Sessions</span></div>
+                <div><strong>2h 35m</strong><span>Focused</span></div>
+                <div><strong>4 days</strong><span>Streak</span></div>
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
       ) : (
         <motion.section className="study-deck-card" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={SPRING}>
           <div className="deck-orbit"><Glyph name="study" className="h-8 w-8" /></div>
@@ -657,6 +962,64 @@ function StudyView({ studyMode }) {
           <button type="button" className="focus-start">Open deck</button>
         </motion.section>
       )}
+
+      <StudySheet
+        open={setupOpen}
+        title="Session setup"
+        detail="Choose one intention, then let it disappear behind the timer."
+        onClose={() => setSetupOpen(false)}
+      >
+        <div className="sheet-field">
+          <label htmlFor="study-session-title">Session title</label>
+          <input id="study-session-title" value={sessionTitle} onChange={(event) => setSessionTitle(event.target.value)} />
+        </div>
+        <div className="sheet-field">
+          <label htmlFor="study-session-tag">Session tag</label>
+          <input id="study-session-tag" value={sessionTag} onChange={(event) => setSessionTag(event.target.value)} />
+        </div>
+        <div className="session-preset-grid" aria-label="Session presets">
+          {['Deep Work', 'Quick Session', 'Review'].map((item) => (
+            <button type="button" className={preset === item ? 'active' : ''} onClick={() => applyPreset(item)} key={item}>
+              <span>{item}</span>
+              <small>{item === 'Deep Work' ? '50 min' : item === 'Quick Session' ? '15 min' : '25 min'}</small>
+            </button>
+          ))}
+        </div>
+        <button type="button" className="sheet-done-button" onClick={() => setSetupOpen(false)}>Save session</button>
+      </StudySheet>
+
+      <StudySheet
+        open={settingsOpen}
+        title="Timer settings"
+        detail="Durations stay out of sight until you need them."
+        onClose={() => setSettingsOpen(false)}
+      >
+        <div className="duration-settings">
+          {[
+            ['work', 'Work', 5, 90],
+            ['break', 'Break', 1, 30],
+            ['long', 'Long break', 5, 45]
+          ].map(([id, label, min, max]) => (
+            <label className="duration-row" key={id}>
+              <span><strong>{label}</strong><small>{durations[id]} minutes</small></span>
+              <input
+                type="range"
+                min={min}
+                max={max}
+                step="1"
+                value={durations[id]}
+                onChange={(event) => updateDuration(id, event.target.value)}
+                aria-label={`${label} duration`}
+              />
+            </label>
+          ))}
+        </div>
+        <div className="study-setting-status">
+          <div><Glyph name="spark" className="h-4 w-4" /><span><strong>Study theme</strong><small>Dark cyber</small></span></div>
+          <div><Glyph name="clock" className="h-4 w-4" /><span><strong>Focus mode</strong><small>Auto-dim enabled</small></span></div>
+        </div>
+        <button type="button" className="sheet-done-button" onClick={() => setSettingsOpen(false)}>Done</button>
+      </StudySheet>
     </motion.section>
   );
 }
@@ -741,6 +1104,7 @@ export default function StudentHubMobileDashboard() {
   const [taskFilter, setTaskFilter] = useState('pending');
   const [calendarView, setCalendarView] = useState('month');
   const [studyMode, setStudyMode] = useState('focus');
+  const [studyRunning, setStudyRunning] = useState(false);
   const [gestureNotice, setGestureNotice] = useState('');
   const drawerX = useMotionValue(-DRAWER_TRAVEL);
   const backdropOpacity = useTransform(drawerX, [-DRAWER_TRAVEL, 0], [0, 0.74]);
@@ -807,7 +1171,7 @@ export default function StudentHubMobileDashboard() {
   const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   return (
-    <div className="studenthub-shell">
+    <div className={`studenthub-shell ${activeView === 'study' && studyRunning ? 'focus-session-active' : ''}`}>
       <div
         className="edge-swipe-zone"
         onPointerDown={handleEdgeDown}
@@ -877,7 +1241,7 @@ export default function StudentHubMobileDashboard() {
             )}
             {activeView === 'tasks' && <TasksView key="tasks" assignments={assignments} filter={taskFilter} connected={data.connected} onConnect={connectCanvas} />}
             {activeView === 'calendar' && <CalendarView key="calendar" calendarView={calendarView} assignments={assignments} />}
-            {activeView === 'study' && <StudyView key="study" studyMode={studyMode} />}
+            {activeView === 'study' && <StudyView key="study" studyMode={studyMode} onRunningChange={setStudyRunning} />}
             {!PRIMARY_VIEWS.includes(activeView) && (
               <SecondaryView
                 key={activeView}

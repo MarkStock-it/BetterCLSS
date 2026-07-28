@@ -21,12 +21,27 @@ npm run dev
 2. Open:
 
 - http://localhost:5500
+- http://localhost:5500/StudentHub.html for the mobile React dashboard
 
 3. Verify the project:
 
 ```bash
 npm test
 ```
+
+## StudentHub Mobile UI
+
+The mobile-first StudentHub lives in `studenthub-app/` and uses React, Tailwind CSS, and Motion.
+
+```bash
+# Local Vite development server
+npm run studenthub:dev
+
+# Build deployable files into studenthub/
+npm run studenthub:build
+```
+
+The production server and static deployment both expose the built experience through `StudentHub.html`.
 
 ## Public Deployment Notes
 
@@ -105,7 +120,7 @@ Token is saved in that user's browser storage.
 
 ## Tech
 
-- Frontend: HTML/CSS/Vanilla JS
+- Frontend: HTML/CSS/Vanilla JS plus a mobile React/Tailwind/Motion StudentHub
 - Backend: Node.js HTTP server (`server.js`)
 - Canvas API: proxied via backend routes under `/api/canvas/*`
 
