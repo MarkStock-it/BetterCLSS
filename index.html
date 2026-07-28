@@ -27,14 +27,27 @@
 
   <!-- Mobile-only nav (hidden on desktop) -->
   <nav class="nav-tabs" aria-label="Main navigation">
-    <button type="button" class="nav-tab active" data-page="dashboard" onclick="switchPage('dashboard', this)">Dashboard</button>
-    <button type="button" class="nav-tab" data-page="assignments" onclick="switchPage('assignments', this)">Assignments</button>
-    <button type="button" class="nav-tab" data-page="calendar" onclick="switchPage('calendar', this)">Calendar</button>
-    <button type="button" class="nav-tab" data-page="grades" onclick="switchPage('grades', this)">Grades</button>
-    <button type="button" class="nav-tab" data-page="announcements" onclick="switchPage('announcements', this)">News</button>
-    <button type="button" class="nav-tab" data-page="study" onclick="switchPage('study', this)">Study</button>
-    <button type="button" class="nav-tab" data-page="resources" onclick="switchPage('resources', this)">Links</button>
-    <button type="button" class="nav-tab" data-page="settings" onclick="switchPage('settings', this)">Settings</button>
+    <button type="button" class="nav-tab active" data-page="dashboard" onclick="switchPage('dashboard', this)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Home</span>
+    </button>
+    <button type="button" class="nav-tab" data-page="assignments" onclick="switchPage('assignments', this)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 13 2 2 4-4"/></svg>
+      <span>Tasks</span>
+      <span class="nav-mobile-badge empty" id="badgePendingMobile">0</span>
+    </button>
+    <button type="button" class="nav-tab" data-page="calendar" onclick="switchPage('calendar', this)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span>Calendar</span>
+    </button>
+    <button type="button" class="nav-tab" data-page="study" onclick="switchPage('study', this)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>Study</span>
+    </button>
+    <button type="button" class="nav-tab" id="mobileMoreTab" onclick="openMobileMoreMenu()">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+      <span>More</span>
+    </button>
   </nav>
 
   <div class="layout">
@@ -126,10 +139,11 @@
         <div class="canvas-banner" id="connectBanner">
           <div class="canvas-banner-icon">&#127891;</div>
           <div class="canvas-banner-text">
-            <div class="canvas-banner-title">Connect your USC Canvas account <button class="btn btn-secondary btn-sm" style="margin-left:8px" onclick="openTutorialModal(true)">Watch Tutorial</button></div>
+            <div class="canvas-banner-title">Connect your USC Canvas account</div>
             <div class="canvas-banner-desc">Pull assignments, grades, and announcements directly from Canvas.</div>
           </div>
           <div class="canvas-banner-actions">
+            <button class="btn btn-secondary" onclick="openTutorialModal(true)">Tutorial</button>
             <button class="btn btn-canvas" onclick="showCanvasSetup()">Connect Canvas</button>
           </div>
         </div>
@@ -253,8 +267,15 @@
             </div>
           </div>
 
+          <div class="study-mobile-tabs" role="tablist" aria-label="Study workspace sections">
+            <button type="button" role="tab" aria-selected="true" class="active" data-study-tab="timer" onclick="switchStudyPanel('timer', this)">Timer</button>
+            <button type="button" role="tab" aria-selected="false" data-study-tab="notes" onclick="switchStudyPanel('notes', this)">Notes</button>
+            <button type="button" role="tab" aria-selected="false" data-study-tab="tasks" onclick="switchStudyPanel('tasks', this)">Tasks</button>
+            <button type="button" role="tab" aria-selected="false" data-study-tab="progress" onclick="switchStudyPanel('progress', this)">Progress</button>
+          </div>
+
           <div class="study-grid" id="studyGrid">
-            <section class="card study-card study-hero-card" data-stagger="0">
+            <section class="card study-card study-hero-card mobile-active" role="tabpanel" data-stagger="0" data-study-panel="timer">
               <div class="study-section-head">
                 <div class="card-title">Pomodoro Session</div>
                 <div class="study-inline-controls">
@@ -327,7 +348,7 @@
               </div>
             </section>
 
-            <section class="card study-card study-notes-card" data-stagger="1">
+            <section class="card study-card study-notes-card" role="tabpanel" data-stagger="1" data-study-panel="notes">
               <div class="study-section-head">
                 <div class="card-title">Notes Workspace</div>
                 <div class="study-export-actions">
@@ -358,7 +379,7 @@
               </div>
             </section>
 
-            <section class="card study-card study-ambient-card" data-stagger="2">
+            <section class="card study-card study-ambient-card" role="tabpanel" data-stagger="2" data-study-panel="tasks">
               <div class="study-section-head"><div class="card-title">Ambient + Tasks</div></div>
 
               <button class="ambient-collapse-header" id="ambientCollapseHeader" onclick="toggleAmbientPanel()" aria-expanded="false" aria-controls="ambientCardRow">
@@ -417,7 +438,7 @@
               <button class="study-fab" onclick="addStudyTask()" aria-label="Add task">＋</button>
             </section>
 
-            <section class="card study-card study-stats-card" data-stagger="3">
+            <section class="card study-card study-stats-card" role="tabpanel" data-stagger="3" data-study-panel="progress">
               <div class="study-section-head"><div class="card-title">Progress + History</div></div>
 
               <div class="progress-card">
@@ -614,7 +635,7 @@
       'assets/tutorial/Screen Recording 2026-04-28 at 10.57.01 AM.mov'
     ];
     const DEFAULT_ACCENT = '#6080ff';
-    const MOBILE_PAGE_ORDER = ['dashboard', 'assignments', 'calendar', 'grades', 'announcements', 'study', 'resources', 'settings'];
+    const MOBILE_PAGE_ORDER = ['dashboard', 'assignments', 'calendar', 'study'];
 
     // Save instantly on-device, then coalesce server writes to avoid one request per keystroke.
     function save() {
@@ -1450,6 +1471,13 @@
         navTab.classList.add('active');
         navTab.setAttribute('aria-current', 'page');
       });
+      if (['grades', 'announcements', 'resources', 'settings'].includes(page)) {
+        const moreTab = document.getElementById('mobileMoreTab');
+        if (moreTab) {
+          moreTab.classList.add('active');
+          moreTab.setAttribute('aria-current', 'page');
+        }
+      }
 
       const mobileTab = document.querySelector('.nav-tabs [data-page="' + page + '"]');
       if (mobileTab && mobileTab.scrollIntoView) {
@@ -1461,6 +1489,43 @@
       }
       window.scrollTo({ top: 0, behavior: 'auto' });
       renderPage(page);
+    }
+
+    function openMobilePage(page) {
+      closeModal();
+      switchPage(page);
+    }
+
+    function openMobileMoreMenu() {
+      const activePage = ((document.querySelector('.page.active') || {}).id || '').replace('page-', '');
+      const items = [
+        { page: 'grades', icon: '↗', title: 'Grades', hint: 'Scores and grade log' },
+        { page: 'announcements', icon: '◉', title: 'News', hint: 'Course announcements' },
+        { page: 'resources', icon: '⌁', title: 'Links', hint: 'Saved resources' },
+        { page: 'settings', icon: '⚙', title: 'Settings', hint: 'Canvas and preferences' }
+      ];
+      const markup = items.map((item) => {
+        const current = item.page === activePage ? ' current' : '';
+        return '<button type="button" class="mobile-more-item' + current + '" onclick="openMobilePage(\'' + item.page + '\')"><span class="mobile-more-icon">' + item.icon + '</span><span><strong>' + item.title + '</strong><small>' + item.hint + '</small></span><span class="mobile-more-arrow">›</span></button>';
+      }).join('');
+      openModal('<div class="mobile-more-head"><div><div class="modal-title">More</div><p>Everything else, organized in one place.</p></div><button type="button" class="assistant-close" onclick="closeModal()" aria-label="Close">×</button></div><div class="mobile-more-grid">' + markup + '</div>', { className: 'mobile-more-modal' });
+    }
+
+    function switchStudyPanel(panel, button) {
+      const validPanels = ['timer', 'notes', 'tasks', 'progress'];
+      const next = validPanels.includes(panel) ? panel : 'timer';
+      localStorage.setItem('bclss_study_mobile_panel', next);
+      document.querySelectorAll('[data-study-tab]').forEach((tab) => {
+        const selected = tab.getAttribute('data-study-tab') === next;
+        tab.classList.toggle('active', selected);
+        tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+      });
+      document.querySelectorAll('[data-study-panel]').forEach((section) => {
+        section.classList.toggle('mobile-active', section.getAttribute('data-study-panel') === next);
+      });
+      if (button && window.innerWidth <= 900) {
+        button.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
     }
 
     function swipeToPage(direction) {
@@ -1482,7 +1547,10 @@
       if (page === 'calendar') renderCalendar();
       if (page === 'grades') renderGrades();
       if (page === 'announcements') renderAnnouncements();
-      if (page === 'study') renderStudyArea();
+      if (page === 'study') {
+        renderStudyArea();
+        switchStudyPanel(localStorage.getItem('bclss_study_mobile_panel') || 'timer');
+      }
       if (page === 'resources') renderLinks();
       if (page === 'settings') {
         updateInstallButtonState();
@@ -1506,6 +1574,9 @@
       const done = all.filter(a => a.done).length;
       const ann = APP.canvas.announcements.length + APP.local.announcements.length;
       document.getElementById('badgePending').textContent = pending;
+      const mobilePendingBadge = document.getElementById('badgePendingMobile');
+      mobilePendingBadge.textContent = pending > 99 ? '99+' : pending;
+      mobilePendingBadge.classList.toggle('empty', pending === 0);
       document.getElementById('badgeAnnounce').textContent = ann;
       document.getElementById('statPending').textContent = pending;
       document.getElementById('statOverdue').textContent = overdue;

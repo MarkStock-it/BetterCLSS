@@ -44,8 +44,15 @@ assert(duplicates.length === 0, `Duplicate HTML id(s): ${[...new Set(duplicates)
   'dashboardDate',
   'connectBanner',
   'modalOverlay',
-  'notificationEnableBtn'
+  'notificationEnableBtn',
+  'mobileMoreTab',
+  'badgePendingMobile'
 ].forEach((id) => assert(ids.includes(id), `Missing required element #${id}`));
+
+assert(
+  [...html.matchAll(/data-study-panel="([^"]+)"/g)].length === 4,
+  'The mobile Study workspace must expose four focused panels'
+);
 
 assert(
   html.includes("switchPage('dashboard');"),
