@@ -22,6 +22,12 @@ npm run dev
 
 - http://localhost:5500
 
+3. Verify the project:
+
+```bash
+npm test
+```
+
 ## Public Deployment Notes
 
 If you publish frontend as a static site (for example GitHub Pages), host this Node backend separately and set backend URL in the app's **Connect Canvas** modal.
@@ -92,6 +98,8 @@ Token is saved in that user's browser storage.
 ## Security Notes
 
 - For shared/public deployments, prefer per-user token input in UI.
+- Saved user-data routes verify the requesting Canvas account before reading or writing a record.
+- Set `NOTIFICATION_ADMIN_KEY` before enabling the notification-sending endpoint.
 - Do not commit real tokens into repository files.
 - If a token is ever pasted in chat/repo, revoke it and create a new one.
 

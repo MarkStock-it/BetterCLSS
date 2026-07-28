@@ -4,7 +4,9 @@
   "private": true,
   "description": "BetterCLSS backend with Express + Firebase Cloud Messaging",
   "scripts": {
+    "check": "node scripts/check.js",
     "dev": "node server.js",
+    "test": "npm run check",
     "start": "node server.js"
   },
   "dependencies": {

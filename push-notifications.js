@@ -12,42 +12,115 @@ const firebaseConfig = {
 const firebasePublicVapidKey = 'YOUR_PUBLIC_VAPID_KEY';
 
 async function setupPushNotifications() {
+  updateNotificationUi();
   if (!('serviceWorker' in navigator) || !('Notification' in window)) {
-    console.log('Push notifications are not supported in this browser.');
+    updateNotificationUi('unsupported');
     return;
   }
 
   try {
-    const swRegistration = await navigator.serviceWorker.register('./service-worker.js?v=2');
+    const swRegistration = await navigator.serviceWorker.register('./service-worker.js?v=5');
     await swRegistration.update().catch(() => {});
     console.log('Service worker registered:', swRegistration.scope);
+    updateNotificationUi();
+  } catch (error) {
+    console.error('Push setup failed:', error);
+    updateNotificationUi('error');
+  }
+}
 
+function pushIsConfigured() {
+  return !Object.values(firebaseConfig).some((value) => String(value).startsWith('YOUR_'))
+    && firebasePublicVapidKey !== 'YOUR_PUBLIC_VAPID_KEY';
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      if (existing.dataset.loaded === 'true') resolve();
+      else existing.addEventListener('load', resolve, { once: true });
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.addEventListener('load', () => {
+      script.dataset.loaded = 'true';
+      resolve();
+    }, { once: true });
+    script.addEventListener('error', () => reject(new Error('Could not load notification support')), { once: true });
+    document.head.appendChild(script);
+  });
+}
+
+async function loadFirebaseScripts() {
+  if (typeof firebase !== 'undefined') return;
+  await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+  await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+}
+
+function updateNotificationUi(forcedState) {
+  const text = document.getElementById('notificationStatusText');
+  const button = document.getElementById('notificationEnableBtn');
+  if (!text || !button) return;
+
+  if (forcedState === 'unsupported' || !('serviceWorker' in navigator) || !('Notification' in window)) {
+    text.textContent = 'Not supported by this browser';
+    button.disabled = true;
+    return;
+  }
+  if (forcedState === 'error') {
+    text.textContent = 'Setup failed—try again';
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    text.textContent = 'Blocked in browser settings';
+    button.disabled = true;
+    return;
+  }
+  if (!pushIsConfigured()) {
+    text.textContent = 'Not configured by the site owner';
+    button.disabled = true;
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    text.textContent = 'Enabled on this device';
+    button.textContent = 'Notifications enabled';
+    button.disabled = true;
+    return;
+  }
+  text.textContent = 'Not enabled';
+}
+
+async function enableAppNotifications() {
+  if (!pushIsConfigured()) {
+    updateNotificationUi();
+    return;
+  }
+  try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
-      console.log('Notification permission not granted.');
+      updateNotificationUi();
       return;
     }
 
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
-
+    const swRegistration = await navigator.serviceWorker.ready;
+    await loadFirebaseScripts();
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const messaging = firebase.messaging();
     const token = await messaging.getToken({
       vapidKey: firebasePublicVapidKey,
       serviceWorkerRegistration: swRegistration
     });
+    if (!token) throw new Error('No notification token returned');
 
-    if (!token) {
-      console.log('No FCM token returned.');
-      return;
-    }
-
-    await fetch(CanvasAPI.apiUrl('/register-token'), {
+    const response = await fetch(CanvasAPI.apiUrl('/register-token'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token })
     });
+    if (!response.ok) throw new Error(`Registration failed: HTTP ${response.status}`);
 
     messaging.onMessage((payload) => {
       const title = payload?.notification?.title || payload?.data?.title || 'BetterCLSS';
@@ -57,12 +130,11 @@ async function setupPushNotifications() {
         badge: 'icons/icon-192.svg',
         data: { url: payload?.data?.url || './index.html' }
       };
-
-      if (Notification.permission === 'granted') {
-        new Notification(title, options);
-      }
+      new Notification(title, options);
     });
+    updateNotificationUi();
   } catch (error) {
-    console.error('Push setup failed:', error);
+    console.error('Push enable failed:', error);
+    updateNotificationUi('error');
   }
 }

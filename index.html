@@ -26,15 +26,15 @@
 
 
   <!-- Mobile-only nav (hidden on desktop) -->
-  <nav class="nav-tabs">
-    <div class="nav-tab active" data-page="dashboard" onclick="switchPage('dashboard', this)">Dashboard</div>
-    <div class="nav-tab" data-page="assignments" onclick="switchPage('assignments', this)">Assignments</div>
-    <div class="nav-tab" data-page="calendar" onclick="switchPage('calendar', this)">Calendar</div>
-    <div class="nav-tab" data-page="grades" onclick="switchPage('grades', this)">Grades</div>
-    <div class="nav-tab" data-page="announcements" onclick="switchPage('announcements', this)">Announcements</div>
-    <div class="nav-tab" data-page="study" onclick="switchPage('study', this)">Study Area</div>
-    <div class="nav-tab" data-page="resources" onclick="switchPage('resources', this)">Links</div>
-    <div class="nav-tab" data-page="settings" onclick="switchPage('settings', this)">Settings</div>
+  <nav class="nav-tabs" aria-label="Main navigation">
+    <button type="button" class="nav-tab active" data-page="dashboard" onclick="switchPage('dashboard', this)">Dashboard</button>
+    <button type="button" class="nav-tab" data-page="assignments" onclick="switchPage('assignments', this)">Assignments</button>
+    <button type="button" class="nav-tab" data-page="calendar" onclick="switchPage('calendar', this)">Calendar</button>
+    <button type="button" class="nav-tab" data-page="grades" onclick="switchPage('grades', this)">Grades</button>
+    <button type="button" class="nav-tab" data-page="announcements" onclick="switchPage('announcements', this)">News</button>
+    <button type="button" class="nav-tab" data-page="study" onclick="switchPage('study', this)">Study</button>
+    <button type="button" class="nav-tab" data-page="resources" onclick="switchPage('resources', this)">Links</button>
+    <button type="button" class="nav-tab" data-page="settings" onclick="switchPage('settings', this)">Settings</button>
   </nav>
 
   <div class="layout">
@@ -114,6 +114,15 @@
 
     <main class="main-content">
       <div class="page active" id="page-dashboard">
+        <div class="dashboard-welcome">
+          <div>
+            <div class="eyebrow">Student overview</div>
+            <h1 id="dashboardGreeting">Your dashboard</h1>
+            <p id="dashboardDate">Everything important, in one place.</p>
+          </div>
+          <button class="btn btn-secondary dashboard-sync" onclick="syncCanvas()" id="dashboardSyncBtn">Sync Canvas</button>
+        </div>
+
         <div class="canvas-banner" id="connectBanner">
           <div class="canvas-banner-icon">&#127891;</div>
           <div class="canvas-banner-text">
@@ -464,11 +473,18 @@
           <button class="btn btn-canvas" onclick="showCanvasSetup()">Open Canvas Connection</button>
         </div>
         <div class="card" style="margin-top:12px">
+          <div class="card-title" style="margin-bottom:14px">Notifications</div>
+          <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px">Enable assignment notifications on this device. Your browser will ask for permission only after you click Enable.</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary" id="notificationEnableBtn" onclick="enableAppNotifications()">Enable notifications</button>
+            <span id="notificationStatusText" style="font-size:0.78rem;color:var(--text-muted)">Checking support…</span>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px">
           <div class="card-title" style="margin-bottom:14px">Tutorial Video</div>
           <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px">Built-in tutorial video only. Supported names: <strong>assets/tutorial/tutorial.mp4</strong> or <strong>assets/tutorial/tutorial.mov</strong>.</div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <button class="btn btn-primary btn-sm" onclick="openTutorialModal(true)">Watch Tutorial</button>
-            <button class="btn btn-secondary btn-sm" onclick="resetTutorialSkip()">Show On Next Open</button>
           </div>
         </div>
         <div class="card" style="margin-top:12px">
@@ -515,8 +531,6 @@
   <script src="config.js"></script>
   <script src="user-auth.js"></script>
   <script src="canvas-api.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
   <script src="push-notifications.js"></script>
   <script>
     const APP = {
@@ -585,6 +599,9 @@
     let ambientContext = null;
     let ambientNodes = [];
     let deferredInstallPrompt = null;
+    let remoteSaveTimer = null;
+    let remoteSaveInFlight = false;
+    let remoteSavePending = false;
     let sidebarCoursesCollapsed = false;
     let studyFocusMode = false;
     const ACCENT_STORAGE_KEY = 'bclss_accent';
@@ -599,27 +616,87 @@
     const DEFAULT_ACCENT = '#6080ff';
     const MOBILE_PAGE_ORDER = ['dashboard', 'assignments', 'calendar', 'grades', 'announcements', 'study', 'resources', 'settings'];
 
-    // Enhanced save function that saves to both localStorage and backend
-    function save() { 
-      // Always save locally first
-      localStorage.setItem('bclss_local', JSON.stringify(APP.local));
-      
-      // Also save to backend if user is authenticated
-      // This happens asynchronously in the background
+    // Save instantly on-device, then coalesce server writes to avoid one request per keystroke.
+    function save() {
+      try {
+        localStorage.setItem('bclss_local', JSON.stringify(APP.local));
+      } catch (err) {
+        toast('This browser could not save your latest change.', 'error');
+        console.error('Local save failed:', err);
+      }
+      scheduleRemoteSave();
+    }
+
+    function scheduleRemoteSave() {
       const user = UserAuth.getCurrentUser();
-      if (user.id) {
-        (async () => {
-          try {
-            const apiBase = CanvasAPI.getApiBase();
-            await UserAuth.saveUserData(user.id, APP.local, apiBase);
-          } catch (err) {
-            // Silently fail - user data is still available locally
-            console.debug('Background save to backend failed:', err.message);
-          }
-        })();
+      if (!user.id) return;
+      remoteSavePending = true;
+      clearTimeout(remoteSaveTimer);
+      remoteSaveTimer = setTimeout(flushRemoteSave, 700);
+    }
+
+    async function flushRemoteSave() {
+      if (remoteSaveInFlight || !remoteSavePending) return;
+      const user = UserAuth.getCurrentUser();
+      if (!user.id) return;
+      remoteSavePending = false;
+      remoteSaveInFlight = true;
+      try {
+        await UserAuth.saveUserData(user.id, APP.local, CanvasAPI.getApiBase());
+      } catch (err) {
+        console.debug('Background save to backend failed:', err.message);
+      } finally {
+        remoteSaveInFlight = false;
+        if (remoteSavePending) {
+          clearTimeout(remoteSaveTimer);
+          remoteSaveTimer = setTimeout(flushRemoteSave, 2000);
+        }
       }
     }
-    function load() { try { const raw = localStorage.getItem('bclss_local'); if (raw) APP.local = { ...APP.local, ...JSON.parse(raw) }; } catch (_) {} }
+
+    function mergeLocalData(incoming) {
+      if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) return;
+      const defaults = APP.local;
+      APP.local = {
+        ...defaults,
+        ...incoming,
+        studySettings: { ...defaults.studySettings, ...(incoming.studySettings || {}) },
+        studyCurrentNote: { ...defaults.studyCurrentNote, ...(incoming.studyCurrentNote || {}) },
+        assignments: Array.isArray(incoming.assignments) ? incoming.assignments : defaults.assignments,
+        grades: Array.isArray(incoming.grades) ? incoming.grades : defaults.grades,
+        notes: Array.isArray(incoming.notes) ? incoming.notes : defaults.notes,
+        studyTasks: Array.isArray(incoming.studyTasks) ? incoming.studyTasks : defaults.studyTasks,
+        studyHistory: Array.isArray(incoming.studyHistory) ? incoming.studyHistory : defaults.studyHistory,
+        events: Array.isArray(incoming.events) ? incoming.events : defaults.events,
+        announcements: Array.isArray(incoming.announcements) ? incoming.announcements : defaults.announcements,
+        links: Array.isArray(incoming.links) ? incoming.links : defaults.links,
+        canvasOverrides: incoming.canvasOverrides && typeof incoming.canvasOverrides === 'object'
+          ? incoming.canvasOverrides
+          : defaults.canvasOverrides
+      };
+    }
+
+    function mergeCanvasData(incoming) {
+      if (!incoming || typeof incoming !== 'object') return;
+      APP.canvas = {
+        ...APP.canvas,
+        ...incoming,
+        assignments: Array.isArray(incoming.assignments) ? incoming.assignments : [],
+        announcements: Array.isArray(incoming.announcements) ? incoming.announcements : [],
+        grades: Array.isArray(incoming.grades) ? incoming.grades : [],
+        courses: Array.isArray(incoming.courses) ? incoming.courses : [],
+        syncing: false
+      };
+    }
+
+    function load() {
+      try {
+        const raw = localStorage.getItem('bclss_local');
+        if (raw) mergeLocalData(JSON.parse(raw));
+      } catch (err) {
+        console.warn('Ignoring invalid local app data:', err);
+      }
+    }
     function toggleTheme() {
       const root = document.documentElement;
       const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
@@ -863,11 +940,29 @@
     function getAiApiKey() { return localStorage.getItem('bclss_ai_key') || ''; }
     function saveAiApiKey() { const v = (document.getElementById('aiKeyInput') || {}).value || ''; if (v.trim()) { localStorage.setItem('bclss_ai_key', v.trim()); } else { localStorage.removeItem('bclss_ai_key'); } }
     function toggleAiKeyRow() { const row = document.getElementById('assistantKeyRow'); if (!row) return; const open = row.style.display === 'none'; row.style.display = open ? '' : 'none'; if (open) { const inp = document.getElementById('aiKeyInput'); if (inp) { inp.value = getAiApiKey(); inp.focus(); } } }
-    function uid() { APP.local.nextId += 1; return APP.local.nextId; }
+    function uid() {
+      APP.local.nextId = Math.max(100, Number(APP.local.nextId) || 100) + 1;
+      return APP.local.nextId;
+    }
     function todayISO() { return new Date().toISOString().split('T')[0]; }
     function daysFromToday(days) { const d = new Date(); d.setDate(d.getDate() + days); return d.toISOString().split('T')[0]; }
-    function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function esc(s) {
+      return String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
     function jsQuote(s) { return String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+    function safeExternalUrl(value) {
+      try {
+        const url = new URL(String(value || ''), window.location.href);
+        return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : '';
+      } catch (_) {
+        return '';
+      }
+    }
 
     function toast(msg, type = 'info') {
       const c = document.getElementById('toastContainer');
@@ -1078,8 +1173,16 @@
       if (options.className) modal.classList.add(options.className);
       modal.innerHTML = html;
       document.getElementById('modalOverlay').classList.add('open');
+      document.body.classList.add('modal-open');
     }
-    function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+    function closeModal() {
+      const overlay = document.getElementById('modalOverlay');
+      const video = overlay.querySelector('video');
+      if (video) video.pause();
+      overlay.classList.remove('open');
+      document.body.classList.remove('modal-open');
+      hideModalLoading();
+    }
 
     function dueDays(dateStr) {
       if (!dateStr) return null;
@@ -1212,9 +1315,6 @@
         return;
       }
 
-      CanvasAPI.saveCredentials(token, domain);
-      CanvasAPI.setApiBase(apiBase);
-
       showModalLoading('Connecting to Canvas…');
       try {
         // ===== USER IDENTITY FLOW START =====
@@ -1224,15 +1324,15 @@
         
         // 2. User is now authenticated with Canvas identity
         // Load their previously saved BetterCLSS data
-        APP.local = {
-          ...APP.local,
-          ...authResult.localData
-        };
-        APP.canvas = authResult.canvasData;
+        CanvasAPI.saveCredentials(token, domain);
+        CanvasAPI.setApiBase(apiBase);
+        mergeLocalData(authResult.localData);
+        mergeCanvasData(authResult.canvasData);
         
         hideModalLoading();
         closeModal();
         toast('Connected as ' + authResult.name, 'success');
+        switchPage('dashboard');
         
         // 3. Auto-sync Canvas data and save to backend
         await syncCanvas();
@@ -1245,6 +1345,8 @@
     }
 
     async function disconnectCanvas() {
+      clearTimeout(remoteSaveTimer);
+      remoteSavePending = false;
       CanvasAPI.clearCredentials();
       APP.canvas.connected = false;
       APP.canvas.assignments = [];
@@ -1270,12 +1372,10 @@
 
       try {
         const authResult = await UserAuth.authenticateUser(token, domain, apiBase);
-        APP.local = {
-          ...APP.local,
-          ...authResult.localData
-        };
-        APP.canvas = authResult.canvasData || APP.canvas;
+        mergeLocalData(authResult.localData);
+        mergeCanvasData(authResult.canvasData);
         APP.canvas.connected = true;
+        updateDashboardWelcome();
         return true;
       } catch (err) {
         console.debug('User session restore failed:', err && err.message ? err.message : err);
@@ -1294,6 +1394,8 @@
       updateConnectionStatus();
       const syncBtn = document.getElementById('syncBtn');
       if (syncBtn) syncBtn.textContent = 'Syncing...';
+      const dashboardSyncBtn = document.getElementById('dashboardSyncBtn');
+      if (dashboardSyncBtn) dashboardSyncBtn.textContent = 'Syncing…';
 
       try {
         const [assignments, announcements, grades] = await Promise.all([CanvasAPI.getAllAssignments(), CanvasAPI.getAllAnnouncements(), CanvasAPI.getGrades()]);
@@ -1326,28 +1428,38 @@
         return true;
       } catch (_) {
         APP.canvas.connected = false;
-        toast('Canvas sync failed. Reconnect token.', 'error');
-        if (fromStartup) openTutorialModal();
+        toast(fromStartup ? 'Canvas could not sync in the background.' : 'Canvas sync failed. Check your connection or token.', 'error');
         return false;
       } finally {
         APP.canvas.syncing = false;
         if (syncBtn) syncBtn.textContent = 'Sync';
+        if (dashboardSyncBtn) dashboardSyncBtn.textContent = 'Sync Canvas';
         renderAll();
       }
     }
 
     function switchPage(page, tab) {
+      const targetPage = document.getElementById('page-' + page);
+      if (!targetPage) return;
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-      document.getElementById('page-' + page).classList.add('active');
+      document.querySelectorAll('.nav-tab').forEach(t => t.removeAttribute('aria-current'));
+      targetPage.classList.add('active');
       if (tab) tab.classList.add('active');
-      document.querySelectorAll('[data-page="' + page + '"]').forEach((navTab) => navTab.classList.add('active'));
+      document.querySelectorAll('[data-page="' + page + '"]').forEach((navTab) => {
+        navTab.classList.add('active');
+        navTab.setAttribute('aria-current', 'page');
+      });
 
       const mobileTab = document.querySelector('.nav-tabs [data-page="' + page + '"]');
       if (mobileTab && mobileTab.scrollIntoView) {
         mobileTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
       }
 
+      if (window.location.hash !== '#' + page) {
+        history.replaceState(null, '', '#' + page);
+      }
+      window.scrollTo({ top: 0, behavior: 'auto' });
       renderPage(page);
     }
 
@@ -1375,6 +1487,7 @@
       if (page === 'settings') {
         updateInstallButtonState();
         syncAccentControls();
+        if (typeof updateNotificationUi === 'function') updateNotificationUi();
       }
     }
 
@@ -1412,12 +1525,30 @@
       }
     }
 
+    function updateDashboardWelcome() {
+      const greeting = document.getElementById('dashboardGreeting');
+      const date = document.getElementById('dashboardDate');
+      if (!greeting || !date) return;
+
+      const hour = new Date().getHours();
+      const salutation = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+      const user = UserAuth.getCurrentUser();
+      const firstName = String(user.name || '').trim().split(/\s+/)[0];
+      greeting.textContent = firstName ? `${salutation}, ${firstName}` : 'Your dashboard';
+      date.textContent = new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+
     function dashboardFeed(items) {
       if (!items.length) return '<div class="empty-state"><div class="empty-text">Nothing to show</div></div>';
       return items.map(a => { const chip = dueChip(dueDays(a.due)); return '<div class="feed-item"><div class="priority-dot ' + a.priority + '"></div><div class="feed-info"><div class="feed-title">' + esc(a.title) + '</div><div class="feed-meta">' + esc(a.subject) + '</div></div><div class="due-chip ' + chip.cls + '">' + chip.text + '</div></div>'; }).join('');
     }
 
     function renderDashboard() {
+      updateDashboardWelcome();
       const all = allAssignments();
       const upcoming = all.filter(a => !a.done && (dueDays(a.due) === null || dueDays(a.due) >= 0)).slice(0, 6);
       const urgent = all.filter(a => !a.done && (a.priority === 'high' || (dueDays(a.due) !== null && dueDays(a.due) < 0))).slice(0, 6);
@@ -1456,7 +1587,8 @@
           ? '<button class="check-btn" onclick="toggleLocalDone(' + a.localId + ')">' + (a.done ? '✓' : '') + '</button>'
           : '<button class="check-btn" onclick="toggleCanvasDone(\'' + jsQuote(a.id) + '\',' + (a.done ? 'true' : 'false') + ')">' + (a.done ? '✓' : '') + '</button>';
         const del = a.source === 'local' ? '<button class="btn btn-sm btn-danger" onclick="deleteLocalAssign(' + a.localId + ')">✕</button>' : '';
-        const link = a.url ? '<a class="btn btn-sm btn-secondary" target="_blank" rel="noopener" href="' + a.url + '">Open</a>' : '';
+        const externalUrl = safeExternalUrl(a.url);
+        const link = externalUrl ? '<a class="btn btn-sm btn-secondary" target="_blank" rel="noopener noreferrer" href="' + esc(externalUrl) + '">Open</a>' : '';
         return '<div class="assign-item ' + (a.done ? 'done' : '') + '"><div class="priority-dot ' + a.priority + '"></div><div class="assign-info"><div class="assign-title">' + esc(a.title) + '</div><div class="assign-sub">' + esc(a.subject) + (a.due ? ' · Due ' + esc(a.due) : '') + (a.source === 'canvas' && a.manualDone ? ' · Manual done' : '') + '</div></div><div class="assign-right"><span class="due-chip ' + chip.cls + '">' + chip.text + '</span>' + link + toggle + del + '</div></div>';
       }).join('');
     }
@@ -1625,7 +1757,12 @@
 
     function renderLinks() {
       const el = document.getElementById('linksGrid');
-      el.innerHTML = APP.local.links.map(l => '<a class="link-card" href="' + l.url + '" target="_blank" rel="noopener noreferrer"><div class="link-icon-box">' + l.icon + '</div><div><div class="link-name">' + esc(l.name) + '</div><div class="link-host">' + esc(l.url.replace(/^https?:\/\//, '').split('/')[0]) + '</div></div></a>').join('') + '<div class="link-card" style="cursor:pointer;border-style:dashed" onclick="openAddLink()"><div class="link-icon-box">+</div><div><div class="link-name">Add Link</div></div></div>';
+      el.innerHTML = APP.local.links.map((l) => {
+        const url = safeExternalUrl(l.url);
+        if (!url) return '';
+        const host = new URL(url).hostname;
+        return '<a class="link-card" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer"><div class="link-icon-box">' + esc(l.icon || '🌐') + '</div><div><div class="link-name">' + esc(l.name) + '</div><div class="link-host">' + esc(host) + '</div></div></a>';
+      }).join('') + '<div class="link-card" style="cursor:pointer;border-style:dashed" onclick="openAddLink()"><div class="link-icon-box">+</div><div><div class="link-name">Add Link</div></div></div>';
     }
 
     function openAddLink() {
@@ -1638,6 +1775,8 @@
       const icon = document.getElementById('l-icon').value.trim() || '🌐';
       if (!name || !url) { toast('Name and URL required', 'warn'); return; }
       if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+      url = safeExternalUrl(url);
+      if (!url) { toast('Enter a valid http or https URL', 'warn'); return; }
       APP.local.links.push({ id: uid(), name, url, icon });
       save(); closeModal(); renderLinks();
     }
@@ -2497,6 +2636,9 @@
       initTheme();
       initAccentTheme();
       load();
+      // The dashboard is always the first visible route. Authentication restores
+      // unobtrusively after the app has rendered.
+      switchPage('dashboard');
       setupStudyArea();
       sidebarCoursesCollapsed = localStorage.getItem('bclss_courses_collapsed') === '1';
       setSidebarCoursesCollapsed(sidebarCoursesCollapsed);
@@ -2506,6 +2648,11 @@
       const topDate = document.getElementById('topDate');
       if (topDate) topDate.textContent = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
       document.getElementById('modalOverlay').addEventListener('click', (e) => { if (e.target.id === 'modalOverlay') closeModal(); });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.getElementById('modalOverlay').classList.contains('open')) {
+          closeModal();
+        }
+      });
       const assistantInput = document.getElementById('assistantInput');
       if (assistantInput) {
         assistantInput.addEventListener('keydown', (e) => {
@@ -2518,10 +2665,9 @@
       addAssistantMessage('assistant', 'Hi, I can see your BetterCLSS dashboard context. Ask me what to prioritize, what is due soon, or how to study this week.');
       renderAll();
       if (CanvasAPI.getToken()) {
-        await restoreUserSession();
-        syncCanvas(true);
-      } else {
-        openTutorialModal();
+        const restored = await restoreUserSession();
+        renderAll();
+        if (restored) syncCanvas(true);
       }
     }
 

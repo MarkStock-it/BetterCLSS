@@ -15,10 +15,12 @@
  * 4. Backend creates/loads user record keyed by Canvas user ID
  * 5. Frontend receives userId and loads user's saved data
  * 6. On any data modification, frontend saves to POST /api/user/data/:userId
- * 7. On logout, frontend calls POST /api/user/logout/:userId
+ * 7. On disconnect, the local session is cleared while saved user data remains available for reconnect
  */
 
 const UserAuth = (() => {
+  const REQUEST_TIMEOUT_MS = 20000;
+
   // Store current user session
   let currentUser = {
     id: null,        // Canvas user ID
@@ -35,6 +37,39 @@ const UserAuth = (() => {
   // Get current user info
   function getCurrentUser() {
     return { ...currentUser };
+  }
+
+  function getCredentialHeaders() {
+    const token = typeof localStorage !== 'undefined'
+      ? String(localStorage.getItem('bclss_canvas_token') || '').trim()
+      : '';
+    const domain = typeof localStorage !== 'undefined'
+      ? String(localStorage.getItem('bclss_canvas_domain') || '').trim()
+      : '';
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['x-canvas-token'] = token;
+    if (domain) headers['x-canvas-domain'] = domain;
+    return headers;
+  }
+
+  async function fetchWithTimeout(url, options = {}) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } catch (err) {
+      if (err && err.name === 'AbortError') {
+        throw new Error('The server took too long to respond. Please try again.');
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async function readError(response, fallback) {
+    const error = await response.json().catch(() => ({}));
+    return new Error(error.message || fallback || `Request failed: HTTP ${response.status}`);
   }
 
   /**
@@ -59,7 +94,7 @@ const UserAuth = (() => {
 
     const apiUrl = apiBase ? `${apiBase}/api/user/authenticate` : '/api/user/authenticate';
     
-    const response = await fetch(apiUrl, {
+    const response = await fetchWithTimeout(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -69,8 +104,7 @@ const UserAuth = (() => {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `Authentication failed: HTTP ${response.status}`);
+      throw await readError(response, `Authentication failed: HTTP ${response.status}`);
     }
 
     const data = await response.json();
@@ -108,15 +142,14 @@ const UserAuth = (() => {
 
     const apiUrl = apiBase ? `${apiBase}/api/user/data/${userId}` : `/api/user/data/${userId}`;
     
-    const response = await fetch(apiUrl, {
+    const response = await fetchWithTimeout(apiUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getCredentialHeaders(),
       body: JSON.stringify({ local: localData })
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `Save failed: HTTP ${response.status}`);
+      throw await readError(response, `Save failed: HTTP ${response.status}`);
     }
 
     return { success: true };
@@ -138,9 +171,9 @@ const UserAuth = (() => {
 
     const apiUrl = apiBase ? `${apiBase}/api/user/sync/${userId}` : `/api/user/sync/${userId}`;
     
-    const response = await fetch(apiUrl, {
+    const response = await fetchWithTimeout(apiUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getCredentialHeaders(),
       body: JSON.stringify({
         assignments: canvasData.assignments || [],
         announcements: canvasData.announcements || [],
@@ -150,16 +183,14 @@ const UserAuth = (() => {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `Canvas sync save failed: HTTP ${response.status}`);
+      throw await readError(response, `Canvas sync save failed: HTTP ${response.status}`);
     }
 
     return { success: true };
   }
 
   /**
-   * Logout user and delete all saved data
-   * Clears Canvas credentials and removes all user data from backend
+   * End the current backend session without deleting saved user data
    * 
    * @param {number} userId - Canvas user ID
    * @param {string} apiBase - Backend API base URL
@@ -173,9 +204,9 @@ const UserAuth = (() => {
     const apiUrl = apiBase ? `${apiBase}/api/user/logout/${userId}` : `/api/user/logout/${userId}`;
     
     try {
-      const response = await fetch(apiUrl, {
+      const response = await fetchWithTimeout(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: getCredentialHeaders()
       });
 
       if (!response.ok) {
@@ -185,7 +216,7 @@ const UserAuth = (() => {
       console.warn('Logout network error:', err.message);
     }
 
-    // Clear local user session
+    // Clear the in-memory user session. The caller owns Canvas credential cleanup.
     currentUser = { id: null, name: '', email: '', isNewUser: false };
     
     return { success: true };
@@ -211,14 +242,13 @@ const UserAuth = (() => {
 
     const apiUrl = apiBase ? `${apiBase}/api/user/data/${userId}` : `/api/user/data/${userId}`;
     
-    const response = await fetch(apiUrl, {
+    const response = await fetchWithTimeout(apiUrl, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
+      headers: getCredentialHeaders()
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `Load failed: HTTP ${response.status}`);
+      throw await readError(response, `Load failed: HTTP ${response.status}`);
     }
 
     const data = await response.json();

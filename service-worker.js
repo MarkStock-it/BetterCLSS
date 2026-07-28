@@ -1,7 +1,19 @@
 /* global importScripts, firebase */
 
-const CACHE_NAME = 'betterclss-v4';
-const OFFLINE_URLS = ['./', './index.html', './StudentHub.html', './styles.css', './canvas-api.js', './config.js', './push-notifications.js'];
+const CACHE_NAME = 'betterclss-v5';
+const OFFLINE_URLS = [
+  './',
+  './index.html',
+  './StudentHub.html',
+  './styles.css',
+  './canvas-api.js',
+  './user-auth.js',
+  './config.js',
+  './push-notifications.js',
+  './manifest.json',
+  './icons/icon-192.svg',
+  './icons/icon-512.svg'
+];
 
 function isHtmlRequest(request) {
   const accept = request.headers.get('accept') || '';
@@ -47,37 +59,34 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         });
       })
-      .catch(() => caches.match('./index.html'))
+      .catch(() => new Response('', { status: 504, statusText: 'Offline' }))
   );
 });
 
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
-
-firebase.initializeApp({
+const firebaseConfig = {
   apiKey: 'YOUR_FIREBASE_API_KEY',
   authDomain: 'YOUR_FIREBASE_AUTH_DOMAIN',
   projectId: 'YOUR_FIREBASE_PROJECT_ID',
   storageBucket: 'YOUR_FIREBASE_STORAGE_BUCKET',
   messagingSenderId: 'YOUR_FIREBASE_MESSAGING_SENDER_ID',
   appId: 'YOUR_FIREBASE_APP_ID'
-});
+};
 
-const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage((payload) => {
-  const title = payload?.notification?.title || payload?.data?.title || 'BetterCLSS';
-  const options = {
-    body: payload?.notification?.body || payload?.data?.body || 'You have a new update.',
-    icon: 'icons/icon-192.svg',
-    badge: 'icons/icon-192.svg',
-    data: {
-      url: payload?.data?.url || './index.html'
-    }
-  };
-
-  self.registration.showNotification(title, options);
-});
+if (!Object.values(firebaseConfig).some((value) => String(value).startsWith('YOUR_'))) {
+  importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+  importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+  firebase.initializeApp(firebaseConfig);
+  firebase.messaging().onBackgroundMessage((payload) => {
+    const title = payload?.notification?.title || payload?.data?.title || 'BetterCLSS';
+    const options = {
+      body: payload?.notification?.body || payload?.data?.body || 'You have a new update.',
+      icon: 'icons/icon-192.svg',
+      badge: 'icons/icon-192.svg',
+      data: { url: payload?.data?.url || './index.html' }
+    };
+    self.registration.showNotification(title, options);
+  });
+}
 
 self.addEventListener('push', (event) => {
   let payload = {};

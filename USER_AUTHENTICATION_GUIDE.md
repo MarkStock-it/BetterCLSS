@@ -4,6 +4,8 @@
 
 This document explains how the new user authentication and data persistence system works. Users are now identified by their Canvas user ID, and all their BetterCLSS data (notes, tasks, assignments, settings) is automatically saved to the backend.
 
+> Current behavior: disconnecting clears the browser credential and session but preserves the user's saved backend data. All user-data endpoints require Canvas credentials and verify that the Canvas account matches the requested user ID.
+
 ## Architecture
 
 ### User Identity Flow
@@ -196,13 +198,13 @@ Headers:
 ```
 
 #### POST /api/user/logout/:userId
-**Purpose:** Delete user session and all data
+**Purpose:** End the authenticated session without deleting saved data
 
 **Response:**
 ```json
 {
   "success": true,
-  "message": "User data deleted"
+  "message": "Logged out successfully"
 }
 ```
 
@@ -229,7 +231,7 @@ await UserAuth.saveUserData(userId, localData, apiBase)
 // Save Canvas sync results
 await UserAuth.saveCanvasSync(userId, canvasData, apiBase)
 
-// Logout and delete all data
+// End the session without deleting saved data
 await UserAuth.logoutUser(userId, apiBase)
 
 // Load user's data
@@ -247,8 +249,8 @@ Modified key functions to integrate with the user authentication system:
 - User's previous data is restored from backend
 
 #### `disconnectCanvas()` - Updated
-- Calls `UserAuth.logoutUser()` to delete session and all backend data
-- Clears local Canvas credentials
+- Clears local Canvas credentials and the in-memory session
+- Preserves backend data for a future reconnect
 
 #### `syncCanvas()` - Updated
 - After syncing Canvas data, calls `UserAuth.saveCanvasSync()`
@@ -287,7 +289,7 @@ Modified key functions to integrate with the user authentication system:
 1. **On Login:** Frontend loads user's previous data from backend
 2. **On Sync Click:** Frontend fetches fresh data from Canvas and saves to backend
 3. **On Any Change:** Enhanced `save()` function persists to both localStorage AND backend
-4. **On Logout:** All user data deleted from backend (user can create new account anytime)
+4. **On Disconnect:** Browser credentials are cleared and backend data is preserved
 
 ## User Experience
 
@@ -317,10 +319,9 @@ Modified key functions to integrate with the user authentication system:
 ### Logout Flow
 
 1. User clicks "Disconnect Canvas"
-2. Frontend calls logout endpoint
-3. Backend deletes all user data from disk
-4. Canvas token and credentials cleared
-5. User can reconnect with same Canvas account later (creates new record)
+2. Canvas token and the in-memory session are cleared
+3. Backend data remains on disk
+4. User can reconnect with the same Canvas account and restore saved data
 
 ## Important Implementation Details
 
@@ -356,9 +357,9 @@ Modified key functions to integrate with the user authentication system:
 ### Privacy & Security
 
 - Each user's data is isolated (separate file)
-- Canvas tokens verified on every authentication
+- Canvas credentials are verified for authentication and user-data access
 - Tokens not stored on backend (kept in browser only)
-- All data deleted on logout
+- Disconnect does not delete saved data
 - HTTPS recommended for production
 
 ## Testing
@@ -381,9 +382,9 @@ Modified key functions to integrate with the user authentication system:
 
 3. **Test Logout:**
    - Disconnect Canvas
-   - Check that `.betterclss_data/user_*.json` file was deleted
+   - Check that `.betterclss_data/user_*.json` is preserved
    - Reconnect with same Canvas account
-   - Should start fresh (new account)
+   - Previous data should be restored
 
 ### API Testing
 
@@ -396,10 +397,14 @@ curl -X POST http://localhost:5500/api/user/authenticate \
 # Test save data
 curl -X POST http://localhost:5500/api/user/data/12345 \
   -H "Content-Type: application/json" \
+  -H "x-canvas-token: your-token" \
+  -H "x-canvas-domain: usc.instructure.com" \
   -d '{"local": {"assignments": [...]}}'
 
 # Test logout
-curl -X POST http://localhost:5500/api/user/logout/12345
+curl -X POST http://localhost:5500/api/user/logout/12345 \
+  -H "x-canvas-token: your-token" \
+  -H "x-canvas-domain: usc.instructure.com"
 ```
 
 ## Deployment Notes

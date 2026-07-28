@@ -11,7 +11,7 @@ Your BetterCLSS app now has a complete user authentication and data persistence 
 3. **One-Click Connection** - Connect Canvas, data loads automatically
 4. **Returning User Support** - Come back anytime, your data is there
 5. **Cross-Device Sync Ready** - Use same Canvas account on different devices
-6. **Clean Logout** - Fully delete user session and data
+6. **Safe Disconnect** - Clear the device session without deleting saved user data
 
 ### 📁 New Files
 
@@ -51,9 +51,8 @@ index.html       ← Updated connect/logout, added auto-save
 
 **Logout:**
 1. Click "Disconnect Canvas"
-2. Choose "Disconnect"
-3. All data deleted from backend
-4. Can reconnect anytime with new Canvas account
+2. The token and local authenticated session are cleared
+3. Saved backend data remains available when the same Canvas account reconnects
 
 ### For Backend
 
@@ -64,7 +63,7 @@ POST /api/user/authenticate      → Verify token, create/load user
 GET  /api/user/data/:userId      → Load user's data
 POST /api/user/data/:userId      → Save local app data
 POST /api/user/sync/:userId      → Save Canvas sync results
-POST /api/user/logout/:userId    → Delete all user data
+POST /api/user/logout/:userId    → End the session without deleting saved data
 ```
 
 **Data Storage:**
@@ -110,12 +109,12 @@ cat .betterclss_data/user_12345.json | jq
 
 ### 5. Test Logout
 - Disconnect Canvas
-- Check that user file was deleted:
+- Check that the user file is still present:
   ```bash
   ls -la .betterclss_data/
   ```
 - Reconnect with same Canvas token
-- Should start fresh (new user)
+- Saved data should be restored
 
 ## API Examples
 
@@ -155,7 +154,9 @@ curl -X POST http://localhost:5500/api/user/data/12345 \
 
 ### Logout
 ```bash
-curl -X POST http://localhost:5500/api/user/logout/12345
+curl -X POST http://localhost:5500/api/user/logout/12345 \
+  -H "x-canvas-token: your-canvas-token" \
+  -H "x-canvas-domain: usc.instructure.com"
 ```
 
 ## Code Overview
@@ -165,7 +166,7 @@ Handles all user authentication and API calls from the browser:
 - `UserAuth.authenticateUser()` - Connect with Canvas token
 - `UserAuth.saveUserData()` - Save notes/tasks/settings
 - `UserAuth.saveCanvasSync()` - Save Canvas assignments
-- `UserAuth.logoutUser()` - Delete everything
+- `UserAuth.logoutUser()` - End the authenticated session
 - `UserAuth.getCurrentUser()` - Get logged-in user info
 
 ### user-storage.js (Backend)
@@ -174,11 +175,11 @@ File-based user data storage on server:
 - `saveUserData()` - Write user data to JSON file
 - `updateUserLocalData()` - Update just local data
 - `updateUserCanvasData()` - Update just Canvas sync
-- `deleteUserData()` - Delete user file on logout
+- `deleteUserData()` - Administrative storage helper; not called by disconnect
 
 ### Updated Functions (index.html)
 - `connectCanvas()` - Now uses UserAuth module
-- `disconnectCanvas()` - Now calls logout endpoint
+- `disconnectCanvas()` - Clears the device credential and in-memory session
 - `syncCanvas()` - Now saves to backend after sync
 - `save()` - Now also saves to backend automatically
 
@@ -278,7 +279,7 @@ Your BetterCLSS app now has:
 - ✅ Canvas-based user identity
 - ✅ Automatic data backup to backend
 - ✅ Returning user support
-- ✅ One-click logout with data deletion
+- ✅ One-click disconnect with data preservation
 - ✅ Existing UI completely preserved
 - ✅ No database required
 - ✅ Ready for production

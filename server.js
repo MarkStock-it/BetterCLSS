@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { URL } = require('url');
 const { spawn } = require('child_process');
 const express = require('express');
@@ -51,11 +52,14 @@ const OPENCLAUDE_API_KEY = process.env.OPENCLAUDE_API_KEY || '';
 const AI_AUTOSTART_OLLAMA = process.env.AI_AUTOSTART_OLLAMA !== '0';
 const AI_MODEL_KEEP_ALIVE = process.env.AI_MODEL_KEEP_ALIVE || '0m';
 const CORS_ALLOW_ORIGIN = process.env.CORS_ALLOW_ORIGIN || 'https://betterclss.onrender.com';
+const NOTIFICATION_ADMIN_KEY = process.env.NOTIFICATION_ADMIN_KEY || '';
 
 const FIREBASE_SERVICE_ACCOUNT_JSON = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '';
 
 let ollamaBootPromise = null;
 const fcmTokens = new Set();
+const verifiedCanvasUsers = new Map();
+const USER_AUTH_CACHE_MS = 15 * 60 * 1000;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -77,9 +81,12 @@ const MIME = {
 function json(res, status, data) {
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Access-Control-Allow-Origin': CORS_ALLOW_ORIGIN,
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Accept, x-canvas-token, x-canvas-domain, x-ai-key',
+    'Access-Control-Allow-Headers': 'Content-Type, Accept, x-canvas-token, x-canvas-domain, x-ai-key, x-admin-key',
     Vary: 'Origin',
   });
   res.end(JSON.stringify(data));
@@ -495,6 +502,60 @@ function resolveCanvasAuth(req) {
   return { token, domain };
 }
 
+function canvasCredentialKey(auth) {
+  return crypto
+    .createHash('sha256')
+    .update(`${auth.domain}\n${auth.token}`)
+    .digest('hex');
+}
+
+async function verifyUserRequest(req, expectedUserId) {
+  const auth = resolveCanvasAuth(req);
+  const cacheKey = canvasCredentialKey(auth);
+  const cached = verifiedCanvasUsers.get(cacheKey);
+  const now = Date.now();
+
+  if (cached && cached.expiresAt > now) {
+    if (String(cached.userId) !== String(expectedUserId)) throw new Error('FORBIDDEN_USER');
+    return cached;
+  }
+
+  const profile = await canvasFetchOne('/users/self/profile', {}, auth);
+  if (!profile || !profile.id) throw new Error('UNAUTHORIZED');
+  if (String(profile.id) !== String(expectedUserId)) throw new Error('FORBIDDEN_USER');
+
+  const verified = {
+    userId: profile.id,
+    name: profile.name || '',
+    expiresAt: now + USER_AUTH_CACHE_MS
+  };
+  verifiedCanvasUsers.set(cacheKey, verified);
+
+  // Keep the short-lived cache bounded on long-running deployments.
+  if (verifiedCanvasUsers.size > 500) {
+    for (const [key, value] of verifiedCanvasUsers) {
+      if (value.expiresAt <= now) verifiedCanvasUsers.delete(key);
+    }
+  }
+  return verified;
+}
+
+function userAuthError(res, err) {
+  if (err.message === 'MISSING_CANVAS_TOKEN') {
+    json(res, 401, { error: 'missing_credentials', message: 'Reconnect Canvas to access saved user data.' });
+    return true;
+  }
+  if (err.message === 'UNAUTHORIZED') {
+    json(res, 401, { error: 'unauthorized', message: 'Canvas token is invalid or expired.' });
+    return true;
+  }
+  if (err.message === 'FORBIDDEN_USER') {
+    json(res, 403, { error: 'forbidden', message: 'This Canvas account cannot access that user record.' });
+    return true;
+  }
+  return false;
+}
+
 async function canvasFetchAll(apiPath, params = {}, auth) {
   const all = [];
   const base = `https://${auth.domain}/api/v1`;
@@ -686,8 +747,8 @@ function serveStatic(req, res) {
     return;
   }
 
-  const filePath = path.join(__dirname, pathname);
-  if (!filePath.startsWith(__dirname)) {
+  const filePath = path.resolve(__dirname, `.${pathname}`);
+  if (filePath !== __dirname && !filePath.startsWith(`${__dirname}${path.sep}`)) {
     json(res, 403, { error: 'forbidden' });
     return;
   }
@@ -781,6 +842,11 @@ async function handleApi(req, res) {
   if (reqUrl.pathname === '/send-notification' || reqUrl.pathname === '/api/send-notification') {
     if (req.method !== 'POST') {
       json(res, 405, { error: 'method_not_allowed' });
+      return;
+    }
+
+    if (!NOTIFICATION_ADMIN_KEY || req.headers['x-admin-key'] !== NOTIFICATION_ADMIN_KEY) {
+      json(res, 403, { error: 'forbidden', message: 'Notification sending requires the configured admin key.' });
       return;
     }
 
@@ -894,6 +960,11 @@ async function handleApi(req, res) {
         name: profile.name,
         email: profile.primary_email || profile.email
       });
+      verifiedCanvasUsers.set(canvasCredentialKey(canvasAuth), {
+        userId,
+        name: profile.name || '',
+        expiresAt: Date.now() + USER_AUTH_CACHE_MS
+      });
 
       json(res, 200, {
         success: true,
@@ -925,6 +996,7 @@ async function handleApi(req, res) {
   if (reqUrl.pathname.match(/^\/api\/user\/data\/\d+$/) && req.method === 'GET') {
     const userId = parseInt(reqUrl.pathname.split('/').pop());
     try {
+      await verifyUserRequest(req, userId);
       const userData = userStorage.loadOrCreateUser(userId);
       json(res, 200, {
         success: true,
@@ -935,6 +1007,7 @@ async function handleApi(req, res) {
       });
       return;
     } catch (err) {
+      if (userAuthError(res, err)) return;
       json(res, 502, { error: 'load_error', message: err.message });
       return;
     }
@@ -947,6 +1020,7 @@ async function handleApi(req, res) {
   if (reqUrl.pathname.match(/^\/api\/user\/data\/\d+$/) && req.method === 'POST') {
     const userId = parseInt(reqUrl.pathname.split('/').pop());
     try {
+      await verifyUserRequest(req, userId);
       const body = await parseRequestBody(req);
       if (body.local && typeof body.local === 'object') {
         userStorage.updateUserLocalData(userId, body.local);
@@ -959,6 +1033,7 @@ async function handleApi(req, res) {
       json(res, 200, { success: true, userId: userId });
       return;
     } catch (err) {
+      if (userAuthError(res, err)) return;
       json(res, 502, { error: 'save_error', message: err.message });
       return;
     }
@@ -971,6 +1046,7 @@ async function handleApi(req, res) {
   if (reqUrl.pathname.match(/^\/api\/user\/sync\/\d+$/) && req.method === 'POST') {
     const userId = parseInt(reqUrl.pathname.split('/').pop());
     try {
+      await verifyUserRequest(req, userId);
       const body = await parseRequestBody(req);
       userStorage.updateUserCanvasData(userId, {
         assignments: Array.isArray(body.assignments) ? body.assignments : [],
@@ -981,6 +1057,7 @@ async function handleApi(req, res) {
       json(res, 200, { success: true, userId: userId });
       return;
     } catch (err) {
+      if (userAuthError(res, err)) return;
       json(res, 502, { error: 'sync_error', message: err.message });
       return;
     }
@@ -993,6 +1070,7 @@ if (reqUrl.pathname.match(/^\/api\/user\/logout\/\d+$/) && req.method === 'POST'
   const userId = parseInt(reqUrl.pathname.split('/').pop());
 
   try {
+    await verifyUserRequest(req, userId);
     // Do NOT delete user data on logout
     json(res, 200, {
       success: true,
@@ -1001,6 +1079,7 @@ if (reqUrl.pathname.match(/^\/api\/user\/logout\/\d+$/) && req.method === 'POST'
     return;
 
   } catch (err) {
+    if (userAuthError(res, err)) return;
     json(res, 502, { error: 'logout_error', message: err.message });
     return;
   }
@@ -1055,6 +1134,7 @@ if (reqUrl.pathname.match(/^\/api\/user\/logout\/\d+$/) && req.method === 'POST'
 }
 
 const app = express();
+app.disable('x-powered-by');
 
 app.use((req, res, next) => {
   const isApiOptions = req.url.startsWith('/api/') || req.url === '/register-token' || req.url === '/send-notification';
@@ -1062,7 +1142,7 @@ app.use((req, res, next) => {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': CORS_ALLOW_ORIGIN,
       'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Accept, x-canvas-token, x-canvas-domain, x-ai-key',
+      'Access-Control-Allow-Headers': 'Content-Type, Accept, x-canvas-token, x-canvas-domain, x-ai-key, x-admin-key',
       'Access-Control-Max-Age': '86400',
       Vary: 'Origin',
     });
