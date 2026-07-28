@@ -352,13 +352,6 @@ function SidebarDrawer({ x, opacity, open, onOpenChange, activeView, onNavigate 
             ))}
           </nav>
 
-          <div className="drawer-tip">
-            <span className="gesture-line" />
-            <div>
-              <strong>Gesture tip</strong>
-              <p>Drag this panel left to close it.</p>
-            </div>
-          </div>
         </div>
       </motion.aside>
     </>
@@ -535,7 +528,6 @@ function TasksView({ assignments, filter, connected, onConnect }) {
   return (
     <motion.section key={`tasks-${filter}`} className="view-stack" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
       <ViewHeading eyebrow="Coursework" title="Tasks" detail={`${filter[0].toUpperCase()}${filter.slice(1)} assignments`} />
-      <div className="gesture-context"><span className="gesture-context-dot" />Hold Tasks in the launchpad and slide to change this filter.</div>
       <section className="section-card">
         {visible.length ? visible.map((item, index) => (
           <div className="deadline-row mb-3 last:mb-0" key={item.id || index}>
@@ -563,7 +555,6 @@ function CalendarView({ calendarView, assignments }) {
   return (
     <motion.section key={`calendar-${calendarView}`} className="view-stack" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
       <ViewHeading eyebrow="Schedule" title="Calendar" detail={`${calendarView[0].toUpperCase()}${calendarView.slice(1)} view`} />
-      <div className="gesture-context"><span className="gesture-context-dot" />Hold Calendar and slide upward to jump between views.</div>
       <section className="section-card">
         <div className="flex items-center justify-between">
           <div>
@@ -633,15 +624,23 @@ function CalendarView({ calendarView, assignments }) {
 }
 
 const DEFAULT_STUDY_DURATIONS = { work: 25, break: 5, long: 15 };
+const STUDY_DURATION_PROFILES = {
+  Quick: { work: 15, break: 5, long: 10 },
+  Balanced: DEFAULT_STUDY_DURATIONS,
+  Deep: { work: 50, break: 10, long: 20 }
+};
 
 function readStudyDurations() {
   try {
     const stored = JSON.parse(localStorage.getItem('bclss_study_durations') || '{}');
-    return {
+    const candidate = {
       work: Number(stored.work) || DEFAULT_STUDY_DURATIONS.work,
       break: Number(stored.break) || DEFAULT_STUDY_DURATIONS.break,
       long: Number(stored.long) || DEFAULT_STUDY_DURATIONS.long
     };
+    return Object.values(STUDY_DURATION_PROFILES).find((profile) => (
+      profile.work === candidate.work && profile.break === candidate.break && profile.long === candidate.long
+    )) || DEFAULT_STUDY_DURATIONS;
   } catch {
     return DEFAULT_STUDY_DURATIONS;
   }
@@ -710,12 +709,13 @@ function StudyView({ studyMode, onRunningChange }) {
   const [setupOpen, setSetupOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sessionTitle, setSessionTitle] = useState('Deep work session');
-  const [sessionTag, setSessionTag] = useState('Coursework');
-  const [preset, setPreset] = useState('Deep Work');
 
   const totalSeconds = durations[activeMode] * 60;
   const remainingRatio = Math.max(0, Math.min(1, timeLeft / totalSeconds));
   const formattedTime = `${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}`;
+  const durationProfile = Object.entries(STUDY_DURATION_PROFILES).find(([, profile]) => (
+    profile.work === durations.work && profile.break === durations.break && profile.long === durations.long
+  ))?.[0] || 'Balanced';
 
   useEffect(() => {
     localStorage.setItem('bclss_study_durations', JSON.stringify(durations));
@@ -769,22 +769,10 @@ function StudyView({ studyMode, onRunningChange }) {
     setTimeLeft(durations[mode] * 60);
   };
 
-  const updateDuration = (mode, value) => {
-    const minutes = Number(value);
-    setDurations((current) => ({ ...current, [mode]: minutes }));
-    if (mode === activeMode && !running) setTimeLeft(minutes * 60);
-  };
-
-  const applyPreset = (nextPreset) => {
-    const presetData = {
-      'Deep Work': { title: 'Deep work session', tag: 'Coursework', work: 50 },
-      'Quick Session': { title: 'Quick focus sprint', tag: 'Quick win', work: 15 },
-      Review: { title: 'Review session', tag: 'Revision', work: 25 }
-    }[nextPreset];
-    setPreset(nextPreset);
-    setSessionTitle(presetData.title);
-    setSessionTag(presetData.tag);
-    updateDuration('work', presetData.work);
+  const applyDurationProfile = (profileName) => {
+    const profile = STUDY_DURATION_PROFILES[profileName] || DEFAULT_STUDY_DURATIONS;
+    setDurations(profile);
+    if (!running) setTimeLeft(profile[activeMode] * 60);
   };
 
   const toggleTimer = () => {
@@ -849,7 +837,7 @@ function StudyView({ studyMode, onRunningChange }) {
                 <span className="session-summary-icon"><Glyph name="tag" className="h-4 w-4" /></span>
                 <span>
                   <strong>{sessionTitle}</strong>
-                  <small>{preset} · {sessionTag}</small>
+                  <small>{durations.work} minute focus</small>
                 </span>
                 <Glyph name="chevron" className="ml-auto h-4 w-4 -rotate-90" />
               </motion.button>
@@ -966,24 +954,12 @@ function StudyView({ studyMode, onRunningChange }) {
       <StudySheet
         open={setupOpen}
         title="Session setup"
-        detail="Choose one intention, then let it disappear behind the timer."
+        detail="Name what you’re working on."
         onClose={() => setSetupOpen(false)}
       >
         <div className="sheet-field">
           <label htmlFor="study-session-title">Session title</label>
           <input id="study-session-title" value={sessionTitle} onChange={(event) => setSessionTitle(event.target.value)} />
-        </div>
-        <div className="sheet-field">
-          <label htmlFor="study-session-tag">Session tag</label>
-          <input id="study-session-tag" value={sessionTag} onChange={(event) => setSessionTag(event.target.value)} />
-        </div>
-        <div className="session-preset-grid" aria-label="Session presets">
-          {['Deep Work', 'Quick Session', 'Review'].map((item) => (
-            <button type="button" className={preset === item ? 'active' : ''} onClick={() => applyPreset(item)} key={item}>
-              <span>{item}</span>
-              <small>{item === 'Deep Work' ? '50 min' : item === 'Quick Session' ? '15 min' : '25 min'}</small>
-            </button>
-          ))}
         </div>
         <button type="button" className="sheet-done-button" onClick={() => setSetupOpen(false)}>Save session</button>
       </StudySheet>
@@ -991,33 +967,18 @@ function StudyView({ studyMode, onRunningChange }) {
       <StudySheet
         open={settingsOpen}
         title="Timer settings"
-        detail="Durations stay out of sight until you need them."
+        detail="Choose one timer rhythm."
         onClose={() => setSettingsOpen(false)}
       >
-        <div className="duration-settings">
-          {[
-            ['work', 'Work', 5, 90],
-            ['break', 'Break', 1, 30],
-            ['long', 'Long break', 5, 45]
-          ].map(([id, label, min, max]) => (
-            <label className="duration-row" key={id}>
-              <span><strong>{label}</strong><small>{durations[id]} minutes</small></span>
-              <input
-                type="range"
-                min={min}
-                max={max}
-                step="1"
-                value={durations[id]}
-                onChange={(event) => updateDuration(id, event.target.value)}
-                aria-label={`${label} duration`}
-              />
-            </label>
-          ))}
-        </div>
-        <div className="study-setting-status">
-          <div><Glyph name="spark" className="h-4 w-4" /><span><strong>Study theme</strong><small>Dark cyber</small></span></div>
-          <div><Glyph name="clock" className="h-4 w-4" /><span><strong>Focus mode</strong><small>Auto-dim enabled</small></span></div>
-        </div>
+        <label className="timer-profile-select">
+          <span>Session length</span>
+          <select value={durationProfile} onChange={(event) => applyDurationProfile(event.target.value)}>
+            <option value="Quick">Quick · 15 / 5 / 10 min</option>
+            <option value="Balanced">Balanced · 25 / 5 / 15 min</option>
+            <option value="Deep">Deep · 50 / 10 / 20 min</option>
+          </select>
+        </label>
+        <p className="study-settings-note">Dark theme · Focus dimming on</p>
         <button type="button" className="sheet-done-button" onClick={() => setSettingsOpen(false)}>Done</button>
       </StudySheet>
     </motion.section>
@@ -1226,7 +1187,6 @@ export default function StudentHubMobileDashboard() {
                       <span className="eyebrow-mobile">At a glance</span>
                       <h2 className="mt-1 text-lg font-bold tracking-[-0.025em] text-white">Today’s workload</h2>
                     </div>
-                    <span className="gesture-hint">Swipe edge for menu</span>
                   </div>
                   <div className="stats-grid-mobile">
                     <StatCard index={0} label="Pending" value={pending.length} detail="assignments" tone="blue" icon="tasks" />

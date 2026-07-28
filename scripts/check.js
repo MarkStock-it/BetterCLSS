@@ -98,8 +98,12 @@ assert(
   'The Study area must include bottom sheets and a focused timer workspace'
 );
 assert(
-  studentHubSource.includes('bclss_study_durations') && studentHubSource.includes('type="range"'),
-  'Study duration settings must be adjustable and persisted'
+  studentHubSource.includes('bclss_study_durations') && studentHubSource.includes('STUDY_DURATION_PROFILES'),
+  'Study duration profiles must be selectable and persisted'
+);
+assert(
+  !studentHubSource.includes('type="range"'),
+  'The simplified Study settings must not expose multiple duration sliders'
 );
 assert(
   packageConfig.scripts['studenthub:build'],
