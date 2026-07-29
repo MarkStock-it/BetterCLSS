@@ -1472,6 +1472,7 @@ export default function StudentHubMobileDashboard() {
   const drawerX = useMotionValue(-DRAWER_TRAVEL);
   const backdropOpacity = useTransform(drawerX, [-DRAWER_TRAVEL, 0], [0, 0.74]);
   const edgeGesture = useRef(null);
+  const pageSwipe = useRef(null);
 
   useEffect(() => {
     animate(drawerX, drawerOpen ? 0 : -DRAWER_TRAVEL, SPRING);
@@ -1508,6 +1509,39 @@ export default function StudentHubMobileDashboard() {
     }
     edgeGesture.current = null;
     setEdgeDragging(false);
+  };
+
+  const handlePageTouchStart = (event) => {
+    if (assistantOpen || drawerOpen || event.touches.length !== 1) return;
+    const target = event.target;
+    if (target.closest('button, a, input, textarea, select, label, .deck-carousel, .drawer-panel, .assistant-drawer')) {
+      pageSwipe.current = null;
+      return;
+    }
+    const touch = event.touches[0];
+    pageSwipe.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: performance.now()
+    };
+  };
+
+  const handlePageTouchEnd = (event) => {
+    if (!pageSwipe.current || !event.changedTouches.length) return;
+    const touch = event.changedTouches[0];
+    const distanceX = touch.clientX - pageSwipe.current.x;
+    const distanceY = touch.clientY - pageSwipe.current.y;
+    const elapsed = Math.max(1, performance.now() - pageSwipe.current.time);
+    const velocityX = distanceX / elapsed;
+    pageSwipe.current = null;
+    if (
+      distanceX > 70
+      && Math.abs(distanceX) > Math.abs(distanceY) * 1.35
+      && (elapsed < 900 || velocityX > 0.22)
+    ) {
+      setAssistantOpen(true);
+      settleDrawer(false);
+    }
   };
 
   const connectCanvas = () => {
@@ -1551,11 +1585,16 @@ export default function StudentHubMobileDashboard() {
   const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   return (
-    <div className={[
-      'studenthub-shell',
-      activeView === 'study' && studyRunning ? 'focus-session-active' : '',
-      activeView === 'study' && studyMode === 'cards' ? 'cards-screen' : ''
-    ].filter(Boolean).join(' ')}>
+    <div
+      className={[
+        'studenthub-shell',
+        activeView === 'study' && studyRunning ? 'focus-session-active' : '',
+        activeView === 'study' && studyMode === 'cards' ? 'cards-screen' : ''
+      ].filter(Boolean).join(' ')}
+      onTouchStart={handlePageTouchStart}
+      onTouchEnd={handlePageTouchEnd}
+      onTouchCancel={() => { pageSwipe.current = null; }}
+    >
       <div
         className="edge-swipe-zone"
         onPointerDown={handleEdgeDown}
