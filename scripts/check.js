@@ -80,6 +80,7 @@ assert(
 const studentHubRedirect = read('StudentHub.html');
 const studentHubSource = read('studenthub-app/src/StudentHubMobileDashboard.jsx');
 const packageConfig = JSON.parse(read('package.json'));
+const pagesWorkflow = read('.github/workflows/deploy-pages.yml');
 
 assert(
   studentHubRedirect.includes('./studenthub/index.html'),
@@ -113,5 +114,24 @@ assert(
   fs.existsSync(path.join(root, 'studenthub', 'index.html')),
   'The built StudentHub entrypoint is missing; run npm run studenthub:build'
 );
+assert(
+  pagesWorkflow.includes('npm run studenthub:build'),
+  'GitHub Pages must build StudentHub before creating the deployment artifact'
+);
+assert(
+  pagesWorkflow.includes('cp -R icons studenthub _site/'),
+  'GitHub Pages must publish the compiled StudentHub and icon directories'
+);
+[
+  'user-auth.js',
+  'push-notifications.js',
+  'service-worker.js',
+  'manifest.json'
+].forEach((asset) => {
+  assert(
+    pagesWorkflow.includes(asset),
+    `GitHub Pages deployment is missing required static asset ${asset}`
+  );
+});
 
 console.log(`Checks passed: 6 JavaScript files, ${inlineScripts.length} inline script, ${ids.length} unique HTML ids, React StudentHub build.`);

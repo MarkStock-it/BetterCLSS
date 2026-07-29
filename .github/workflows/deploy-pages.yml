@@ -25,13 +25,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build StudentHub
+        run: |
+          npm ci
+          npm run studenthub:build
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Prepare static artifact
         run: |
           mkdir -p _site
-          cp -R StudentHub.html index.html styles.css canvas-api.js config.js _site/
+          cp StudentHub.html index.html styles.css canvas-api.js config.js user-auth.js push-notifications.js service-worker.js manifest.json _site/
+          cp -R icons studenthub _site/
+          if [ -d assets ]; then cp -R assets _site/; fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
