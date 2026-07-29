@@ -60,7 +60,8 @@ function Glyph({ name, className = 'h-5 w-5' }) {
     notes: <><path d="M5 4h14v16H5z" /><path d="M8 8h8M8 12h8M8 16h5" /></>,
     sliders: <><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></>,
     tag: <><path d="M20 13 13 20 4 11V4h7l9 9Z" /><circle cx="8.5" cy="8.5" r="1.5" /></>,
-    progress: <><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" /></>
+    progress: <><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" /></>,
+    smile: <><circle cx="12" cy="12" r="9" /><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0" /><path d="M9 9h.01M15 9h.01" /></>
   };
 
   return (
@@ -1472,7 +1473,6 @@ export default function StudentHubMobileDashboard() {
   const drawerX = useMotionValue(-DRAWER_TRAVEL);
   const backdropOpacity = useTransform(drawerX, [-DRAWER_TRAVEL, 0], [0, 0.74]);
   const edgeGesture = useRef(null);
-  const pageSwipe = useRef(null);
 
   useEffect(() => {
     animate(drawerX, drawerOpen ? 0 : -DRAWER_TRAVEL, SPRING);
@@ -1496,6 +1496,11 @@ export default function StudentHubMobileDashboard() {
 
   const handleEdgeMove = (event) => {
     if (!edgeGesture.current || event.pointerId !== edgeGesture.current.pointerId) return;
+    const distance = Math.max(0, event.clientX - edgeGesture.current.x);
+    const resisted = distance <= DRAWER_TRAVEL
+      ? distance
+      : DRAWER_TRAVEL + (distance - DRAWER_TRAVEL) * 0.16;
+    drawerX.set(Math.min(0, -DRAWER_TRAVEL + resisted));
   };
 
   const handleEdgeEnd = (event) => {
@@ -1503,45 +1508,9 @@ export default function StudentHubMobileDashboard() {
     const distance = Math.max(0, event.clientX - edgeGesture.current.x);
     const elapsed = Math.max(1, performance.now() - edgeGesture.current.time);
     const velocity = distance / elapsed;
-    if (distance > 78 || velocity > 0.58) {
-      setAssistantOpen(true);
-      settleDrawer(false);
-    }
+    settleDrawer(distance > 78 || velocity > 0.58);
     edgeGesture.current = null;
     setEdgeDragging(false);
-  };
-
-  const handlePageTouchStart = (event) => {
-    if (assistantOpen || drawerOpen || event.touches.length !== 1) return;
-    const target = event.target;
-    if (target.closest('button, a, input, textarea, select, label, .deck-carousel, .drawer-panel, .assistant-drawer')) {
-      pageSwipe.current = null;
-      return;
-    }
-    const touch = event.touches[0];
-    pageSwipe.current = {
-      x: touch.clientX,
-      y: touch.clientY,
-      time: performance.now()
-    };
-  };
-
-  const handlePageTouchEnd = (event) => {
-    if (!pageSwipe.current || !event.changedTouches.length) return;
-    const touch = event.changedTouches[0];
-    const distanceX = touch.clientX - pageSwipe.current.x;
-    const distanceY = touch.clientY - pageSwipe.current.y;
-    const elapsed = Math.max(1, performance.now() - pageSwipe.current.time);
-    const velocityX = distanceX / elapsed;
-    pageSwipe.current = null;
-    if (
-      distanceX > 70
-      && Math.abs(distanceX) > Math.abs(distanceY) * 1.35
-      && (elapsed < 900 || velocityX > 0.22)
-    ) {
-      setAssistantOpen(true);
-      settleDrawer(false);
-    }
   };
 
   const connectCanvas = () => {
@@ -1585,16 +1554,11 @@ export default function StudentHubMobileDashboard() {
   const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   return (
-    <div
-      className={[
-        'studenthub-shell',
-        activeView === 'study' && studyRunning ? 'focus-session-active' : '',
-        activeView === 'study' && studyMode === 'cards' ? 'cards-screen' : ''
-      ].filter(Boolean).join(' ')}
-      onTouchStart={handlePageTouchStart}
-      onTouchEnd={handlePageTouchEnd}
-      onTouchCancel={() => { pageSwipe.current = null; }}
-    >
+    <div className={[
+      'studenthub-shell',
+      activeView === 'study' && studyRunning ? 'focus-session-active' : '',
+      activeView === 'study' && studyMode === 'cards' ? 'cards-screen' : ''
+    ].filter(Boolean).join(' ')}>
       <div
         className="edge-swipe-zone"
         onPointerDown={handleEdgeDown}
@@ -1621,13 +1585,24 @@ export default function StudentHubMobileDashboard() {
         assignments={assignments}
         onCreateDeck={createAssistantDeck}
       />
+      {!assistantOpen && (
+        <motion.button
+          type="button"
+          className="assistant-fab"
+          onClick={() => setAssistantOpen(true)}
+          aria-label="Open BetterCLSS AI"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          whileTap={{ scale: 0.92 }}
+          transition={SPRING}
+        >
+          <Glyph name="smile" className="h-6 w-6" />
+        </motion.button>
+      )}
 
       <main className="studenthub-main">
         <div className="ambient-grid" />
         <header className="mobile-topbar">
-          <button type="button" className="menu-button" onClick={() => settleDrawer(true)} aria-label="Open navigation">
-            <Glyph name="menu" className="h-5 w-5" />
-          </button>
           <BrandLogo className="topbar-logo" />
           <div className="min-w-0 flex-1">
             <span className="block truncate text-[0.66rem] font-bold uppercase tracking-[0.18em] text-[#7380a5]">{dateLabel}</span>
