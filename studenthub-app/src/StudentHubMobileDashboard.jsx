@@ -73,6 +73,12 @@ function readDashboardData() {
   const fallback = {
     assignments: [],
     announcements: [],
+    events: [],
+    grades: [],
+    links: [],
+    studyTasks: [],
+    studyHistory: [],
+    studyNote: '',
     connected: false,
     name: ''
   };
@@ -108,6 +114,17 @@ function readDashboardData() {
         ...(Array.isArray(canvas.announcements) ? canvas.announcements : []),
         ...(Array.isArray(local.announcements) ? local.announcements : [])
       ],
+      events: Array.isArray(local.events) ? local.events : [],
+      grades: [
+        ...(Array.isArray(canvas.grades) ? canvas.grades : []),
+        ...(Array.isArray(local.grades) ? local.grades : [])
+      ],
+      links: Array.isArray(local.links) ? local.links : [],
+      studyTasks: Array.isArray(local.studyTasks) ? local.studyTasks : [],
+      studyHistory: Array.isArray(local.studyHistory) ? local.studyHistory : [],
+      studyNote: local.studyCurrentNote && typeof local.studyCurrentNote.content === 'string'
+        ? local.studyCurrentNote.content
+        : '',
       connected: Boolean(localStorage.getItem('bclss_canvas_token')),
       name: localStorage.getItem('bclss_student_name') || ''
     };
@@ -123,6 +140,77 @@ function daysUntil(date) {
   const due = new Date(`${date}T00:00:00`);
   if (Number.isNaN(due.getTime())) return null;
   return Math.round((due - today) / 86400000);
+}
+
+function updateStoredLocalData(updater) {
+  try {
+    const local = JSON.parse(localStorage.getItem('bclss_local') || '{}');
+    const safeLocal = local && typeof local === 'object' && !Array.isArray(local) ? local : {};
+    updater(safeLocal);
+    localStorage.setItem('bclss_local', JSON.stringify(safeLocal));
+  } catch {
+    // Keep the in-memory StudentHub state usable when browser storage is unavailable.
+  }
+}
+
+function dateKey(date = new Date()) {
+  return date.toISOString().slice(0, 10);
+}
+
+function weekStartKey(date = new Date()) {
+  const start = new Date(date);
+  const day = start.getDay();
+  start.setDate(start.getDate() - day + (day === 0 ? -6 : 1));
+  return dateKey(start);
+}
+
+function formatDuration(seconds) {
+  const minutes = Math.max(0, Math.round((Number(seconds) || 0) / 60));
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  if (!hours) return `${remainder}m`;
+  return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
+}
+
+function buildStudyStats(history) {
+  const safeHistory = Array.isArray(history) ? history : [];
+  const currentWeek = weekStartKey();
+  const weekEntries = safeHistory.filter((entry) => (
+    entry.week === currentWeek || (entry.date && entry.date >= currentWeek)
+  ));
+  const focusedSeconds = weekEntries.reduce((total, entry) => total + (Number(entry.durationSecs) || 0), 0);
+  const studiedDays = [...new Set(safeHistory.map((entry) => entry.date).filter(Boolean))].sort();
+  let streak = 0;
+  let longestStreak = 0;
+  let previous = null;
+  studiedDays.forEach((day) => {
+    streak = previous && ((new Date(day) - new Date(previous)) / 86400000 === 1) ? streak + 1 : 1;
+    longestStreak = Math.max(longestStreak, streak);
+    previous = day;
+  });
+  return {
+    sessions: weekEntries.length,
+    focusedSeconds,
+    longestStreak
+  };
+}
+
+function buildCourseDecks(assignments) {
+  const groups = new Map();
+  assignments.forEach((assignment) => {
+    const course = String(assignment.subject || '').trim();
+    if (!course) return;
+    if (!groups.has(course)) groups.set(course, []);
+    groups.get(course).push(assignment);
+  });
+  return [...groups.entries()]
+    .map(([course, cards]) => ({
+      id: course.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      title: course,
+      cards: smartSort(cards),
+      completed: cards.filter((card) => card.done).length
+    }))
+    .sort((a, b) => a.title.localeCompare(b.title));
 }
 
 function smartSort(assignments) {
