@@ -94,15 +94,20 @@ function readDashboardData() {
     const local = JSON.parse(localStorage.getItem('bclss_local') || '{}');
     const canvas = JSON.parse(localStorage.getItem('bclss_canvas_cache') || '{}');
     const localAssignments = Array.isArray(local.assignments) ? local.assignments : [];
+    const canvasOverrides = local.canvasOverrides && typeof local.canvasOverrides === 'object'
+      ? local.canvasOverrides
+      : {};
     const canvasAssignments = Array.isArray(canvas.assignments)
       ? canvas.assignments.map((item) => {
         const state = String(item.submissionState || '').toLowerCase();
-        const done = Boolean(
+        const canvasDone = Boolean(
           item.graded
           || item.submitted
           || item.submittedAt
           || ['submitted', 'graded', 'pending_review', 'complete'].includes(state)
         );
+        const override = canvasOverrides[item.id] || {};
+        const done = typeof override.done === 'boolean' ? override.done : canvasDone;
         const due = item.dueAt ? String(item.dueAt).split('T')[0] : null;
         const remaining = daysUntil(due);
         return {
@@ -111,6 +116,7 @@ function readDashboardData() {
           subject: item.courseName || item.courseCode || 'Canvas',
           due,
           done,
+          source: 'canvas',
           priority: remaining !== null && remaining <= 1 ? 'high' : remaining !== null && remaining <= 3 ? 'medium' : 'low'
         };
       })
@@ -126,7 +132,10 @@ function readDashboardData() {
       localStorage.setItem('bclss_local', JSON.stringify(local));
     }
     return {
-      assignments: [...canvasAssignments, ...localAssignments],
+      assignments: [
+        ...canvasAssignments,
+        ...localAssignments.map((item) => ({ ...item, source: item.source || 'local' }))
+      ],
       announcements: [
         ...(Array.isArray(canvas.announcements) ? canvas.announcements : []),
         ...(Array.isArray(local.announcements) ? local.announcements : [])
@@ -636,7 +645,7 @@ function ViewModeTabs({ label, value, options, onChange }) {
   );
 }
 
-function TasksView({ assignments, filter, onFilterChange, connected, onConnect }) {
+function TasksView({ assignments, filter, onFilterChange, connected, onConnect, onToggleDone }) {
   const [page, setPage] = useState(1);
   const listStartRef = useRef(null);
   const visible = useMemo(() => smartSort(assignments).filter((item) => {
@@ -696,13 +705,23 @@ function TasksView({ assignments, filter, onFilterChange, connected, onConnect }
                 transition={{ duration: 0.18 }}
               >
                 {pageItems.map((item, index) => (
-                  <div className="deadline-row mb-3 last:mb-0" key={`${item.id || item.title}-${startIndex + index}`}>
+                  <button
+                    type="button"
+                    className="deadline-row task-toggle-row mb-3 last:mb-0"
+                    key={`${item.id || item.title}-${startIndex + index}`}
+                    onClick={() => onToggleDone(item)}
+                    aria-pressed={Boolean(item.done)}
+                    aria-label={`${item.done ? 'Mark pending' : 'Mark submitted'}: ${item.title}`}
+                  >
                     <span className={`priority-rail ${item.priority || 'medium'}`} />
                     <div className="min-w-0 flex-1">
                       <h3 className="task-title truncate text-sm font-semibold">{item.title}</h3>
                       <p className="task-meta mt-1 text-xs">{item.subject || 'Course'} · {item.due || 'No due date'}</p>
                     </div>
-                  </div>
+                    <span className={`task-done-control ${item.done ? 'done' : ''}`} aria-hidden="true">
+                      <Glyph name={item.done ? 'spark' : 'tasks'} className="h-4 w-4" />
+                    </span>
+                  </button>
                 ))}
               </motion.div>
             </AnimatePresence>
@@ -1371,6 +1390,14 @@ function ViewHeading({ eyebrow, title, detail }) {
 }
 
 function SecondaryView({ view, announcements, grades, links, connected, onConnect }) {
+  const [aiApiKey, setAiApiKey] = useState(() => {
+    try {
+      return localStorage.getItem('bclss_ai_key') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [aiKeyStatus, setAiKeyStatus] = useState('');
   const [title, detail] = VIEW_COPY[view] || ['StudentHub', 'Choose a destination from the navigation drawer.'];
   const gradePanels = grades.slice(0, 6).map((grade) => {
     const course = grade.courseName || grade.courseCode || grade.course || grade.subject || 'Course';
@@ -1412,6 +1439,27 @@ function SecondaryView({ view, announcements, grades, links, connected, onConnec
     announcements: connected ? 'No announcements are available.' : 'Connect Canvas to load announcements.',
     resources: 'No saved resources yet.'
   };
+  const saveAiApiKey = (event) => {
+    event.preventDefault();
+    const cleanKey = aiApiKey.trim();
+    try {
+      if (cleanKey) localStorage.setItem('bclss_ai_key', cleanKey);
+      else localStorage.removeItem('bclss_ai_key');
+      setAiApiKey(cleanKey);
+      setAiKeyStatus(cleanKey ? 'Saved on this device.' : 'Custom key removed.');
+    } catch {
+      setAiKeyStatus('This browser could not save the key.');
+    }
+  };
+  const removeAiApiKey = () => {
+    setAiApiKey('');
+    try {
+      localStorage.removeItem('bclss_ai_key');
+      setAiKeyStatus('Custom key removed.');
+    } catch {
+      setAiKeyStatus('This browser could not remove the key.');
+    }
+  };
 
   return (
     <motion.section className="view-stack" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
@@ -1435,6 +1483,36 @@ function SecondaryView({ view, announcements, grades, links, connected, onConnec
         {!activePanels.length && (
           <p className="study-empty-copy">{emptyMessages[view] || 'Nothing to show yet.'}</p>
         )}
+        {view === 'settings' && (
+          <form className="ai-key-settings" onSubmit={saveAiApiKey}>
+            <div className="ai-key-settings-head">
+              <span className="secondary-icon"><Glyph name="spark" className="h-5 w-5" /></span>
+              <div>
+                <h2>Personal AI API key</h2>
+                <p>Stored only in this browser’s local cache and sent directly to the BetterCLSS AI backend.</p>
+              </div>
+            </div>
+            <label htmlFor="studenthub-ai-api-key">AI API key</label>
+            <input
+              id="studenthub-ai-api-key"
+              type="password"
+              value={aiApiKey}
+              onChange={(event) => {
+                setAiApiKey(event.target.value);
+                setAiKeyStatus('');
+              }}
+              placeholder="Paste your API key"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck="false"
+            />
+            <div className="ai-key-settings-actions">
+              <button type="submit">Save key</button>
+              {aiApiKey && <button type="button" className="remove" onClick={removeAiApiKey}>Remove</button>}
+            </div>
+            {aiKeyStatus && <p className="ai-key-status" role="status">{aiKeyStatus}</p>}
+          </form>
+        )}
         {(view === 'settings' || (view === 'grades' && !connected)) && (
           <button type="button" className="secondary-action" onClick={onConnect}>
             <Glyph name="sync" className="h-4 w-4" />
@@ -1448,7 +1526,7 @@ function SecondaryView({ view, announcements, grades, links, connected, onConnec
 
 export default function StudentHubMobileDashboard() {
   const data = useMemo(readDashboardData, []);
-  const assignments = data.assignments;
+  const [assignments, setAssignments] = useState(data.assignments);
   const { pending, overdue, submitted } = useMemo(() => {
     const nextPending = assignments.filter((item) => !item.done);
     return {
@@ -1520,6 +1598,31 @@ export default function StudentHubMobileDashboard() {
       // The URL still carries the return target when browser storage is restricted.
     }
     window.location.href = '../index.html?connect=1&returnTo=studenthub#dashboard';
+  };
+
+  const toggleAssignmentDone = (assignment) => {
+    const nextDone = !assignment.done;
+    setAssignments((current) => current.map((item) => (
+      item.id === assignment.id && item.source === assignment.source
+        ? { ...item, done: nextDone }
+        : item
+    )));
+    updateStoredLocalData((local) => {
+      if (assignment.source === 'canvas') {
+        local.canvasOverrides = local.canvasOverrides && typeof local.canvasOverrides === 'object'
+          ? local.canvasOverrides
+          : {};
+        local.canvasOverrides[assignment.id] = {
+          ...(local.canvasOverrides[assignment.id] || {}),
+          done: nextDone,
+          updatedAt: new Date().toISOString()
+        };
+        return;
+      }
+      local.assignments = (Array.isArray(local.assignments) ? local.assignments : []).map((item) => (
+        String(item.id) === String(assignment.id) ? { ...item, done: nextDone } : item
+      ));
+    });
   };
 
   const createAssistantDeck = (action) => {
@@ -1642,7 +1745,17 @@ export default function StudentHubMobileDashboard() {
                 <DeadlineList assignments={assignments} connected={data.connected} onConnect={connectCanvas} />
               </motion.div>
             )}
-            {activeView === 'tasks' && <TasksView key="tasks" assignments={assignments} filter={taskFilter} onFilterChange={setTaskFilter} connected={data.connected} onConnect={connectCanvas} />}
+            {activeView === 'tasks' && (
+              <TasksView
+                key="tasks"
+                assignments={assignments}
+                filter={taskFilter}
+                onFilterChange={setTaskFilter}
+                connected={data.connected}
+                onConnect={connectCanvas}
+                onToggleDone={toggleAssignmentDone}
+              />
+            )}
             {activeView === 'calendar' && <CalendarView key="calendar" calendarView={calendarView} onViewChange={setCalendarView} assignments={assignments} savedEvents={data.events} />}
             {activeView === 'study' && (
               <StudyView
