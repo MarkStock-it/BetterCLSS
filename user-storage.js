@@ -51,6 +51,7 @@ function getDefaultUserData() {
       notes: [],
       studyTasks: [],
       studyHistory: [],
+      studyDecks: [],
       studyCurrentNote: {
         content: '',
         updatedAt: null

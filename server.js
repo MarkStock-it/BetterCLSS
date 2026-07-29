@@ -301,6 +301,42 @@ function summarizeDashboardContext(context) {
   ].join('\n\n');
 }
 
+function parseAssistantResult(content) {
+  const raw = String(content || '');
+  const actions = [];
+  const actionPattern = /<betterclss_action>([\s\S]*?)<\/betterclss_action>/gi;
+  let match;
+  while ((match = actionPattern.exec(raw)) && actions.length < 3) {
+    try {
+      const parsed = JSON.parse(match[1].trim().replace(/^```(?:json)?\s*|\s*```$/gi, ''));
+      if (parsed.type !== 'create_deck' || !Array.isArray(parsed.cards)) continue;
+      const cards = parsed.cards.slice(0, 50).map((card) => ({
+        front: String(card && card.front || '').trim().slice(0, 500),
+        back: String(card && card.back || '').trim().slice(0, 1200),
+      })).filter((card) => card.front && card.back);
+      if (cards.length) {
+        actions.push({
+          type: 'create_deck',
+          title: String(parsed.title || 'AI study deck').trim().slice(0, 100),
+          cards,
+        });
+      }
+    } catch {
+      // Ignore malformed actions instead of exposing model syntax to the user.
+    }
+  }
+  const reply = raw
+    .replace(actionPattern, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/^\s*#{1,6}\s*/gm, '')
+    .replace(/^\s*[-*]\s+/gm, '• ')
+    .trim();
+  return {
+    reply: reply || (actions.length ? 'Your study deck is ready in Cards.' : 'I completed that request.'),
+    actions,
+  };
+}
+
 async function assistantChat(message, context = {}, history = [], callerApiKey = '') {
   await ensureOllamaRunning();
 
@@ -317,6 +353,10 @@ async function assistantChat(message, context = {}, history = [], callerApiKey =
     'When user asks for priorities or planning, cite specific assignments/courses from context.',
     'Never pretend to have context that is not provided.',
     'If context lacks detail, state that clearly and suggest the next click or sync step.',
+    'Use plain text only. Do not use Markdown, asterisks, or heading markers.',
+    'When the user asks you to create flashcards or a study deck, create useful question-and-answer cards using lesson details in their message and available dashboard notes or announcements.',
+    'For a deck, include exactly one machine action after the user-facing reply using this format: <betterclss_action>{"type":"create_deck","title":"Deck title","cards":[{"front":"Question","back":"Answer"}]}</betterclss_action>.',
+    'Never mention the machine action or its tags to the user.',
   ].join(' ');
 
   const payload = {
@@ -374,7 +414,7 @@ async function assistantChat(message, context = {}, history = [], callerApiKey =
     const ollamaData = await ollamaResp.json();
     const ollamaContent = ollamaData?.message?.content;
     if (!ollamaContent) throw new Error('AI_EMPTY');
-    return String(ollamaContent);
+    return parseAssistantResult(ollamaContent);
   }
 
   if (!response.ok) {
@@ -385,7 +425,7 @@ async function assistantChat(message, context = {}, history = [], callerApiKey =
   const data = await response.json();
   const content = data?.choices?.[0]?.message?.content;
   if (!content) throw new Error('AI_EMPTY');
-  return String(content);
+  return parseAssistantResult(content);
 }
 
 function normalizeAiError(err) {
@@ -907,8 +947,42 @@ async function handleApi(req, res) {
       }
 
       const callerApiKey = String(req.headers['x-ai-key'] || '').trim();
-      const reply = await assistantChat(message, context, history, callerApiKey);
-      json(res, 200, { reply });
+      const result = await assistantChat(message, context, history, callerApiKey);
+      if (result.actions.length && req.headers['x-canvas-token']) {
+        try {
+          const canvasAuth = resolveCanvasAuth(req);
+          const profile = await canvasFetchOne('/users/self/profile', {}, canvasAuth);
+          const userData = userStorage.loadOrCreateUser(profile.id, {
+            name: profile.name,
+            email: profile.primary_email || profile.email
+          });
+          const createdAt = new Date().toISOString();
+          result.actions = result.actions.map((action, index) => ({
+            ...action,
+            id: `${Date.now()}-${index}`,
+            createdAt
+          }));
+          userStorage.updateUserLocalData(profile.id, {
+            studyDecks: [
+              ...result.actions.map((action) => ({
+                id: action.id,
+                title: action.title,
+                cards: action.cards.map((card, index) => ({
+                  id: `${action.id}-${index}`,
+                  ...card,
+                  done: false
+                })),
+                createdAt: action.createdAt,
+                source: 'assistant'
+              })),
+              ...(Array.isArray(userData.local.studyDecks) ? userData.local.studyDecks : [])
+            ].slice(0, 30)
+          });
+        } catch (persistError) {
+          console.warn('Assistant deck backend save skipped:', persistError.message);
+        }
+      }
+      json(res, 200, result);
       return;
     } catch (err) {
       const known = ['INVALID_JSON', 'BODY_TOO_LARGE', 'BODY_READ_ERROR'];

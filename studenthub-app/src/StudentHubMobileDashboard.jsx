@@ -83,6 +83,7 @@ function readDashboardData() {
     links: [],
     studyTasks: [],
     studyHistory: [],
+    studyDecks: [],
     studyNote: '',
     connected: false,
     name: ''
@@ -137,6 +138,7 @@ function readDashboardData() {
       links,
       studyTasks: Array.isArray(local.studyTasks) ? local.studyTasks : [],
       studyHistory: Array.isArray(local.studyHistory) ? local.studyHistory : [],
+      studyDecks: Array.isArray(local.studyDecks) ? local.studyDecks : [],
       studyNote: local.studyCurrentNote && typeof local.studyCurrentNote.content === 'string'
         ? local.studyCurrentNote.content
         : '',
@@ -210,7 +212,7 @@ function buildStudyStats(history) {
   };
 }
 
-function buildCourseDecks(assignments) {
+function buildCourseDecks(assignments, savedDecks = []) {
   const groups = new Map();
   assignments.forEach((assignment) => {
     const course = String(assignment.subject || '').trim();
@@ -218,14 +220,29 @@ function buildCourseDecks(assignments) {
     if (!groups.has(course)) groups.set(course, []);
     groups.get(course).push(assignment);
   });
-  return [...groups.entries()]
+  const courseDecks = [...groups.entries()]
     .map(([course, cards]) => ({
       id: course.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       title: course,
       cards: smartSort(cards),
-      completed: cards.filter((card) => card.done).length
+      completed: cards.filter((card) => card.done).length,
+      generated: false
     }))
     .sort((a, b) => a.title.localeCompare(b.title));
+  const generatedDecks = savedDecks.map((deck) => ({
+    id: `ai-${deck.id}`,
+    title: deck.title,
+    cards: Array.isArray(deck.cards) ? deck.cards.map((card, index) => ({
+      id: card.id || `${deck.id}-${index}`,
+      title: card.front,
+      answer: card.back,
+      done: Boolean(card.done),
+      due: null
+    })) : [],
+    completed: Array.isArray(deck.cards) ? deck.cards.filter((card) => card.done).length : 0,
+    generated: true
+  })).filter((deck) => deck.cards.length);
+  return [...generatedDecks, ...courseDecks];
 }
 
 function smartSort(assignments) {
@@ -304,58 +321,6 @@ function EmptyDeadlines({ connected, onConnect }) {
         {connected ? 'Sync again' : 'Connect Canvas'}
       </button>
     </div>
-  );
-}
-
-function CanvasBanner({ connected, onConnect }) {
-  const [collapsed, setCollapsed] = useState(() => (
-    connected || localStorage.getItem('bclss_mobile_canvas_collapsed') === '1'
-  ));
-
-  const toggle = () => {
-    const next = !collapsed;
-    setCollapsed(next);
-    localStorage.setItem('bclss_mobile_canvas_collapsed', next ? '1' : '0');
-  };
-
-  if (collapsed) {
-    return (
-      <motion.button
-        type="button"
-        layout
-        className="canvas-collapsed"
-        onClick={toggle}
-        whileTap={{ scale: 0.985 }}
-      >
-        <span className={`status-pulse ${connected ? 'connected' : ''}`} />
-        <span>{connected ? 'Canvas connected' : 'Connect Canvas for live coursework'}</span>
-        <Glyph name="chevron" className="ml-auto h-4 w-4 -rotate-90 text-slate-500" />
-      </motion.button>
-    );
-  }
-
-  return (
-    <motion.section
-      layout
-      className="canvas-hero"
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={SPRING}
-    >
-      <div className="canvas-orb"><Glyph name="sync" className="h-6 w-6" /></div>
-      <button type="button" onClick={toggle} className="canvas-collapse-button" aria-label="Collapse Canvas banner">
-        <Glyph name="chevron" className="h-4 w-4" />
-      </button>
-      <div className="relative z-10 mt-5">
-        <span className="eyebrow-mobile">{connected ? 'Live connection' : 'One-minute setup'}</span>
-        <h2>{connected ? 'Canvas is keeping you current' : 'See the work that matters next'}</h2>
-        <p>{connected ? 'Assignments and course updates are ready to sync.' : 'Connect once to pull deadlines, grades, and announcements into StudentHub.'}</p>
-        <button type="button" className="canvas-action" onClick={onConnect}>
-          {connected ? 'Sync Canvas' : 'Connect Canvas'}
-          <Glyph name="arrow" className="h-4 w-4" />
-        </button>
-      </div>
-    </motion.section>
   );
 }
 
@@ -464,6 +429,190 @@ function SidebarDrawer({ x, opacity, open, onOpenChange, activeView, onNavigate 
         </div>
       </motion.aside>
     </>
+  );
+}
+
+function AssistantText({ text }) {
+  return String(text || '').split('\n').filter((line, index, lines) => line.trim() || (
+    index > 0 && index < lines.length - 1
+  )).map((line, lineIndex) => {
+    const cleanLine = line.replace(/^#{1,6}\s+/, '').replace(/^\s*[-*]\s+/, '• ');
+    const parts = cleanLine.split(/(\*\*[^*]+\*\*)/g);
+    return (
+      <p key={`${lineIndex}-${cleanLine.slice(0, 12)}`}>
+        {parts.map((part, index) => (
+          part.startsWith('**') && part.endsWith('**')
+            ? <strong key={index}>{part.slice(2, -2)}</strong>
+            : <React.Fragment key={index}>{part}</React.Fragment>
+        ))}
+      </p>
+    );
+  });
+}
+
+function AssistantDrawer({ open, onClose, data, assignments, onCreateDeck }) {
+  const [messages, setMessages] = useState([
+    { role: 'assistant', content: 'Hi, I can use your live BetterCLSS dashboard to help you plan, review lessons, or create a study deck.' }
+  ]);
+  const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
+  const messagesRef = useRef(null);
+
+  useEffect(() => {
+    if (open) messagesRef.current?.scrollTo({ top: messagesRef.current.scrollHeight });
+  }, [messages, open]);
+
+  const sendMessage = async (event) => {
+    event?.preventDefault();
+    const message = input.trim();
+    if (!message || sending) return;
+    const userMessage = { role: 'user', content: message };
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
+    setInput('');
+    setSending(true);
+
+    const pending = assignments.filter((item) => !item.done);
+    const context = {
+      contextVersion: 3,
+      activePage: 'studenthub',
+      canvasConnected: data.connected,
+      totals: {
+        assignmentsTotal: assignments.length,
+        pending: pending.length,
+        overdue: pending.filter((item) => {
+          const days = daysUntil(item.due);
+          return days !== null && days < 0;
+        }).length,
+        submitted: assignments.filter((item) => item.done).length,
+        announcements: data.announcements.length,
+        courses: new Set(assignments.map((item) => item.subject).filter(Boolean)).size
+      },
+      dueSoon: smartSort(pending).slice(0, 20).map((item) => ({
+        title: item.title,
+        subject: item.subject,
+        due: item.due,
+        dueInDays: daysUntil(item.due),
+        priority: item.priority
+      })),
+      grades: data.grades.slice(0, 12).map((grade) => ({
+        course: grade.courseName || grade.courseCode || grade.subject,
+        score: grade.currentScore ?? grade.score
+      })),
+      recentAnnouncements: data.announcements.slice(0, 12).map((item) => ({
+        title: item.title,
+        course: item.courseName,
+        messagePreview: String(item.message || item.body || '').replace(/<[^>]*>/g, ' ').slice(0, 600)
+      })),
+      notes: data.studyNote ? [{ title: 'Current study note', preview: data.studyNote.slice(0, 1600) }] : [],
+      existingDecks: data.studyDecks.map((deck) => ({ title: deck.title, cardCount: deck.cards?.length || 0 }))
+    };
+
+    try {
+      let apiBase = '';
+      let aiKey = '';
+      let canvasToken = '';
+      let canvasDomain = '';
+      try {
+        apiBase = (localStorage.getItem('bclss_api_base') || 'https://betterclss.onrender.com').replace(/\/+$/, '');
+        aiKey = localStorage.getItem('bclss_ai_key') || '';
+        canvasToken = localStorage.getItem('bclss_canvas_token') || '';
+        canvasDomain = localStorage.getItem('bclss_canvas_domain') || '';
+      } catch {
+        apiBase = 'https://betterclss.onrender.com';
+      }
+      const headers = { 'Content-Type': 'application/json' };
+      if (aiKey) headers['x-ai-key'] = aiKey;
+      if (canvasToken) headers['x-canvas-token'] = canvasToken;
+      if (canvasDomain) headers['x-canvas-domain'] = canvasDomain;
+      const response = await fetch(`${apiBase}/api/assistant/chat`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          message,
+          history: nextMessages.slice(-12),
+          context
+        })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || 'The AI service is unavailable.');
+      (Array.isArray(result.actions) ? result.actions : []).forEach((action) => {
+        if (action.type === 'create_deck') onCreateDeck(action);
+      });
+      setMessages((current) => [...current, {
+        role: 'assistant',
+        content: result.reply || 'I completed that request.'
+      }]);
+    } catch (error) {
+      setMessages((current) => [...current, {
+        role: 'assistant',
+        content: `I could not reach the BetterCLSS AI backend. ${error.message || 'Please try again.'}`
+      }]);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.button
+            type="button"
+            className="assistant-backdrop"
+            aria-label="Close AI helper"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+          />
+          <motion.aside
+            className="assistant-drawer"
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '-100%' }}
+            transition={SPRING}
+            drag="x"
+            dragConstraints={{ left: -DRAWER_TRAVEL, right: 0 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.x < -70 || info.velocity.x < -500) onClose();
+            }}
+            aria-label="BetterCLSS AI helper"
+          >
+            <header className="assistant-drawer-head">
+              <div className="assistant-avatar"><Glyph name="spark" className="h-5 w-5" /></div>
+              <div>
+                <strong>BetterCLSS AI</strong>
+                <span>Connected to your dashboard</span>
+              </div>
+              <button type="button" className="drawer-close" onClick={onClose} aria-label="Close AI helper">
+                <Glyph name="close" className="h-5 w-5" />
+              </button>
+            </header>
+            <div className="assistant-message-list" ref={messagesRef}>
+              {messages.map((message, index) => (
+                <article className={`assistant-message ${message.role}`} key={`${message.role}-${index}`}>
+                  <AssistantText text={message.content} />
+                </article>
+              ))}
+              {sending && <div className="assistant-typing"><i /><i /><i /></div>}
+            </div>
+            <form className="assistant-composer" onSubmit={sendMessage}>
+              <textarea
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                placeholder="Ask about your dashboard or create cards…"
+                rows="2"
+                aria-label="Message BetterCLSS AI"
+              />
+              <button type="submit" disabled={!input.trim() || sending} aria-label="Send message">
+                <Glyph name="arrow" className="h-4 w-4" />
+              </button>
+            </form>
+          </motion.aside>
+        </>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -759,9 +908,10 @@ function StudySheet({ open, title, detail, onClose, children }) {
   );
 }
 
-function StudyView({ studyMode, onModeChange, onRunningChange, assignments, initialTasks, initialHistory, initialNote }) {
-  const decks = useMemo(() => buildCourseDecks(assignments), [assignments]);
+function StudyView({ studyMode, onModeChange, onRunningChange, assignments, savedDecks, initialTasks, initialHistory, initialNote }) {
+  const decks = useMemo(() => buildCourseDecks(assignments, savedDecks), [assignments, savedDecks]);
   const [deckIndex, setDeckIndex] = useState(0);
+  const [cardFlipped, setCardFlipped] = useState(false);
   const [activeTab, setActiveTab] = useState('timer');
   const [activeMode, setActiveMode] = useState('work');
   const [durations, setDurations] = useState(readStudyDurations);
@@ -817,6 +967,10 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, init
   useEffect(() => {
     setDeckIndex((current) => Math.min(current, Math.max(0, decks.length - 1)));
   }, [decks.length]);
+
+  useEffect(() => {
+    setCardFlipped(false);
+  }, [deckIndex, nextCard?.id]);
 
   useEffect(() => {
     onRunningChange?.(running && studyMode === 'focus');
@@ -1124,11 +1278,23 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, init
                 <h2>{activeDeck.title}</h2>
                 <p>{activeDeck.cards.length} items · {activeDeck.cards.length - activeDeck.completed} pending</p>
                 {nextCard && (
-                  <div className="deck-next-card">
-                    <span>Next item</span>
-                    <strong>{nextCard.title}</strong>
-                    <small>{nextCard.due || 'No due date'}</small>
-                  </div>
+                  nextCard.answer ? (
+                    <button
+                      type="button"
+                      className={`deck-next-card generated-card-content ${cardFlipped ? 'flipped' : ''}`}
+                      onClick={() => setCardFlipped((current) => !current)}
+                    >
+                      <span>{cardFlipped ? 'Answer' : 'Question'}</span>
+                      <strong>{cardFlipped ? nextCard.answer : nextCard.title}</strong>
+                      <small>Tap to {cardFlipped ? 'show question' : 'reveal answer'}</small>
+                    </button>
+                  ) : (
+                    <div className="deck-next-card">
+                      <span>Next item</span>
+                      <strong>{nextCard.title}</strong>
+                      <small>{nextCard.due || 'No due date'}</small>
+                    </div>
+                  )
                 )}
                 <div className="deck-progress">
                   <motion.span initial={{ width: 0 }} animate={{ width: `${deckProgress}%` }} transition={{ ...SPRING, delay: 0.12 }} />
@@ -1296,11 +1462,13 @@ export default function StudentHubMobileDashboard() {
 
   const [activeView, setActiveView] = useState('home');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [edgeDragging, setEdgeDragging] = useState(false);
   const [taskFilter, setTaskFilter] = useState('pending');
   const [calendarView, setCalendarView] = useState('month');
   const [studyMode, setStudyMode] = useState('focus');
   const [studyRunning, setStudyRunning] = useState(false);
+  const [studyDecks, setStudyDecks] = useState(data.studyDecks);
   const drawerX = useMotionValue(-DRAWER_TRAVEL);
   const backdropOpacity = useTransform(drawerX, [-DRAWER_TRAVEL, 0], [0, 0.74]);
   const edgeGesture = useRef(null);
@@ -1327,11 +1495,6 @@ export default function StudentHubMobileDashboard() {
 
   const handleEdgeMove = (event) => {
     if (!edgeGesture.current || event.pointerId !== edgeGesture.current.pointerId) return;
-    const distance = Math.max(0, event.clientX - edgeGesture.current.x);
-    const resisted = distance <= DRAWER_TRAVEL
-      ? distance
-      : DRAWER_TRAVEL + (distance - DRAWER_TRAVEL) * 0.16;
-    drawerX.set(Math.min(0, -DRAWER_TRAVEL + resisted));
   };
 
   const handleEdgeEnd = (event) => {
@@ -1339,7 +1502,10 @@ export default function StudentHubMobileDashboard() {
     const distance = Math.max(0, event.clientX - edgeGesture.current.x);
     const elapsed = Math.max(1, performance.now() - edgeGesture.current.time);
     const velocity = distance / elapsed;
-    settleDrawer(distance > 78 || velocity > 0.58);
+    if (distance > 78 || velocity > 0.58) {
+      setAssistantOpen(true);
+      settleDrawer(false);
+    }
     edgeGesture.current = null;
     setEdgeDragging(false);
   };
@@ -1351,6 +1517,35 @@ export default function StudentHubMobileDashboard() {
       // The URL still carries the return target when browser storage is restricted.
     }
     window.location.href = '../index.html?connect=1&returnTo=studenthub#dashboard';
+  };
+
+  const createAssistantDeck = (action) => {
+    const cards = (Array.isArray(action.cards) ? action.cards : [])
+      .map((card, index) => ({
+        id: `${Date.now()}-${index}`,
+        front: String(card.front || '').trim().slice(0, 500),
+        back: String(card.back || '').trim().slice(0, 1200),
+        done: false
+      }))
+      .filter((card) => card.front && card.back)
+      .slice(0, 50);
+    if (!cards.length) return;
+    const deck = {
+      id: action.id || Date.now(),
+      title: String(action.title || 'AI study deck').trim().slice(0, 100),
+      cards,
+      createdAt: action.createdAt || new Date().toISOString(),
+      source: 'assistant'
+    };
+    setStudyDecks((current) => {
+      const next = [deck, ...current].slice(0, 30);
+      updateStoredLocalData((local) => {
+        local.studyDecks = next;
+      });
+      return next;
+    });
+    setStudyMode('cards');
+    setActiveView('study');
   };
 
   const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -1375,10 +1570,17 @@ export default function StudentHubMobileDashboard() {
       <SidebarDrawer
         x={drawerX}
         opacity={backdropOpacity}
-        open={drawerOpen || edgeDragging}
+        open={drawerOpen}
         onOpenChange={settleDrawer}
         activeView={activeView}
         onNavigate={navigate}
+      />
+      <AssistantDrawer
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        data={{ ...data, studyDecks }}
+        assignments={assignments}
+        onCreateDeck={createAssistantDeck}
       />
 
       <main className="studenthub-main">
@@ -1408,8 +1610,6 @@ export default function StudentHubMobileDashboard() {
                   <p>Priorities, deadlines, and focus tools without the noise.</p>
                 </header>
 
-                <CanvasBanner connected={data.connected} onConnect={connectCanvas} />
-
                 <section>
                   <div className="mb-4 flex items-end justify-between">
                     <div>
@@ -1437,6 +1637,7 @@ export default function StudentHubMobileDashboard() {
                 onModeChange={setStudyMode}
                 onRunningChange={setStudyRunning}
                 assignments={assignments}
+                savedDecks={studyDecks}
                 initialTasks={data.studyTasks}
                 initialHistory={data.studyHistory}
                 initialNote={data.studyNote}

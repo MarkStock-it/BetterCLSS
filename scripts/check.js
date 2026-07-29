@@ -120,10 +120,23 @@ assert(
   'StudentHub must keep Study Area controls in Focus and course decks inside Cards'
 );
 assert(
-  studentHubSource.includes('buildCourseDecks(assignments)') &&
+  studentHubSource.includes('buildCourseDecks(assignments, savedDecks)') &&
     studentHubSource.includes('drag="x"') &&
     studentHubSource.includes('onDragEnd={(_, info) => {'),
   'StudentHub course decks must come from coursework and support horizontal swiping'
+);
+assert(
+  !studentHubSource.includes('function CanvasBanner') &&
+    studentHubSource.includes('function AssistantDrawer') &&
+    studentHubSource.includes("local.studyDecks = next") &&
+    studentHubSource.includes('/api/assistant/chat'),
+  'StudentHub must replace the dashboard Canvas banner with a backend-connected AI deck helper'
+);
+assert(
+  read('server.js').includes('<betterclss_action>') &&
+    read('server.js').includes("type: 'create_deck'") &&
+    read('server.js').includes("replace(/\\*\\*([^*]+)\\*\\*/g, '$1')"),
+  'The AI backend must support validated deck actions and normalize broken Markdown bold markers'
 );
 assert(
   !studentHubSource.includes('Course progress') &&

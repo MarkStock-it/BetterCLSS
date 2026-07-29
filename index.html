@@ -579,6 +579,7 @@
         notes: [],
         studyTasks: [],
         studyHistory: [],
+        studyDecks: [],
         studyCurrentNote: {
           content: '',
           updatedAt: null
@@ -703,6 +704,7 @@
         notes: Array.isArray(incoming.notes) ? incoming.notes : defaults.notes,
         studyTasks: Array.isArray(incoming.studyTasks) ? incoming.studyTasks : defaults.studyTasks,
         studyHistory: Array.isArray(incoming.studyHistory) ? incoming.studyHistory : defaults.studyHistory,
+        studyDecks: Array.isArray(incoming.studyDecks) ? incoming.studyDecks : defaults.studyDecks,
         events: Array.isArray(incoming.events) ? incoming.events : defaults.events,
         announcements: Array.isArray(incoming.announcements) ? incoming.announcements : defaults.announcements,
         links: Array.isArray(incoming.links) ? incoming.links : defaults.links,
