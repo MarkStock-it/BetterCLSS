@@ -170,9 +170,9 @@ assert(
   'The built StudentHub entrypoint is missing; run npm run studenthub:build'
 );
 assert(
-  manifest.start_url === './StudentHub.html' &&
+  manifest.start_url === './studenthub/index.html' &&
     manifest.icons.every((icon) => icon.type === 'image/png') &&
-    studentHubManifest.start_url === '../StudentHub.html',
+    studentHubManifest.start_url === './index.html',
   'The PWA must launch StudentHub and use iOS-compatible PNG icons'
 );
 [

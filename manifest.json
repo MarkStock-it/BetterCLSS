@@ -2,7 +2,7 @@
   "id": "./studenthub/",
   "name": "BetterCLSS StudentHub",
   "short_name": "BetterCLSS",
-  "start_url": "./StudentHub.html",
+  "start_url": "./studenthub/index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0d1117",

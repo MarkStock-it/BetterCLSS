@@ -5,6 +5,7 @@ const OFFLINE_URLS = [
   './',
   './index.html',
   './StudentHub.html',
+  './studenthub/index.html',
   './styles.css?v=6',
   './canvas-api.js?v=6',
   './user-auth.js?v=6',
