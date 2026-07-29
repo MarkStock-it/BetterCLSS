@@ -91,6 +91,12 @@ assert(
   'StudentHub Canvas setup must preserve StudentHub as the post-authentication destination'
 );
 assert(
+  studentHubSource.includes('TASKS_PER_PAGE') &&
+    studentHubSource.includes('className="task-pagination"') &&
+    studentHubSource.includes('aria-label="Task pages"'),
+  'StudentHub task management must paginate long filtered lists'
+);
+assert(
   html.includes("launchParams.get('returnTo') === 'studenthub'") &&
     html.includes('window.location.replace(returnUrl)'),
   'Canvas authentication must return mobile users to StudentHub'

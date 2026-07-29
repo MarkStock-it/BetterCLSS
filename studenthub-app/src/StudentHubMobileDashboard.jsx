@@ -9,6 +9,7 @@ import {
 
 const DRAWER_TRAVEL = 360;
 const SPRING = { type: 'spring', stiffness: 430, damping: 38, mass: 0.86 };
+const TASKS_PER_PAGE = 6;
 
 const PRIMARY_VIEWS = ['home', 'tasks', 'calendar', 'study'];
 
@@ -518,26 +519,93 @@ function BottomLaunchpad({ activeView, onNavigate, onGestureChoice }) {
 }
 
 function TasksView({ assignments, filter, connected, onConnect }) {
+  const [page, setPage] = useState(1);
+  const listStartRef = useRef(null);
   const visible = smartSort(assignments).filter((item) => {
     const days = daysUntil(item.due);
     if (filter === 'overdue') return !item.done && days !== null && days < 0;
     if (filter === 'submitted') return item.done;
     return !item.done;
   });
+  const pageCount = Math.max(1, Math.ceil(visible.length / TASKS_PER_PAGE));
+  const safePage = Math.min(page, pageCount);
+  const startIndex = (safePage - 1) * TASKS_PER_PAGE;
+  const pageItems = visible.slice(startIndex, startIndex + TASKS_PER_PAGE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, pageCount));
+  }, [pageCount]);
+
+  const changePage = (nextPage) => {
+    const clampedPage = Math.max(1, Math.min(nextPage, pageCount));
+    if (clampedPage === safePage) return;
+    setPage(clampedPage);
+    window.requestAnimationFrame(() => {
+      listStartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
   return (
-    <motion.section key={`tasks-${filter}`} className="view-stack" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
+    <motion.section key={`tasks-${filter}`} className="view-stack tasks-view" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
       <ViewHeading eyebrow="Coursework" title="Tasks" detail={`${filter[0].toUpperCase()}${filter.slice(1)} assignments`} />
-      <section className="section-card">
-        {visible.length ? visible.map((item, index) => (
-          <div className="deadline-row mb-3 last:mb-0" key={item.id || index}>
-            <span className={`priority-rail ${item.priority || 'medium'}`} />
-            <div className="min-w-0 flex-1">
-              <h3 className="truncate text-sm font-semibold text-white">{item.title}</h3>
-              <p className="mt-1 text-xs text-slate-500">{item.subject || 'Course'} · {item.due || 'No due date'}</p>
+      <section className="section-card tasks-card" ref={listStartRef}>
+        {visible.length ? (
+          <>
+            <div className="task-page-summary" aria-live="polite">
+              <span>Showing {startIndex + 1}–{Math.min(startIndex + TASKS_PER_PAGE, visible.length)} of {visible.length}</span>
+              <strong>{filter}</strong>
             </div>
-          </div>
-        )) : <EmptyDeadlines connected={connected} onConnect={onConnect} />}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={`${filter}-${safePage}`}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -8 }}
+                transition={{ duration: 0.18 }}
+              >
+                {pageItems.map((item, index) => (
+                  <div className="deadline-row mb-3 last:mb-0" key={`${item.id || item.title}-${startIndex + index}`}>
+                    <span className={`priority-rail ${item.priority || 'medium'}`} />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="task-title truncate text-sm font-semibold">{item.title}</h3>
+                      <p className="task-meta mt-1 text-xs">{item.subject || 'Course'} · {item.due || 'No due date'}</p>
+                    </div>
+                  </div>
+                ))}
+              </motion.div>
+            </AnimatePresence>
+            {pageCount > 1 && (
+              <nav className="task-pagination" aria-label="Task pages">
+                <button
+                  type="button"
+                  onClick={() => changePage(safePage - 1)}
+                  disabled={safePage === 1}
+                  aria-label="Previous task page"
+                >
+                  <Glyph name="chevron" className="h-4 w-4 rotate-90" />
+                  <span>Previous</span>
+                </button>
+                <span className="task-page-status">
+                  <strong>{safePage}</strong>
+                  <span>of {pageCount}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => changePage(safePage + 1)}
+                  disabled={safePage === pageCount}
+                  aria-label="Next task page"
+                >
+                  <span>Next</span>
+                  <Glyph name="chevron" className="h-4 w-4 -rotate-90" />
+                </button>
+              </nav>
+            )}
+          </>
+        ) : <EmptyDeadlines connected={connected} onConnect={onConnect} />}
       </section>
     </motion.section>
   );
