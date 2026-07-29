@@ -1,5 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192" role="img" aria-label="BetterCLSS icon">
-  <rect width="192" height="192" rx="32" fill="#0d1117"/>
-  <path d="M42 96L96 56L150 96L96 136Z" fill="#4ade80"/>
-  <path d="M62 104V132C82 150 110 150 130 132V104" fill="none" stroke="#f8fafc" stroke-width="10" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 512 512" role="img" aria-label="BetterCLSS StudentHub logo">
+  <defs>
+    <linearGradient id="background" x1="52" y1="36" x2="460" y2="476" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111833"/>
+      <stop offset="1" stop-color="#050711"/>
+    </linearGradient>
+    <linearGradient id="cap" x1="105" y1="126" x2="398" y2="306" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6f8cff"/>
+      <stop offset="1" stop-color="#9a61df"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#background)"/>
+  <circle cx="428" cy="91" r="82" fill="#7a5ce8" opacity=".12"/>
+  <circle cx="78" cy="432" r="104" fill="#5578ff" opacity=".09"/>
+  <path d="M91 205 256 112l165 93-165 93L91 205Z" fill="url(#cap)"/>
+  <path d="m211 205 30 30 64-69" fill="none" stroke="#f7f9ff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M146 274v78c31 34 68 51 110 51s79-17 110-51v-78l-110 62-110-62Z" fill="#dfe6ff" opacity=".96"/>
+  <path d="M256 336v67" stroke="#9baeff" stroke-width="10" stroke-linecap="round" opacity=".72"/>
+  <path d="M421 205v101" stroke="#9b73e7" stroke-width="15" stroke-linecap="round"/>
+  <circle cx="421" cy="320" r="17" fill="#9b73e7"/>
 </svg>

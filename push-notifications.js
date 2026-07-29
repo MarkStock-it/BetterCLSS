@@ -126,8 +126,8 @@ async function enableAppNotifications() {
       const title = payload?.notification?.title || payload?.data?.title || 'BetterCLSS';
       const options = {
         body: payload?.notification?.body || payload?.data?.body || 'You have a new update.',
-        icon: 'icons/icon-192.svg',
-        badge: 'icons/icon-192.svg',
+        icon: 'icons/icon-192.png',
+        badge: 'icons/icon-192.png',
         data: { url: payload?.data?.url || './index.html' }
       };
       new Notification(title, options);

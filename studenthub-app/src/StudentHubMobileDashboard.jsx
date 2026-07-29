@@ -6,10 +6,11 @@ import {
   useMotionValue,
   useTransform
 } from 'motion/react';
+import brandLogoUrl from '../../icons/icon-192.png';
 
 const DRAWER_TRAVEL = 360;
 const SPRING = { type: 'spring', stiffness: 430, damping: 38, mass: 0.86 };
-const TASKS_PER_PAGE = 6;
+const TASKS_PER_PAGE = 5;
 
 const PRIMARY_VIEWS = ['home', 'tasks', 'calendar', 'study'];
 
@@ -62,6 +63,10 @@ function Glyph({ name, className = 'h-5 w-5' }) {
       {paths[name] || paths.home}
     </svg>
   );
+}
+
+function BrandLogo({ className = '' }) {
+  return <img className={className} src={brandLogoUrl} alt="" width="192" height="192" decoding="async" />;
 }
 
 function readDashboardData() {
@@ -320,7 +325,7 @@ function SidebarDrawer({ x, opacity, open, onOpenChange, activeView, onNavigate 
         <div className="relative z-10 flex h-full flex-col">
           <div className="flex items-center justify-between px-5 pb-6 pt-[max(24px,env(safe-area-inset-top))]">
             <div className="flex items-center gap-3">
-              <span className="brand-mark"><Glyph name="study" className="h-5 w-5" /></span>
+              <span className="brand-mark"><BrandLogo /></span>
               <div>
                 <strong className="block text-sm text-white">BetterCLSS</strong>
                 <span className="text-[0.66rem] uppercase tracking-[0.16em] text-slate-500">StudentHub</span>
@@ -359,174 +364,34 @@ function SidebarDrawer({ x, opacity, open, onOpenChange, activeView, onNavigate 
   );
 }
 
-function LongPressTab({ id, label, icon, active, options = [], menuAlign = 'center', onTap, onSelect }) {
-  const timer = useRef(null);
-  const start = useRef({ x: 0, y: 0 });
-  const menuOpen = useRef(false);
-  const selectedRef = useRef(0);
-  const [showMenu, setShowMenu] = useState(false);
-  const [selected, setSelected] = useState(0);
-
-  const clearPress = () => {
-    window.clearTimeout(timer.current);
-    timer.current = null;
-  };
-
-  const handlePointerDown = (event) => {
-    event.currentTarget.setPointerCapture(event.pointerId);
-    start.current = { x: event.clientX, y: event.clientY };
-    menuOpen.current = false;
-    selectedRef.current = 0;
-    setSelected(0);
-    clearPress();
-    if (options.length) {
-      timer.current = window.setTimeout(() => {
-        menuOpen.current = true;
-        setShowMenu(true);
-        navigator.vibrate?.(12);
-      }, 380);
-    }
-  };
-
-  const handlePointerMove = (event) => {
-    const horizontal = Math.abs(event.clientX - start.current.x);
-    const vertical = start.current.y - event.clientY;
-    if (!menuOpen.current) {
-      if (horizontal > 14 || Math.abs(vertical) > 14) clearPress();
-      return;
-    }
-    const nextIndex = Math.max(0, Math.min(options.length - 1, Math.floor(Math.max(0, vertical - 25) / 48)));
-    selectedRef.current = nextIndex;
-    setSelected(nextIndex);
-  };
-
-  const finishPress = () => {
-    const wasMenu = menuOpen.current;
-    clearPress();
-    if (wasMenu) {
-      onSelect?.(options[selectedRef.current]);
-      navigator.vibrate?.(8);
-    } else {
-      onTap();
-    }
-    menuOpen.current = false;
-    setShowMenu(false);
-  };
-
+function ViewModeTabs({ label, value, options, onChange }) {
   return (
-    <button
-      type="button"
-      className={`launchpad-tab ${active ? 'active' : ''}`}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={finishPress}
-      onPointerCancel={() => {
-        clearPress();
-        menuOpen.current = false;
-        setShowMenu(false);
-      }}
-      aria-label={options.length ? `${label}. Hold and slide for quick options.` : label}
-    >
-      <AnimatePresence>
-        {showMenu && (
-          <motion.div
-            className={`quick-menu align-${menuAlign}`}
-            initial={{ opacity: 0, y: 12, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.94 }}
-            transition={SPRING}
-          >
-            <div className="quick-menu-label">Slide to choose</div>
-            <div className="flex flex-col-reverse gap-1.5">
-              {options.map((option, index) => (
-                <motion.div
-                  key={option.value}
-                  className={`quick-option ${selected === index ? 'selected' : ''}`}
-                  animate={{ x: selected === index ? -5 : 0 }}
-                  transition={SPRING}
-                >
-                  <span>{option.label}</span>
-                  {selected === index && <span className="quick-option-dot" />}
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      {active && <motion.span layoutId="launchpad-active" className="launchpad-active-bg" transition={SPRING} />}
-      <span className="relative z-10"><Glyph name={icon} className="h-[21px] w-[21px]" /></span>
-      <span className="relative z-10 text-[0.64rem] font-semibold">{label}</span>
-      {options.length > 0 && <span className="hold-indicator" />}
-    </button>
-  );
-}
-
-function BottomLaunchpad({ activeView, onNavigate, onGestureChoice }) {
-  const tabs = [
-    { id: 'home', label: 'Home', icon: 'home' },
-    {
-      id: 'tasks',
-      label: 'Tasks',
-      icon: 'tasks',
-      options: [
-        { value: 'pending', label: 'Pending' },
-        { value: 'overdue', label: 'Overdue' },
-        { value: 'submitted', label: 'Submitted' }
-      ]
-    },
-    {
-      id: 'calendar',
-      label: 'Calendar',
-      icon: 'calendar',
-      options: [
-        { value: 'month', label: 'Month' },
-        { value: 'agenda', label: 'Agenda' },
-        { value: 'week', label: 'Week' },
-        { value: 'day', label: 'Day' }
-      ]
-    },
-    {
-      id: 'study',
-      label: 'Study',
-      icon: 'study',
-      align: 'right',
-      options: [
-        { value: 'focus', label: 'Focus timer' },
-        { value: 'flashcards', label: 'Flashcards' },
-        { value: 'database', label: 'Databases' },
-        { value: 'algorithms', label: 'Algorithms' }
-      ]
-    }
-  ];
-
-  return (
-    <div className="launchpad-wrap">
-      <nav className="launchpad" aria-label="Primary navigation">
-        {tabs.map((tab) => (
-          <LongPressTab
-            key={tab.id}
-            {...tab}
-            menuAlign={tab.align || 'center'}
-            active={activeView === tab.id}
-            onTap={() => onNavigate(tab.id)}
-            onSelect={(option) => onGestureChoice(tab.id, option)}
-          />
-        ))}
-      </nav>
-      <div className="safe-area-fill" />
+    <div className="view-mode-tabs" role="tablist" aria-label={label}>
+      {options.map((option) => (
+        <button
+          type="button"
+          role="tab"
+          aria-selected={value === option.value}
+          className={value === option.value ? 'active' : ''}
+          onClick={() => onChange(option.value)}
+          key={option.value}
+        >
+          {option.label}
+        </button>
+      ))}
     </div>
   );
 }
 
-function TasksView({ assignments, filter, connected, onConnect }) {
+function TasksView({ assignments, filter, onFilterChange, connected, onConnect }) {
   const [page, setPage] = useState(1);
   const listStartRef = useRef(null);
-  const visible = smartSort(assignments).filter((item) => {
+  const visible = useMemo(() => smartSort(assignments).filter((item) => {
     const days = daysUntil(item.due);
     if (filter === 'overdue') return !item.done && days !== null && days < 0;
     if (filter === 'submitted') return item.done;
     return !item.done;
-  });
+  }), [assignments, filter]);
   const pageCount = Math.max(1, Math.ceil(visible.length / TASKS_PER_PAGE));
   const safePage = Math.min(page, pageCount);
   const startIndex = (safePage - 1) * TASKS_PER_PAGE;
@@ -552,6 +417,16 @@ function TasksView({ assignments, filter, connected, onConnect }) {
   return (
     <motion.section key={`tasks-${filter}`} className="view-stack tasks-view" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
       <ViewHeading eyebrow="Coursework" title="Tasks" detail={`${filter[0].toUpperCase()}${filter.slice(1)} assignments`} />
+      <ViewModeTabs
+        label="Task filters"
+        value={filter}
+        onChange={onFilterChange}
+        options={[
+          { value: 'pending', label: 'Pending' },
+          { value: 'overdue', label: 'Overdue' },
+          { value: 'submitted', label: 'Submitted' }
+        ]}
+      />
       <section className="section-card tasks-card" ref={listStartRef}>
         {visible.length ? (
           <>
@@ -611,9 +486,12 @@ function TasksView({ assignments, filter, connected, onConnect }) {
   );
 }
 
-function CalendarView({ calendarView, assignments }) {
+function CalendarView({ calendarView, onViewChange, assignments }) {
   const days = Array.from({ length: 35 }, (_, index) => index < 3 ? 27 + index : index - 2);
-  const upcoming = smartSort(assignments).filter((item) => !item.done).slice(0, 4);
+  const upcoming = useMemo(
+    () => smartSort(assignments).filter((item) => !item.done).slice(0, 4),
+    [assignments]
+  );
   const fallbackEvents = [
     { title: 'Review course notes', subject: 'Study block', due: 'Today · 4:00 PM' },
     { title: 'Plan tomorrow', subject: 'Personal', due: 'Today · 7:30 PM' }
@@ -623,6 +501,17 @@ function CalendarView({ calendarView, assignments }) {
   return (
     <motion.section key={`calendar-${calendarView}`} className="view-stack" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
       <ViewHeading eyebrow="Schedule" title="Calendar" detail={`${calendarView[0].toUpperCase()}${calendarView.slice(1)} view`} />
+      <ViewModeTabs
+        label="Calendar views"
+        value={calendarView}
+        onChange={onViewChange}
+        options={[
+          { value: 'month', label: 'Month' },
+          { value: 'agenda', label: 'Agenda' },
+          { value: 'week', label: 'Week' },
+          { value: 'day', label: 'Day' }
+        ]}
+      />
       <section className="section-card">
         <div className="flex items-center justify-between">
           <div>
@@ -762,7 +651,7 @@ function StudySheet({ open, title, detail, onClose, children }) {
   );
 }
 
-function StudyView({ studyMode, onRunningChange }) {
+function StudyView({ studyMode, onModeChange, onRunningChange }) {
   const decks = {
     flashcards: ['Recently studied', '12 cards due', '78% recall'],
     database: ['Database Systems', '28 cards', 'Normalization · SQL'],
@@ -874,6 +763,20 @@ function StudyView({ studyMode, onRunningChange }) {
           <Glyph name="settings" className="h-5 w-5" />
         </button>
       </motion.header>
+
+      <motion.div className="study-mode-picker study-dimmable" animate={{ opacity: running ? 0.12 : 1 }} transition={SPRING}>
+        <ViewModeTabs
+          label="Study modes"
+          value={studyMode}
+          onChange={onModeChange}
+          options={[
+            { value: 'focus', label: 'Focus' },
+            { value: 'flashcards', label: 'Cards' },
+            { value: 'database', label: 'Database' },
+            { value: 'algorithms', label: 'Algorithms' }
+          ]}
+        />
+      </motion.div>
 
       <motion.div className="study-tabs study-dimmable" role="tablist" aria-label="Study area" animate={{ opacity: running ? 0.12 : 1 }} transition={SPRING}>
         {tabs.map(([id, label]) => (
@@ -1079,7 +982,7 @@ function SecondaryView({ view, announcements, connected, onConnect }) {
       : [['All caught up', 'New instructor updates will collect here after a Canvas sync.', 'bell']],
     resources: [
       ['Canvas courses', 'Assignments, modules, and course links in one place.', 'link'],
-      ['Study workspace', 'Jump into flashcards or a focus session from the launchpad.', 'study']
+      ['Study workspace', 'Open flashcards or a focus session from the Study page.', 'study']
     ],
     settings: [
       ['Canvas connection', connected ? 'Connected and ready to sync.' : 'Connect Canvas to populate StudentHub.', 'sync'],
@@ -1120,12 +1023,17 @@ function SecondaryView({ view, announcements, connected, onConnect }) {
 export default function StudentHubMobileDashboard() {
   const data = useMemo(readDashboardData, []);
   const assignments = data.assignments;
-  const pending = assignments.filter((item) => !item.done);
-  const overdue = pending.filter((item) => {
-    const days = daysUntil(item.due);
-    return days !== null && days < 0;
-  });
-  const submitted = assignments.filter((item) => item.done);
+  const { pending, overdue, submitted } = useMemo(() => {
+    const nextPending = assignments.filter((item) => !item.done);
+    return {
+      pending: nextPending,
+      overdue: nextPending.filter((item) => {
+        const days = daysUntil(item.due);
+        return days !== null && days < 0;
+      }),
+      submitted: assignments.filter((item) => item.done)
+    };
+  }, [assignments]);
 
   const [activeView, setActiveView] = useState('home');
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -1134,7 +1042,6 @@ export default function StudentHubMobileDashboard() {
   const [calendarView, setCalendarView] = useState('month');
   const [studyMode, setStudyMode] = useState('focus');
   const [studyRunning, setStudyRunning] = useState(false);
-  const [gestureNotice, setGestureNotice] = useState('');
   const drawerX = useMotionValue(-DRAWER_TRAVEL);
   const backdropOpacity = useTransform(drawerX, [-DRAWER_TRAVEL, 0], [0, 0.74]);
   const edgeGesture = useRef(null);
@@ -1142,12 +1049,6 @@ export default function StudentHubMobileDashboard() {
   useEffect(() => {
     animate(drawerX, drawerOpen ? 0 : -DRAWER_TRAVEL, SPRING);
   }, [drawerOpen, drawerX]);
-
-  useEffect(() => {
-    if (!gestureNotice) return undefined;
-    const timeout = window.setTimeout(() => setGestureNotice(''), 1800);
-    return () => window.clearTimeout(timeout);
-  }, [gestureNotice]);
 
   const settleDrawer = (open) => {
     setDrawerOpen(open);
@@ -1184,15 +1085,6 @@ export default function StudentHubMobileDashboard() {
     setEdgeDragging(false);
   };
 
-  const handleGestureChoice = (tab, option) => {
-    if (!option) return;
-    setActiveView(tab);
-    if (tab === 'tasks') setTaskFilter(option.value);
-    if (tab === 'calendar') setCalendarView(option.value);
-    if (tab === 'study') setStudyMode(option.value);
-    setGestureNotice(`${option.label} selected`);
-  };
-
   const connectCanvas = () => {
     window.location.href = '../index.html?connect=1&returnTo=studenthub#dashboard';
   };
@@ -1227,6 +1119,7 @@ export default function StudentHubMobileDashboard() {
           <button type="button" className="menu-button" onClick={() => settleDrawer(true)} aria-label="Open navigation">
             <Glyph name="menu" className="h-5 w-5" />
           </button>
+          <BrandLogo className="topbar-logo" />
           <div className="min-w-0 flex-1">
             <span className="block truncate text-[0.66rem] font-bold uppercase tracking-[0.18em] text-[#7380a5]">{dateLabel}</span>
             <strong className="mt-1 block text-sm font-semibold text-slate-100">BetterCLSS</strong>
@@ -1267,9 +1160,9 @@ export default function StudentHubMobileDashboard() {
                 <DeadlineList assignments={assignments} connected={data.connected} onConnect={connectCanvas} />
               </motion.div>
             )}
-            {activeView === 'tasks' && <TasksView key="tasks" assignments={assignments} filter={taskFilter} connected={data.connected} onConnect={connectCanvas} />}
-            {activeView === 'calendar' && <CalendarView key="calendar" calendarView={calendarView} assignments={assignments} />}
-            {activeView === 'study' && <StudyView key="study" studyMode={studyMode} onRunningChange={setStudyRunning} />}
+            {activeView === 'tasks' && <TasksView key="tasks" assignments={assignments} filter={taskFilter} onFilterChange={setTaskFilter} connected={data.connected} onConnect={connectCanvas} />}
+            {activeView === 'calendar' && <CalendarView key="calendar" calendarView={calendarView} onViewChange={setCalendarView} assignments={assignments} />}
+            {activeView === 'study' && <StudyView key="study" studyMode={studyMode} onModeChange={setStudyMode} onRunningChange={setStudyRunning} />}
             {!PRIMARY_VIEWS.includes(activeView) && (
               <SecondaryView
                 key={activeView}
@@ -1283,16 +1176,6 @@ export default function StudentHubMobileDashboard() {
         </div>
       </main>
 
-      <AnimatePresence>
-        {gestureNotice && (
-          <motion.div className="gesture-toast" initial={{ opacity: 0, y: 18, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8 }} transition={SPRING}>
-            <span />
-            {gestureNotice}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <BottomLaunchpad activeView={activeView} onNavigate={navigate} onGestureChoice={handleGestureChoice} />
     </div>
   );
 }

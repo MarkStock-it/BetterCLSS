@@ -1,6 +1,6 @@
 /* global importScripts, firebase */
 
-const CACHE_NAME = 'betterclss-v6';
+const CACHE_NAME = 'betterclss-v7';
 const OFFLINE_URLS = [
   './',
   './index.html',
@@ -11,8 +11,9 @@ const OFFLINE_URLS = [
   './config.js?v=6',
   './push-notifications.js?v=6',
   './manifest.json',
-  './icons/icon-192.svg',
-  './icons/icon-512.svg'
+  './icons/apple-touch-icon.png',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
 ];
 
 function isHtmlRequest(request) {
@@ -111,8 +112,8 @@ if (!Object.values(firebaseConfig).some((value) => String(value).startsWith('YOU
     const title = payload?.notification?.title || payload?.data?.title || 'BetterCLSS';
     const options = {
       body: payload?.notification?.body || payload?.data?.body || 'You have a new update.',
-      icon: 'icons/icon-192.svg',
-      badge: 'icons/icon-192.svg',
+      icon: 'icons/icon-192.png',
+      badge: 'icons/icon-192.png',
       data: { url: payload?.data?.url || './index.html' }
     };
     self.registration.showNotification(title, options);
@@ -130,8 +131,8 @@ self.addEventListener('push', (event) => {
   const title = payload?.notification?.title || payload?.data?.title || 'BetterCLSS';
   const options = {
     body: payload?.notification?.body || payload?.data?.body || 'You have a new update.',
-    icon: 'icons/icon-192.svg',
-    badge: 'icons/icon-192.svg',
+    icon: 'icons/icon-192.png',
+    badge: 'icons/icon-192.png',
     data: {
       url: payload?.data?.url || './index.html'
     }

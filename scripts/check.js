@@ -81,6 +81,8 @@ const studentHubRedirect = read('StudentHub.html');
 const studentHubSource = read('studenthub-app/src/StudentHubMobileDashboard.jsx');
 const packageConfig = JSON.parse(read('package.json'));
 const pagesWorkflow = read('.github/workflows/deploy-pages.yml');
+const manifest = JSON.parse(read('manifest.json'));
+const studentHubManifest = JSON.parse(read('studenthub-app/public/manifest.json'));
 
 assert(
   studentHubRedirect.includes('./studenthub/index.html'),
@@ -91,10 +93,10 @@ assert(
   'StudentHub Canvas setup must preserve StudentHub as the post-authentication destination'
 );
 assert(
-  studentHubSource.includes('TASKS_PER_PAGE') &&
+  studentHubSource.includes('const TASKS_PER_PAGE = 5;') &&
     studentHubSource.includes('className="task-pagination"') &&
     studentHubSource.includes('aria-label="Task pages"'),
-  'StudentHub task management must paginate long filtered lists'
+  'StudentHub task management must show five assignments per page'
 );
 assert(
   html.includes("launchParams.get('returnTo') === 'studenthub'") &&
@@ -102,8 +104,10 @@ assert(
   'Canvas authentication must return mobile users to StudentHub'
 );
 assert(
-  studentHubSource.includes('handleEdgeMove') && studentHubSource.includes('LongPressTab'),
-  'StudentHub must include edge-swipe and long-press gesture navigation'
+  studentHubSource.includes('handleEdgeMove') &&
+    studentHubSource.includes('function ViewModeTabs') &&
+    !studentHubSource.includes('BottomLaunchpad'),
+  'StudentHub must use the swipe drawer and page-level controls without a floating launchpad'
 );
 assert(
   studentHubSource.includes("from 'motion/react'"),
@@ -129,6 +133,19 @@ assert(
   fs.existsSync(path.join(root, 'studenthub', 'index.html')),
   'The built StudentHub entrypoint is missing; run npm run studenthub:build'
 );
+assert(
+  manifest.start_url === './StudentHub.html' &&
+    manifest.icons.every((icon) => icon.type === 'image/png') &&
+    studentHubManifest.start_url === '../StudentHub.html',
+  'The PWA must launch StudentHub and use iOS-compatible PNG icons'
+);
+[
+  'icons/icon-192.png',
+  'icons/icon-512.png',
+  'icons/apple-touch-icon.png'
+].forEach((iconPath) => {
+  assert(fs.existsSync(path.join(root, iconPath)), `Missing PWA icon ${iconPath}`);
+});
 assert(
   pagesWorkflow.includes('npm run studenthub:build'),
   'GitHub Pages must build StudentHub before creating the deployment artifact'

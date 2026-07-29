@@ -178,7 +178,7 @@ async function sendNotificationToAllTokens(payload) {
           notification: {
             title: payload.title,
             body: payload.body,
-            icon: '/icons/icon-192.svg',
+            icon: '/icons/icon-192.png',
           },
           fcmOptions: {
             link: payload.url,

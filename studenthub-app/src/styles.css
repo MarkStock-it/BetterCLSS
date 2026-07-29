@@ -134,10 +134,18 @@ a:focus-visible {
   box-shadow: 0 0 9px rgba(66, 221, 169, 0.7);
 }
 
+.topbar-logo {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  box-shadow: 0 8px 22px rgba(55, 72, 172, 0.24);
+}
+
 .content-wrap {
   position: relative;
   z-index: 2;
-  padding: 20px 20px calc(112px + env(safe-area-inset-bottom));
+  padding: 20px 20px calc(42px + env(safe-area-inset-bottom));
 }
 
 .view-stack {
@@ -408,6 +416,44 @@ a:focus-visible {
   text-transform: capitalize;
 }
 
+.view-mode-tabs {
+  display: flex;
+  width: 100%;
+  min-height: 43px;
+  padding: 4px;
+  overflow-x: auto;
+  border: 1px solid rgba(97, 115, 177, 0.17);
+  border-radius: 14px;
+  background: rgba(10, 13, 27, 0.5);
+  scrollbar-width: none;
+}
+
+.view-mode-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.view-mode-tabs button {
+  min-width: 0;
+  flex: 1 0 auto;
+  padding: 0 11px;
+  color: #697493;
+  border-radius: 10px;
+  font-size: 0.63rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.view-mode-tabs button:active {
+  transform: scale(0.97);
+}
+
+.view-mode-tabs button.active {
+  color: #e5eaff;
+  background: linear-gradient(145deg, rgba(97, 124, 235, 0.22), rgba(126, 80, 205, 0.14));
+  box-shadow: inset 0 0 0 1px rgba(127, 148, 232, 0.16), 0 5px 15px rgba(47, 62, 142, 0.14);
+}
+
 .empty-deadlines {
   padding: 22px 4px 5px;
   text-align: center;
@@ -606,6 +652,7 @@ a:focus-visible {
     rgba(8, 10, 21, 0.98);
   box-shadow: 30px 0 80px rgba(0, 0, 0, 0.48);
   touch-action: pan-y;
+  will-change: transform;
 }
 
 .drawer-glow {
@@ -628,6 +675,12 @@ a:focus-visible {
   border: 1px solid rgba(142, 159, 235, 0.24);
   border-radius: 14px;
   background: linear-gradient(145deg, rgba(97, 126, 246, 0.36), rgba(128, 79, 206, 0.28));
+}
+
+.brand-mark img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
 }
 
 .drawer-link {
@@ -667,169 +720,6 @@ a:focus-visible {
   color: #91a5ff;
   background: rgba(104, 131, 244, 0.11);
   box-shadow: 0 0 22px rgba(80, 105, 220, 0.11);
-}
-
-.launchpad-wrap {
-  position: fixed;
-  z-index: 30;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  margin: auto;
-}
-
-.launchpad {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 5px;
-  min-height: 75px;
-  margin: 0 12px;
-  padding: 7px;
-  border: 1px solid rgba(107, 126, 191, 0.17);
-  border-radius: 22px;
-  background: rgba(10, 13, 26, 0.9);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.035),
-    0 -10px 36px rgba(0, 0, 0, 0.26);
-  backdrop-filter: blur(22px) saturate(135%);
-  -webkit-backdrop-filter: blur(22px) saturate(135%);
-}
-
-.safe-area-fill {
-  height: env(safe-area-inset-bottom);
-  background: rgba(6, 8, 17, 0.94);
-}
-
-.launchpad-tab {
-  position: relative;
-  display: flex;
-  min-width: 0;
-  min-height: 59px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  color: #697493;
-  border-radius: 18px;
-  user-select: none;
-  touch-action: none;
-}
-
-.launchpad-tab.active {
-  color: #dbe3ff;
-}
-
-.launchpad-active-bg {
-  position: absolute;
-  inset: 0;
-  border: 1px solid rgba(125, 146, 239, 0.22);
-  border-radius: 18px;
-  background: linear-gradient(145deg, rgba(94, 121, 235, 0.2), rgba(116, 77, 197, 0.13));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 7px 20px rgba(57, 76, 170, 0.12);
-}
-
-.hold-indicator {
-  position: absolute;
-  top: 7px;
-  right: 10px;
-  width: 3px;
-  height: 3px;
-  border-radius: 999px;
-  background: #65749e;
-  box-shadow: 0 0 7px rgba(121, 143, 226, 0.65);
-}
-
-.quick-menu {
-  position: absolute;
-  z-index: 80;
-  bottom: 76px;
-  width: 166px;
-  padding: 9px;
-  color: #dfe5fb;
-  border: 1px solid rgba(130, 151, 235, 0.28);
-  border-radius: 19px;
-  background:
-    radial-gradient(130px 110px at 100% 0%, rgba(124, 79, 212, 0.24), transparent 68%),
-    rgba(13, 17, 34, 0.96);
-  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.46), 0 0 34px rgba(77, 100, 220, 0.14);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
-  pointer-events: none;
-}
-
-.quick-menu.align-center {
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.quick-menu.align-right {
-  right: 0;
-}
-
-.quick-menu-label {
-  padding: 3px 7px 8px;
-  color: #687598;
-  font-size: 0.58rem;
-  font-weight: 750;
-  letter-spacing: 0.12em;
-  text-align: left;
-  text-transform: uppercase;
-}
-
-.quick-option {
-  display: flex;
-  min-height: 40px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 11px;
-  color: #8793b6;
-  border-radius: 12px;
-  font-size: 0.71rem;
-  font-weight: 650;
-}
-
-.quick-option.selected {
-  color: white;
-  background: linear-gradient(90deg, rgba(100, 130, 255, 0.3), rgba(132, 84, 216, 0.2));
-  box-shadow: inset 0 0 0 1px rgba(143, 161, 239, 0.16), 0 5px 18px rgba(66, 84, 186, 0.17);
-}
-
-.quick-option-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: #9eafff;
-  box-shadow: 0 0 10px #718cff;
-}
-
-.gesture-toast {
-  position: fixed;
-  z-index: 90;
-  bottom: calc(100px + env(safe-area-inset-bottom));
-  left: 50%;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-height: 40px;
-  padding: 0 14px;
-  color: #dce4ff;
-  border: 1px solid rgba(128, 149, 232, 0.22);
-  border-radius: 999px;
-  background: rgba(16, 20, 39, 0.94);
-  box-shadow: 0 13px 38px rgba(0, 0, 0, 0.38);
-  backdrop-filter: blur(16px);
-  transform: translateX(-50%);
-  font-size: 0.68rem;
-  font-weight: 650;
-  white-space: nowrap;
-}
-
-.gesture-toast > span {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: #7690ff;
-  box-shadow: 0 0 9px #7690ff;
 }
 
 .calendar-day-mobile {
@@ -1291,6 +1181,7 @@ a:focus-visible {
 }
 
 .timer-running .study-heading,
+.timer-running .study-mode-picker,
 .timer-running .study-tabs,
 .timer-running .session-setup-summary {
   min-height: 0;
@@ -1315,9 +1206,7 @@ a:focus-visible {
   transform: scale(1.05);
 }
 
-.focus-session-active .mobile-topbar,
-.focus-session-active .launchpad-wrap,
-.focus-session-active .edge-swipe-zone {
+.focus-session-active .mobile-topbar {
   opacity: 0.08;
   filter: saturate(60%);
   pointer-events: none;
@@ -1705,9 +1594,6 @@ a:focus-visible {
     box-shadow: 0 0 90px rgba(0, 0, 0, 0.46);
   }
 
-  .launchpad-wrap {
-    max-width: 520px;
-  }
 }
 
 @media (max-width: 360px) {
