@@ -1415,10 +1415,18 @@
       if (overlay) overlay.remove();
     }
 
+    function getCanvasConnectReturnUrl() {
+      const launchParams = new URLSearchParams(window.location.search);
+      return launchParams.get('returnTo') === 'studenthub'
+        ? './studenthub/index.html'
+        : '';
+    }
+
     async function connectCanvas() {
       const tokenInput = document.getElementById('canvasTokenInput');
       const domainInput = document.getElementById('canvasDomainInput');
       const apiBaseInput = document.getElementById('apiBaseInput');
+      const returnUrl = getCanvasConnectReturnUrl();
       const existingToken = CanvasAPI.getToken() || '';
       const token = existingToken || (tokenInput ? tokenInput.value.trim() : '');
       const domain = domainInput ? domainInput.value.trim() : 'usc.instructure.com';
@@ -1451,6 +1459,10 @@
         // 3. Auto-sync Canvas data and save to backend
         await syncCanvas();
         // ===== USER IDENTITY FLOW END =====
+
+        if (returnUrl) {
+          window.location.replace(returnUrl);
+        }
       } catch (err) {
         hideModalLoading();
         const details = err && err.message ? err.message : 'Unknown connection error';

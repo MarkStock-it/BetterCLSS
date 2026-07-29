@@ -87,6 +87,15 @@ assert(
   'StudentHub.html must launch the React mobile dashboard'
 );
 assert(
+  studentHubSource.includes('../index.html?connect=1&returnTo=studenthub#dashboard'),
+  'StudentHub Canvas setup must preserve StudentHub as the post-authentication destination'
+);
+assert(
+  html.includes("launchParams.get('returnTo') === 'studenthub'") &&
+    html.includes('window.location.replace(returnUrl)'),
+  'Canvas authentication must return mobile users to StudentHub'
+);
+assert(
   studentHubSource.includes('handleEdgeMove') && studentHubSource.includes('LongPressTab'),
   'StudentHub must include edge-swipe and long-press gesture navigation'
 );

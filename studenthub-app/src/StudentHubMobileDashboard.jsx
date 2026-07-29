@@ -1126,7 +1126,7 @@ export default function StudentHubMobileDashboard() {
   };
 
   const connectCanvas = () => {
-    window.location.href = '../index.html?connect=1#dashboard';
+    window.location.href = '../index.html?connect=1&returnTo=studenthub#dashboard';
   };
 
   const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
