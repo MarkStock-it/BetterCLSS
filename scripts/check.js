@@ -89,7 +89,8 @@ assert(
   'StudentHub.html must launch the React mobile dashboard'
 );
 assert(
-  studentHubSource.includes('../index.html?connect=1&returnTo=studenthub#dashboard'),
+  studentHubSource.includes("localStorage.setItem('bclss_connect_return', 'studenthub')") &&
+    studentHubSource.includes('../index.html?connect=1&returnTo=studenthub#dashboard'),
   'StudentHub Canvas setup must preserve StudentHub as the post-authentication destination'
 );
 assert(
@@ -100,14 +101,36 @@ assert(
 );
 assert(
   html.includes("launchParams.get('returnTo') === 'studenthub'") &&
+    html.includes("storedReturn === 'studenthub'") &&
+    html.includes("localStorage.removeItem('bclss_connect_return')") &&
     html.includes('window.location.replace(returnUrl)'),
-  'Canvas authentication must return mobile users to StudentHub'
+  'Canvas authentication must return mobile users to StudentHub across Safari tabs'
 );
 assert(
   studentHubSource.includes('handleEdgeMove') &&
     studentHubSource.includes('function ViewModeTabs') &&
     !studentHubSource.includes('BottomLaunchpad'),
   'StudentHub must use the swipe drawer and page-level controls without a floating launchpad'
+);
+assert(
+  studentHubSource.includes("options={[\n            { value: 'focus', label: 'Focus' },\n            { value: 'cards', label: 'Cards' }") &&
+    studentHubSource.includes("studyMode === 'focus' && (") &&
+    !studentHubSource.includes("{ value: 'database'") &&
+    !studentHubSource.includes("{ value: 'algorithms'"),
+  'StudentHub must keep Study Area controls in Focus and course decks inside Cards'
+);
+assert(
+  studentHubSource.includes('buildCourseDecks(assignments)') &&
+    studentHubSource.includes('drag="x"') &&
+    studentHubSource.includes('onDragEnd={(_, info) => {'),
+  'StudentHub course decks must come from coursework and support horizontal swiping'
+);
+assert(
+  !studentHubSource.includes('Course progress') &&
+    !studentHubSource.includes('What-if scores') &&
+    !studentHubSource.includes('All caught up') &&
+    !studentHubSource.includes('Study workspace'),
+  'StudentHub secondary pages must not render hard-coded demo cards'
 );
 assert(
   studentHubSource.includes("from 'motion/react'"),

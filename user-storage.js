@@ -67,11 +67,7 @@ function getDefaultUserData() {
       events: [],
       announcements: [],
       canvasOverrides: {},
-      links: [
-        { id: 1, name: 'USC Canvas', url: 'https://usc.instructure.com', icon: '🎓' },
-        { id: 2, name: 'USC Email', url: 'https://mail.usc.edu', icon: '📧' },
-        { id: 3, name: 'Google Drive', url: 'https://drive.google.com', icon: '📁' }
-      ],
+      links: [],
       studyHours: 0,
       studyGoal: 4,
       pomoSessions: 0,

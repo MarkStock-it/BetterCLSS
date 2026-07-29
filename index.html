@@ -298,7 +298,7 @@
                 <div class="card-title">Pomodoro Session</div>
                 <div class="study-inline-controls">
                   <label class="study-inline-label" for="sessionTagInput">Session Tags</label>
-                  <input type="text" id="sessionTagInput" placeholder="Database, Networking, Math">
+                  <input type="text" id="sessionTagInput" placeholder="Course, chapter, topic">
                 </div>
               </div>
 
@@ -595,11 +595,7 @@
         events: [],
         announcements: [],
         canvasOverrides: {},
-        links: [
-          { id: 1, name: 'USC Canvas', url: 'https://usc.instructure.com', icon: '🎓' },
-          { id: 2, name: 'USC Email', url: 'https://mail.usc.edu', icon: '📧' },
-          { id: 3, name: 'Google Drive', url: 'https://drive.google.com', icon: '📁' }
-        ],
+        links: [],
         studyHours: 0,
         studyGoal: 4,
         pomoSessions: 0,
@@ -1417,7 +1413,11 @@
 
     function getCanvasConnectReturnUrl() {
       const launchParams = new URLSearchParams(window.location.search);
-      return launchParams.get('returnTo') === 'studenthub'
+      let storedReturn = '';
+      try {
+        storedReturn = localStorage.getItem('bclss_connect_return') || '';
+      } catch (_) {}
+      return launchParams.get('returnTo') === 'studenthub' || storedReturn === 'studenthub'
         ? './studenthub/index.html'
         : '';
     }
@@ -1461,6 +1461,9 @@
         // ===== USER IDENTITY FLOW END =====
 
         if (returnUrl) {
+          try {
+            localStorage.removeItem('bclss_connect_return');
+          } catch (_) {}
           window.location.replace(returnUrl);
         }
       } catch (err) {

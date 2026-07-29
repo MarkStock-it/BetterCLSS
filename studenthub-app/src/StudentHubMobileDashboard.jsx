@@ -11,6 +11,11 @@ import brandLogoUrl from '../../icons/icon-192.png';
 const DRAWER_TRAVEL = 360;
 const SPRING = { type: 'spring', stiffness: 430, damping: 38, mass: 0.86 };
 const TASKS_PER_PAGE = 5;
+const LEGACY_SEEDED_LINKS = new Set([
+  'https://usc.instructure.com',
+  'https://mail.usc.edu',
+  'https://drive.google.com'
+]);
 
 const PRIMARY_VIEWS = ['home', 'tasks', 'calendar', 'study'];
 
@@ -108,6 +113,16 @@ function readDashboardData() {
         };
       })
       : [];
+    const links = Array.isArray(local.links)
+      ? local.links.filter((item) => !(
+        [1, 2, 3].includes(Number(item.id))
+        && LEGACY_SEEDED_LINKS.has(String(item.url || '').replace(/\/$/, ''))
+      ))
+      : [];
+    if (Array.isArray(local.links) && links.length !== local.links.length) {
+      local.links = links;
+      localStorage.setItem('bclss_local', JSON.stringify(local));
+    }
     return {
       assignments: [...canvasAssignments, ...localAssignments],
       announcements: [
@@ -119,7 +134,7 @@ function readDashboardData() {
         ...(Array.isArray(canvas.grades) ? canvas.grades : []),
         ...(Array.isArray(local.grades) ? local.grades : [])
       ],
-      links: Array.isArray(local.links) ? local.links : [],
+      links,
       studyTasks: Array.isArray(local.studyTasks) ? local.studyTasks : [],
       studyHistory: Array.isArray(local.studyHistory) ? local.studyHistory : [],
       studyNote: local.studyCurrentNote && typeof local.studyCurrentNote.content === 'string'
@@ -574,17 +589,22 @@ function TasksView({ assignments, filter, onFilterChange, connected, onConnect }
   );
 }
 
-function CalendarView({ calendarView, onViewChange, assignments }) {
+function CalendarView({ calendarView, onViewChange, assignments, savedEvents }) {
   const days = Array.from({ length: 35 }, (_, index) => index < 3 ? 27 + index : index - 2);
-  const upcoming = useMemo(
-    () => smartSort(assignments).filter((item) => !item.done).slice(0, 4),
-    [assignments]
+  const events = useMemo(
+    () => smartSort([
+      ...assignments.filter((item) => !item.done),
+      ...savedEvents.map((event) => ({
+        id: `event-${event.id}`,
+        title: event.title,
+        subject: event.type || 'Event',
+        due: event.date,
+        done: false,
+        priority: 'low'
+      }))
+    ]).slice(0, 8),
+    [assignments, savedEvents]
   );
-  const fallbackEvents = [
-    { title: 'Review course notes', subject: 'Study block', due: 'Today · 4:00 PM' },
-    { title: 'Plan tomorrow', subject: 'Personal', due: 'Today · 7:30 PM' }
-  ];
-  const events = upcoming.length ? upcoming : fallbackEvents;
 
   return (
     <motion.section key={`calendar-${calendarView}`} className="view-stack" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
@@ -627,7 +647,7 @@ function CalendarView({ calendarView, onViewChange, assignments }) {
 
           {calendarView === 'agenda' && (
             <motion.div key="agenda-list" className="calendar-agenda" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
-              {events.map((event, index) => (
+              {events.length ? events.map((event, index) => (
                 <article className="agenda-event" key={event.id || `${event.title}-${index}`}>
                   <span className={`agenda-dot ${index === 0 ? 'urgent' : ''}`} />
                   <div>
@@ -635,7 +655,7 @@ function CalendarView({ calendarView, onViewChange, assignments }) {
                     <p>{event.subject || 'Course'} · {event.due || 'No due date'}</p>
                   </div>
                 </article>
-              ))}
+              )) : <p className="study-empty-copy">No scheduled coursework or events.</p>}
             </motion.div>
           )}
 
@@ -657,7 +677,7 @@ function CalendarView({ calendarView, onViewChange, assignments }) {
                 <div className="timeline-row" key={time}>
                   <time>{time}</time>
                   <span />
-                  {index === 1 && <article><strong>{events[0]?.title}</strong><small>{events[0]?.subject || 'Coursework'}</small></article>}
+                  {index === 1 && events[0] && <article><strong>{events[0].title}</strong><small>{events[0].subject || 'Coursework'}</small></article>}
                 </div>
               ))}
             </motion.div>
@@ -739,13 +759,9 @@ function StudySheet({ open, title, detail, onClose, children }) {
   );
 }
 
-function StudyView({ studyMode, onModeChange, onRunningChange }) {
-  const decks = {
-    flashcards: ['Recently studied', '12 cards due', '78% recall'],
-    database: ['Database Systems', '28 cards', 'Normalization · SQL'],
-    algorithms: ['Algorithms', '34 cards', 'Graphs · Complexity']
-  };
-  const activeDeck = decks[studyMode];
+function StudyView({ studyMode, onModeChange, onRunningChange, assignments, initialTasks, initialHistory, initialNote }) {
+  const decks = useMemo(() => buildCourseDecks(assignments), [assignments]);
+  const [deckIndex, setDeckIndex] = useState(0);
   const [activeTab, setActiveTab] = useState('timer');
   const [activeMode, setActiveMode] = useState('work');
   const [durations, setDurations] = useState(readStudyDurations);
@@ -753,7 +769,11 @@ function StudyView({ studyMode, onModeChange, onRunningChange }) {
   const [running, setRunning] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [sessionTitle, setSessionTitle] = useState('Deep work session');
+  const [sessionTitle, setSessionTitle] = useState(() => localStorage.getItem('bclss_study_session_title') || '');
+  const [sessionNote, setSessionNote] = useState(initialNote);
+  const [studyTasks, setStudyTasks] = useState(initialTasks);
+  const [studyHistory, setStudyHistory] = useState(initialHistory);
+  const noteReady = useRef(false);
 
   const totalSeconds = durations[activeMode] * 60;
   const remainingRatio = Math.max(0, Math.min(1, timeLeft / totalSeconds));
@@ -761,10 +781,42 @@ function StudyView({ studyMode, onModeChange, onRunningChange }) {
   const durationProfile = Object.entries(STUDY_DURATION_PROFILES).find(([, profile]) => (
     profile.work === durations.work && profile.break === durations.break && profile.long === durations.long
   ))?.[0] || 'Balanced';
+  const activeDeck = decks[Math.min(deckIndex, Math.max(0, decks.length - 1))];
+  const deckProgress = activeDeck?.cards.length
+    ? (activeDeck.completed / activeDeck.cards.length) * 100
+    : 0;
+  const nextCard = activeDeck?.cards.find((card) => !card.done) || activeDeck?.cards[0];
+  const studyStats = useMemo(() => buildStudyStats(studyHistory), [studyHistory]);
 
   useEffect(() => {
     localStorage.setItem('bclss_study_durations', JSON.stringify(durations));
   }, [durations]);
+
+  useEffect(() => {
+    if (sessionTitle) localStorage.setItem('bclss_study_session_title', sessionTitle);
+    else localStorage.removeItem('bclss_study_session_title');
+  }, [sessionTitle]);
+
+  useEffect(() => {
+    if (!noteReady.current) {
+      noteReady.current = true;
+      return undefined;
+    }
+    const timeout = window.setTimeout(() => {
+      updateStoredLocalData((local) => {
+        local.studyCurrentNote = {
+          ...(local.studyCurrentNote || {}),
+          content: sessionNote,
+          updatedAt: new Date().toISOString()
+        };
+      });
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [sessionNote]);
+
+  useEffect(() => {
+    setDeckIndex((current) => Math.min(current, Math.max(0, decks.length - 1)));
+  }, [decks.length]);
 
   useEffect(() => {
     onRunningChange?.(running && studyMode === 'focus');
@@ -783,6 +835,30 @@ function StudyView({ studyMode, onModeChange, onRunningChange }) {
         if (current <= 1) {
           window.clearInterval(timer);
           setRunning(false);
+          if (activeMode === 'work') {
+            const now = new Date();
+            const entry = {
+              id: now.getTime(),
+              at: now.toISOString(),
+              date: dateKey(now),
+              week: weekStartKey(now),
+              durationSecs: durations.work * 60,
+              tagList: sessionTitle ? [sessionTitle] : [],
+              notePreview: sessionNote.slice(0, 180),
+              noteFull: sessionNote
+            };
+            setStudyHistory((currentHistory) => {
+              const nextHistory = [entry, ...currentHistory].slice(0, 150);
+              updateStoredLocalData((local) => {
+                local.studyHistory = nextHistory;
+                local.studyHours = +(nextHistory
+                  .filter((item) => item.date === entry.date)
+                  .reduce((total, item) => total + (Number(item.durationSecs) || 0), 0) / 3600)
+                  .toFixed(2);
+              });
+              return nextHistory;
+            });
+          }
           navigator.vibrate?.([35, 50, 35]);
           return 0;
         }
@@ -790,7 +866,7 @@ function StudyView({ studyMode, onModeChange, onRunningChange }) {
       });
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [running]);
+  }, [running, activeMode, durations.work, sessionNote, sessionTitle]);
 
   useEffect(() => {
     if (!setupOpen && !settingsOpen) return undefined;
@@ -832,6 +908,21 @@ function StudyView({ studyMode, onModeChange, onRunningChange }) {
     setTimeLeft(totalSeconds);
   };
 
+  const changeDeck = (direction) => {
+    if (decks.length < 2) return;
+    setDeckIndex((current) => (current + direction + decks.length) % decks.length);
+  };
+
+  const toggleStudyTask = (taskId) => {
+    setStudyTasks((current) => {
+      const next = current.map((task) => task.id === taskId ? { ...task, done: !task.done } : task);
+      updateStoredLocalData((local) => {
+        local.studyTasks = next;
+      });
+      return next;
+    });
+  };
+
   const tabs = [
     ['timer', 'Timer'],
     ['notes', 'Notes'],
@@ -845,7 +936,7 @@ function StudyView({ studyMode, onModeChange, onRunningChange }) {
         <div>
           <span className="eyebrow-mobile">Deep work</span>
           <h1>Study</h1>
-          <p>{studyMode === 'focus' ? 'One session. Zero noise.' : `${studyMode[0].toUpperCase()}${studyMode.slice(1)} selected`}</p>
+          <p>{studyMode === 'focus' ? 'One session. Zero noise.' : 'Swipe through decks built from your courses.'}</p>
         </div>
         <button type="button" className="study-settings-button" onClick={() => setSettingsOpen(true)} aria-label="Open study settings">
           <Glyph name="settings" className="h-5 w-5" />
@@ -859,27 +950,27 @@ function StudyView({ studyMode, onModeChange, onRunningChange }) {
           onChange={onModeChange}
           options={[
             { value: 'focus', label: 'Focus' },
-            { value: 'flashcards', label: 'Cards' },
-            { value: 'database', label: 'Database' },
-            { value: 'algorithms', label: 'Algorithms' }
+            { value: 'cards', label: 'Cards' }
           ]}
         />
       </motion.div>
 
-      <motion.div className="study-tabs study-dimmable" role="tablist" aria-label="Study area" animate={{ opacity: running ? 0.12 : 1 }} transition={SPRING}>
-        {tabs.map(([id, label]) => (
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === id}
-            className={activeTab === id ? 'active' : ''}
-            key={id}
-            onClick={() => setActiveTab(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </motion.div>
+      {studyMode === 'focus' && (
+        <motion.div className="study-tabs study-dimmable" role="tablist" aria-label="Study area" initial={{ opacity: 0, y: -6 }} animate={{ opacity: running ? 0.12 : 1, y: 0 }} transition={SPRING}>
+          {tabs.map(([id, label]) => (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === id}
+              className={activeTab === id ? 'active' : ''}
+              key={id}
+              onClick={() => setActiveTab(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </motion.div>
+      )}
 
       {studyMode === 'focus' ? (
         <AnimatePresence mode="wait">
@@ -895,7 +986,7 @@ function StudyView({ studyMode, onModeChange, onRunningChange }) {
               >
                 <span className="session-summary-icon"><Glyph name="tag" className="h-4 w-4" /></span>
                 <span>
-                  <strong>{sessionTitle}</strong>
+                  <strong>{sessionTitle || 'Focus session'}</strong>
                   <small>{durations.work} minute focus</small>
                 </span>
                 <Glyph name="chevron" className="ml-auto h-4 w-4 -rotate-90" />
@@ -970,8 +1061,13 @@ function StudyView({ studyMode, onModeChange, onRunningChange }) {
             <motion.section className="study-secondary-panel" key="study-notes" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={SPRING}>
               <span className="secondary-icon"><Glyph name="notes" className="h-5 w-5" /></span>
               <h2>Session notes</h2>
-              <p>Capture only what matters. Notes remain on this device.</p>
-              <textarea aria-label="Session notes" placeholder="What are you working through?" />
+              <p>Saved to your BetterCLSS study workspace.</p>
+              <textarea
+                aria-label="Session notes"
+                placeholder="What are you working through?"
+                value={sessionNote}
+                onChange={(event) => setSessionNote(event.target.value)}
+              />
             </motion.section>
           )}
 
@@ -979,10 +1075,13 @@ function StudyView({ studyMode, onModeChange, onRunningChange }) {
             <motion.section className="study-secondary-panel" key="study-tasks" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={SPRING}>
               <span className="secondary-icon"><Glyph name="tasks" className="h-5 w-5" /></span>
               <h2>Focus queue</h2>
-              <p>Keep today’s target deliberately small.</p>
-              {['Review lecture notes', 'Finish practice set', 'Summarize key ideas'].map((task, index) => (
-                <label className="study-task-row" key={task}><input type="checkbox" defaultChecked={index === 0} /><span>{task}</span></label>
-              ))}
+              <p>Your saved Study Area tasks.</p>
+              {studyTasks.length ? studyTasks.map((task) => (
+                <label className={`study-task-row ${task.done ? 'done' : ''}`} key={task.id}>
+                  <input type="checkbox" checked={Boolean(task.done)} onChange={() => toggleStudyTask(task.id)} />
+                  <span>{task.text}</span>
+                </label>
+              )) : <p className="study-empty-copy">No study tasks saved yet.</p>}
             </motion.section>
           )}
 
@@ -990,24 +1089,73 @@ function StudyView({ studyMode, onModeChange, onRunningChange }) {
             <motion.section className="study-secondary-panel" key="study-progress" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={SPRING}>
               <span className="secondary-icon"><Glyph name="progress" className="h-5 w-5" /></span>
               <h2>This week</h2>
-              <p>A quiet snapshot of your focused time.</p>
+              <p>Calculated from your completed focus sessions.</p>
               <div className="focus-metrics">
-                <div><strong>6</strong><span>Sessions</span></div>
-                <div><strong>2h 35m</strong><span>Focused</span></div>
-                <div><strong>4 days</strong><span>Streak</span></div>
+                <div><strong>{studyStats.sessions}</strong><span>Sessions</span></div>
+                <div><strong>{formatDuration(studyStats.focusedSeconds)}</strong><span>Focused</span></div>
+                <div><strong>{studyStats.longestStreak}</strong><span>Streak</span></div>
               </div>
             </motion.section>
           )}
         </AnimatePresence>
       ) : (
-        <motion.section className="study-deck-card" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={SPRING}>
-          <div className="deck-orbit"><Glyph name="study" className="h-8 w-8" /></div>
-          <span className="eyebrow-mobile">Quick deck</span>
-          <h2>{activeDeck?.[0]}</h2>
-          <p>{activeDeck?.[1]} · {activeDeck?.[2]}</p>
-          <div className="deck-progress"><motion.span initial={{ width: 0 }} animate={{ width: studyMode === 'flashcards' ? '78%' : '46%' }} transition={{ ...SPRING, delay: 0.12 }} /></div>
-          <button type="button" className="focus-start">Open deck</button>
-        </motion.section>
+        <section className="deck-carousel" aria-label="Course decks">
+          {activeDeck ? (
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.article
+                key={activeDeck.id}
+                className="study-deck-card"
+                initial={{ opacity: 0, x: 28, scale: 0.97 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -28, scale: 0.97 }}
+                transition={SPRING}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.16}
+                onDragEnd={(_, info) => {
+                  if (info.offset.x < -55 || info.velocity.x < -450) changeDeck(1);
+                  if (info.offset.x > 55 || info.velocity.x > 450) changeDeck(-1);
+                }}
+              >
+                <div className="deck-orbit"><Glyph name="study" className="h-8 w-8" /></div>
+                <span className="eyebrow-mobile">Course deck</span>
+                <h2>{activeDeck.title}</h2>
+                <p>{activeDeck.cards.length} items · {activeDeck.cards.length - activeDeck.completed} pending</p>
+                {nextCard && (
+                  <div className="deck-next-card">
+                    <span>Next item</span>
+                    <strong>{nextCard.title}</strong>
+                    <small>{nextCard.due || 'No due date'}</small>
+                  </div>
+                )}
+                <div className="deck-progress">
+                  <motion.span initial={{ width: 0 }} animate={{ width: `${deckProgress}%` }} transition={{ ...SPRING, delay: 0.12 }} />
+                </div>
+              </motion.article>
+            </AnimatePresence>
+          ) : (
+            <div className="study-deck-card deck-empty">
+              <div className="deck-orbit"><Glyph name="study" className="h-8 w-8" /></div>
+              <h2>No course decks yet</h2>
+              <p>Connect or sync Canvas to build decks from your coursework.</p>
+            </div>
+          )}
+          {decks.length > 1 && (
+            <div className="deck-navigation">
+              <button type="button" onClick={() => changeDeck(-1)} aria-label="Previous course deck">
+                <Glyph name="chevron" className="h-4 w-4 rotate-90" />
+              </button>
+              <div className="deck-dots" aria-label={`Deck ${deckIndex + 1} of ${decks.length}`}>
+                {decks.map((deck, index) => (
+                  <button type="button" className={index === deckIndex ? 'active' : ''} onClick={() => setDeckIndex(index)} aria-label={`Open ${deck.title} deck`} key={deck.id} />
+                ))}
+              </div>
+              <button type="button" onClick={() => changeDeck(1)} aria-label="Next course deck">
+                <Glyph name="chevron" className="h-4 w-4 -rotate-90" />
+              </button>
+            </div>
+          )}
+        </section>
       )}
 
       <StudySheet
@@ -1037,7 +1185,6 @@ function StudyView({ studyMode, onModeChange, onRunningChange }) {
             <option value="Deep">Deep · 50 / 10 / 20 min</option>
           </select>
         </label>
-        <p className="study-settings-note">Dark theme · Focus dimming on</p>
         <button type="button" className="sheet-done-button" onClick={() => setSettingsOpen(false)}>Done</button>
       </StudySheet>
     </motion.section>
@@ -1054,35 +1201,54 @@ function ViewHeading({ eyebrow, title, detail }) {
   );
 }
 
-function SecondaryView({ view, announcements, connected, onConnect }) {
+function SecondaryView({ view, announcements, grades, links, connected, onConnect }) {
   const [title, detail] = VIEW_COPY[view] || ['StudentHub', 'Choose a destination from the navigation drawer.'];
+  const gradePanels = grades.slice(0, 6).map((grade) => {
+    const course = grade.courseName || grade.courseCode || grade.course || grade.subject || 'Course';
+    const activity = grade.label || grade.currentGrade || grade.courseCode || '';
+    let score = '';
+    if (grade.currentScore != null && Number.isFinite(Number(grade.currentScore))) {
+      score = `${Math.round(Number(grade.currentScore))}%`;
+    } else if (grade.score != null && grade.total != null) {
+      score = `${grade.score}/${grade.total}`;
+    } else if (grade.score != null && Number.isFinite(Number(grade.score))) {
+      score = `${Math.round(Number(grade.score))}%`;
+    }
+    return [course, [activity, score].filter(Boolean).join(' · '), 'grades'];
+  });
+  const announcementPanels = announcements.slice(0, 6).map((item) => [
+    item.title || item.courseName || 'Course announcement',
+    String(item.message || item.body || item.courseName || '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim(),
+    'bell'
+  ]);
+  const resourcePanels = links.slice(0, 6).map((item) => [
+    item.name || item.title || 'Saved resource',
+    item.url || '',
+    'link'
+  ]);
   const panels = {
-    grades: [
-      ['Course progress', 'Grade details arrive with your next Canvas sync.', 'grades'],
-      ['What-if scores', 'Open the full BetterCLSS workspace to model upcoming assignments.', 'spark']
-    ],
-    announcements: announcements.length
-      ? announcements.slice(0, 4).map((item) => [
-        item.title || 'Course announcement',
-        item.message || item.courseName || 'Open Canvas for the full update.',
-        'bell'
-      ])
-      : [['All caught up', 'New instructor updates will collect here after a Canvas sync.', 'bell']],
-    resources: [
-      ['Canvas courses', 'Assignments, modules, and course links in one place.', 'link'],
-      ['Study workspace', 'Open flashcards or a focus session from the Study page.', 'study']
-    ],
+    grades: gradePanels,
+    announcements: announcementPanels,
+    resources: resourcePanels,
     settings: [
-      ['Canvas connection', connected ? 'Connected and ready to sync.' : 'Connect Canvas to populate StudentHub.', 'sync'],
-      ['Gesture controls', 'Edge swipe and hold-to-slide shortcuts are enabled.', 'settings']
+      ['Canvas connection', connected ? 'Connected' : 'Not connected', 'sync']
     ]
+  };
+  const activePanels = panels[view] || [];
+  const emptyMessages = {
+    grades: connected ? 'No grade records are available from Canvas yet.' : 'Connect Canvas to load your grades.',
+    announcements: connected ? 'No announcements are available.' : 'Connect Canvas to load announcements.',
+    resources: 'No saved resources yet.'
   };
 
   return (
     <motion.section className="view-stack" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
       <ViewHeading eyebrow="StudentHub" title={title} detail={detail} />
       <section className="section-card secondary-list">
-        {(panels[view] || []).map(([panelTitle, panelDetail, icon], index) => (
+        {activePanels.map(([panelTitle, panelDetail, icon], index) => (
           <motion.article
             className="secondary-row"
             key={`${panelTitle}-${index}`}
@@ -1097,6 +1263,9 @@ function SecondaryView({ view, announcements, connected, onConnect }) {
             </div>
           </motion.article>
         ))}
+        {!activePanels.length && (
+          <p className="study-empty-copy">{emptyMessages[view] || 'Nothing to show yet.'}</p>
+        )}
         {(view === 'settings' || (view === 'grades' && !connected)) && (
           <button type="button" className="secondary-action" onClick={onConnect}>
             <Glyph name="sync" className="h-4 w-4" />
@@ -1174,6 +1343,11 @@ export default function StudentHubMobileDashboard() {
   };
 
   const connectCanvas = () => {
+    try {
+      localStorage.setItem('bclss_connect_return', 'studenthub');
+    } catch {
+      // The URL still carries the return target when browser storage is restricted.
+    }
     window.location.href = '../index.html?connect=1&returnTo=studenthub#dashboard';
   };
 
@@ -1249,13 +1423,26 @@ export default function StudentHubMobileDashboard() {
               </motion.div>
             )}
             {activeView === 'tasks' && <TasksView key="tasks" assignments={assignments} filter={taskFilter} onFilterChange={setTaskFilter} connected={data.connected} onConnect={connectCanvas} />}
-            {activeView === 'calendar' && <CalendarView key="calendar" calendarView={calendarView} onViewChange={setCalendarView} assignments={assignments} />}
-            {activeView === 'study' && <StudyView key="study" studyMode={studyMode} onModeChange={setStudyMode} onRunningChange={setStudyRunning} />}
+            {activeView === 'calendar' && <CalendarView key="calendar" calendarView={calendarView} onViewChange={setCalendarView} assignments={assignments} savedEvents={data.events} />}
+            {activeView === 'study' && (
+              <StudyView
+                key="study"
+                studyMode={studyMode}
+                onModeChange={setStudyMode}
+                onRunningChange={setStudyRunning}
+                assignments={assignments}
+                initialTasks={data.studyTasks}
+                initialHistory={data.studyHistory}
+                initialNote={data.studyNote}
+              />
+            )}
             {!PRIMARY_VIEWS.includes(activeView) && (
               <SecondaryView
                 key={activeView}
                 view={activeView}
                 announcements={data.announcements}
+                grades={data.grades}
+                links={data.links}
                 connected={data.connected}
                 onConnect={connectCanvas}
               />

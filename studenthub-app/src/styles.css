@@ -1279,6 +1279,20 @@ a:focus-visible {
   accent-color: #7892ff;
 }
 
+.study-task-row.done span {
+  opacity: 0.58;
+  text-decoration: line-through;
+}
+
+.study-empty-copy {
+  margin: auto;
+  padding: 34px 12px;
+  color: #7581a2;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  text-align: center;
+}
+
 .focus-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1440,12 +1454,6 @@ a:focus-visible {
   border-color: rgba(123, 147, 239, 0.48);
 }
 
-.study-settings-note {
-  margin: 13px 2px 0;
-  color: #65718f;
-  font-size: 0.61rem;
-}
-
 .sheet-done-button {
   width: 100%;
   min-height: 49px;
@@ -1484,6 +1492,21 @@ a:focus-visible {
     radial-gradient(230px 210px at 50% 34%, rgba(111, 82, 211, 0.18), transparent 68%),
     linear-gradient(155deg, rgba(20, 25, 48, 0.95), rgba(9, 11, 24, 0.97));
   box-shadow: 0 24px 56px rgba(0, 0, 0, 0.3);
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.study-deck-card:active {
+  cursor: grabbing;
+}
+
+.deck-carousel {
+  overflow: hidden;
+}
+
+.deck-empty {
+  cursor: default;
 }
 
 .deck-orbit {
@@ -1513,6 +1536,44 @@ a:focus-visible {
   font-size: 0.7rem;
 }
 
+.deck-next-card {
+  width: min(100%, 280px);
+  margin-top: 24px;
+  padding: 15px 17px;
+  border: 1px solid rgba(111, 132, 210, 0.16);
+  border-radius: 17px;
+  background: rgba(7, 10, 22, 0.48);
+}
+
+.deck-next-card span,
+.deck-next-card strong,
+.deck-next-card small {
+  display: block;
+}
+
+.deck-next-card span {
+  color: #7180a7;
+  font-size: 0.56rem;
+  font-weight: 750;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.deck-next-card strong {
+  margin-top: 8px;
+  overflow: hidden;
+  color: #e6ebff;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deck-next-card small {
+  margin-top: 5px;
+  color: #7784aa;
+  font-size: 0.61rem;
+}
+
 .deck-progress {
   width: min(100%, 230px);
   height: 5px;
@@ -1528,6 +1589,50 @@ a:focus-visible {
   border-radius: inherit;
   background: linear-gradient(90deg, #6d8bff, #9b69e7);
   box-shadow: 0 0 12px rgba(109, 139, 255, 0.5);
+}
+
+.deck-navigation {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 12px;
+  margin-top: 17px;
+}
+
+.deck-navigation > button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  color: #9dabd7;
+  border: 1px solid rgba(108, 128, 201, 0.18);
+  border-radius: 13px;
+  background: rgba(13, 17, 32, 0.72);
+}
+
+.deck-navigation > button:active {
+  transform: scale(0.95);
+}
+
+.deck-dots {
+  display: flex;
+  min-width: 0;
+  justify-content: center;
+  gap: 7px;
+}
+
+.deck-dots button {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border-radius: 999px;
+  background: #39425e;
+  transition: width 180ms ease, background-color 180ms ease;
+}
+
+.deck-dots button.active {
+  width: 22px;
+  background: #8299ff;
 }
 
 .secondary-list {
@@ -1584,6 +1689,166 @@ a:focus-visible {
   margin-top: auto;
   padding: 0 15px;
   font-size: 0.7rem;
+}
+
+:root[data-theme="light"] {
+  color: #20263a;
+  background: #f1f3fb;
+  color-scheme: light;
+  --task-row-surface: rgba(255, 255, 255, 0.8);
+  --task-row-border: rgba(71, 86, 137, 0.15);
+  --task-title: #20263a;
+  --task-meta: #6c7591;
+  --pager-surface: rgba(255, 255, 255, 0.82);
+  --pager-border: rgba(71, 86, 137, 0.16);
+  --pager-text: #4c587c;
+  --pager-muted: #747d98;
+  --pager-hover: rgba(92, 119, 226, 0.1);
+  --pager-accent: #526fd8;
+  --pager-accent-border: rgba(82, 111, 216, 0.28);
+}
+
+:root[data-theme="light"] body {
+  background:
+    radial-gradient(900px 620px at 50% -18%, rgba(100, 124, 226, 0.14), transparent 61%),
+    #f1f3fb;
+}
+
+:root[data-theme="light"] .studenthub-main {
+  background:
+    radial-gradient(560px 400px at 115% 8%, rgba(130, 94, 207, 0.1), transparent 65%),
+    radial-gradient(620px 420px at -15% 32%, rgba(75, 109, 218, 0.1), transparent 67%),
+    linear-gradient(180deg, #f7f8fd 0%, #f1f3fb 100%);
+}
+
+:root[data-theme="light"] .menu-button,
+:root[data-theme="light"] .drawer-close,
+:root[data-theme="light"] .study-settings-button {
+  color: #52607f;
+  border-color: rgba(66, 82, 135, 0.16);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 8px 24px rgba(60, 74, 119, 0.1);
+}
+
+:root[data-theme="light"] .dashboard-intro h1,
+:root[data-theme="light"] .view-heading h1,
+:root[data-theme="light"] .study-heading h1,
+:root[data-theme="light"] .section-card-head h2,
+:root[data-theme="light"] .empty-deadlines h3,
+:root[data-theme="light"] .study-secondary-panel > h2,
+:root[data-theme="light"] .secondary-row h2 {
+  color: #1f263a;
+}
+
+:root[data-theme="light"] .dashboard-intro p,
+:root[data-theme="light"] .view-heading p,
+:root[data-theme="light"] .study-heading p,
+:root[data-theme="light"] .empty-deadlines p,
+:root[data-theme="light"] .secondary-row p,
+:root[data-theme="light"] .study-empty-copy {
+  color: #68738f;
+}
+
+:root[data-theme="light"] .stat-card-mobile,
+:root[data-theme="light"] .section-card,
+:root[data-theme="light"] .study-secondary-panel {
+  border-color: rgba(71, 86, 137, 0.13);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 14px 34px rgba(70, 81, 120, 0.09);
+}
+
+:root[data-theme="light"] .view-mode-tabs,
+:root[data-theme="light"] .study-tabs,
+:root[data-theme="light"] .timer-mode-switch {
+  border-color: rgba(71, 86, 137, 0.14);
+  background: rgba(220, 225, 241, 0.52);
+}
+
+:root[data-theme="light"] .view-mode-tabs button,
+:root[data-theme="light"] .study-tabs button,
+:root[data-theme="light"] .timer-mode-switch button {
+  color: #727c98;
+}
+
+:root[data-theme="light"] .view-mode-tabs button.active,
+:root[data-theme="light"] .study-tabs button.active,
+:root[data-theme="light"] .timer-mode-switch button.active {
+  color: #33446f;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: inset 0 0 0 1px rgba(91, 112, 185, 0.13), 0 5px 15px rgba(65, 79, 128, 0.08);
+}
+
+:root[data-theme="light"] .session-setup-summary,
+:root[data-theme="light"] .study-task-row,
+:root[data-theme="light"] .focus-metrics div,
+:root[data-theme="light"] .secondary-row,
+:root[data-theme="light"] .deck-next-card,
+:root[data-theme="light"] .deck-navigation > button {
+  color: #596581;
+  border-color: rgba(71, 86, 137, 0.13);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+:root[data-theme="light"] .session-setup-summary strong,
+:root[data-theme="light"] .focus-metrics strong,
+:root[data-theme="light"] .deck-next-card strong,
+:root[data-theme="light"] .timer-readout strong {
+  color: #28324b;
+}
+
+:root[data-theme="light"] .study-deck-card {
+  border-color: rgba(77, 94, 153, 0.17);
+  background:
+    radial-gradient(230px 210px at 50% 34%, rgba(111, 82, 211, 0.1), transparent 68%),
+    linear-gradient(155deg, rgba(255, 255, 255, 0.9), rgba(235, 238, 249, 0.96));
+  box-shadow: 0 24px 56px rgba(71, 83, 126, 0.13);
+}
+
+:root[data-theme="light"] .study-deck-card h2 {
+  color: #222b42;
+}
+
+:root[data-theme="light"] .study-deck-card p,
+:root[data-theme="light"] .deck-next-card span,
+:root[data-theme="light"] .deck-next-card small {
+  color: #68748f;
+}
+
+:root[data-theme="light"] .study-secondary-panel textarea,
+:root[data-theme="light"] .sheet-field input,
+:root[data-theme="light"] .timer-profile-select select {
+  color: #28324b;
+  border-color: rgba(71, 86, 137, 0.16);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+:root[data-theme="light"] .study-sheet {
+  color: #29334c;
+  border-color: rgba(71, 86, 137, 0.16);
+  background: #f7f8fd;
+  box-shadow: 0 -25px 70px rgba(50, 61, 101, 0.18);
+}
+
+:root[data-theme="light"] .study-sheet-header h2 {
+  color: #20283e;
+}
+
+:root[data-theme="light"] .drawer-panel {
+  color: #26304a;
+  border-color: rgba(71, 86, 137, 0.18);
+  background:
+    radial-gradient(350px 280px at 5% 0%, rgba(89, 111, 229, 0.13), transparent 68%),
+    rgba(248, 249, 253, 0.98);
+  box-shadow: 30px 0 80px rgba(51, 62, 99, 0.2);
+}
+
+:root[data-theme="light"] .drawer-link {
+  color: #68738f;
+}
+
+:root[data-theme="light"] .drawer-link.active {
+  color: #263659;
+  background: rgba(93, 120, 239, 0.1);
 }
 
 @media (min-width: 560px) {
