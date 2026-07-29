@@ -36,6 +36,7 @@ body {
   min-width: 320px;
   min-height: 100dvh;
   overflow-x: hidden;
+  overscroll-behavior-y: none;
   background:
     radial-gradient(1000px 700px at 50% -18%, rgba(82, 105, 223, 0.19), transparent 61%),
     #05060c;
@@ -56,6 +57,72 @@ a:focus-visible {
   position: relative;
   min-height: 100dvh;
   isolation: isolate;
+}
+
+.cards-screen {
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.cards-screen .studenthub-main {
+  display: flex;
+  height: 100dvh;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cards-screen .mobile-topbar {
+  flex: 0 0 auto;
+}
+
+.cards-screen .content-wrap {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  padding-top: clamp(10px, 2dvh, 20px);
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+.cards-screen .study-view {
+  height: 100%;
+  min-height: 0;
+  gap: clamp(10px, 2dvh, 18px);
+}
+
+.cards-screen .deck-carousel {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.cards-screen .study-deck-card {
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: clamp(16px, 3dvh, 30px);
+}
+
+.cards-screen .deck-orbit {
+  width: clamp(58px, 10dvh, 92px);
+  height: clamp(58px, 10dvh, 92px);
+  margin-bottom: clamp(10px, 2.5dvh, 27px);
+  border-radius: clamp(20px, 3.5dvh, 31px);
+}
+
+.cards-screen .deck-next-card {
+  margin-top: clamp(12px, 2dvh, 24px);
+  padding: clamp(10px, 1.8dvh, 15px) 17px;
+}
+
+.cards-screen .deck-progress {
+  margin-top: clamp(12px, 2dvh, 25px);
+}
+
+.cards-screen .deck-navigation {
+  flex: 0 0 auto;
+  margin-top: clamp(8px, 1.5dvh, 17px);
 }
 
 .studenthub-main {
@@ -1493,7 +1560,7 @@ a:focus-visible {
     linear-gradient(155deg, rgba(20, 25, 48, 0.95), rgba(9, 11, 24, 0.97));
   box-shadow: 0 24px 56px rgba(0, 0, 0, 0.3);
   cursor: grab;
-  touch-action: pan-y;
+  touch-action: none;
   user-select: none;
 }
 
@@ -1503,6 +1570,7 @@ a:focus-visible {
 
 .deck-carousel {
   overflow: hidden;
+  touch-action: none;
 }
 
 .deck-empty {

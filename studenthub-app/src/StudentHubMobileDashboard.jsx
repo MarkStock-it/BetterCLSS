@@ -1110,8 +1110,10 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, init
                 exit={{ opacity: 0, x: -28, scale: 0.97 }}
                 transition={SPRING}
                 drag="x"
+                dragDirectionLock
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={0.16}
+                dragMomentum={false}
                 onDragEnd={(_, info) => {
                   if (info.offset.x < -55 || info.velocity.x < -450) changeDeck(1);
                   if (info.offset.x > 55 || info.velocity.x > 450) changeDeck(-1);
@@ -1354,7 +1356,11 @@ export default function StudentHubMobileDashboard() {
   const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   return (
-    <div className={`studenthub-shell ${activeView === 'study' && studyRunning ? 'focus-session-active' : ''}`}>
+    <div className={[
+      'studenthub-shell',
+      activeView === 'study' && studyRunning ? 'focus-session-active' : '',
+      activeView === 'study' && studyMode === 'cards' ? 'cards-screen' : ''
+    ].filter(Boolean).join(' ')}>
       <div
         className="edge-swipe-zone"
         onPointerDown={handleEdgeDown}
