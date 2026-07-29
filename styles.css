@@ -3747,3 +3747,10 @@ input[type="password"] { letter-spacing: 0.1em; }
     transition-duration: 0.01ms !important;
   }
 }
+@media (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
