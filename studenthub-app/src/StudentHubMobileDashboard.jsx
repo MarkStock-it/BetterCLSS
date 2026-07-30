@@ -209,6 +209,11 @@ function formatDuration(seconds) {
   return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
 }
 
+function formatTimerValue(seconds) {
+  const safeSeconds = Math.max(0, Math.round(Number(seconds) || 0));
+  return `${String(Math.floor(safeSeconds / 60)).padStart(2, '0')}:${String(safeSeconds % 60).padStart(2, '0')}`;
+}
+
 function buildStudyStats(history) {
   const safeHistory = Array.isArray(history) ? history : [];
   const currentWeek = weekStartKey();
@@ -1002,6 +1007,7 @@ const STUDY_DURATION_PROFILES = {
   Balanced: DEFAULT_STUDY_DURATIONS,
   Deep: { work: 50, break: 10, long: 20 }
 };
+const MODE_CAROUSEL_SPRING = { type: 'spring', stiffness: 420, damping: 34, mass: 0.82 };
 
 function readStudyDurations() {
   try {
@@ -1016,6 +1022,25 @@ function readStudyDurations() {
     )) || DEFAULT_STUDY_DURATIONS;
   } catch {
     return DEFAULT_STUDY_DURATIONS;
+  }
+}
+
+function readCustomSessions() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('bclss_custom_sessions') || '[]');
+    return Array.isArray(stored)
+      ? stored
+        .map((session) => ({
+          id: String(session.id || ''),
+          label: String(session.label || '').trim().slice(0, 40),
+          minutes: Math.max(1, Math.min(120, Number(session.minutes) || 25)),
+          custom: true,
+          icon: 'tag'
+        }))
+        .filter((session) => session.id && session.label)
+      : [];
+  } catch {
+    return [];
   }
 }
 
@@ -1064,6 +1089,198 @@ function StudySheet({ open, title, detail, onClose, children }) {
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+function TimerModeCarousel({ sessions, activeId, onSelect, onAdd, onEdit, editingDisabled = false }) {
+  const reduceMotion = useReducedMotion();
+  const viewportRef = useRef(null);
+  const itemRefs = useRef([]);
+  const draggedRef = useRef(false);
+  const trackX = useMotionValue(0);
+  const [metrics, setMetrics] = useState({ width: 280, cardWidth: 208, gap: 12 });
+  const activeIndex = Math.max(0, sessions.findIndex((session) => session.id === activeId));
+  const stride = metrics.cardWidth + metrics.gap;
+  const inset = (metrics.width - metrics.cardWidth) / 2;
+  const addIndex = sessions.length;
+  const positionForIndex = (index) => inset - (index * stride);
+
+  const settleAt = (index, animateSettle = true) => {
+    const target = positionForIndex(Math.max(0, Math.min(addIndex, index)));
+    if (reduceMotion || !animateSettle) {
+      trackX.set(target);
+      return;
+    }
+    animate(trackX, target, MODE_CAROUSEL_SPRING);
+  };
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return undefined;
+    const measure = () => {
+      const width = viewport.getBoundingClientRect().width || 280;
+      setMetrics({
+        width,
+        cardWidth: Math.min(224, Math.max(188, width * 0.76)),
+        gap: 12
+      });
+    };
+    measure();
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
+    observer?.observe(viewport);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
+
+  useEffect(() => {
+    settleAt(activeIndex);
+  }, [activeIndex, metrics.width, metrics.cardWidth]);
+
+  const selectIndex = (index, { focus = false } = {}) => {
+    const safeIndex = Math.max(0, Math.min(addIndex, index));
+    if (safeIndex === addIndex) {
+      settleAt(activeIndex);
+      onAdd();
+    } else {
+      onSelect(sessions[safeIndex]);
+      settleAt(safeIndex);
+    }
+    if (focus) window.requestAnimationFrame(() => itemRefs.current[safeIndex]?.focus());
+  };
+
+  const handleKeyDown = (event, index) => {
+    let nextIndex = null;
+    if (event.key === 'ArrowRight') nextIndex = Math.min(addIndex, index + 1);
+    if (event.key === 'ArrowLeft') nextIndex = Math.max(0, index - 1);
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = addIndex;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    if (nextIndex < addIndex) {
+      onSelect(sessions[nextIndex]);
+      settleAt(nextIndex);
+    } else {
+      settleAt(nextIndex);
+    }
+    window.requestAnimationFrame(() => itemRefs.current[nextIndex]?.focus());
+  };
+
+  const handleDragEnd = (_, info) => {
+    const rawIndex = Math.round((inset - trackX.get()) / stride);
+    const flickDirection = info.velocity.x < -460 ? 1 : info.velocity.x > 460 ? -1 : 0;
+    const intendedIndex = rawIndex === activeIndex && flickDirection
+      ? activeIndex + flickDirection
+      : rawIndex;
+    const nextIndex = Math.max(0, Math.min(addIndex, intendedIndex));
+    if (nextIndex === addIndex) {
+      settleAt(activeIndex);
+      onAdd();
+    } else {
+      onSelect(sessions[nextIndex]);
+      settleAt(nextIndex);
+    }
+    window.setTimeout(() => {
+      draggedRef.current = false;
+    }, 0);
+  };
+
+  return (
+    <div className="timer-mode-carousel" role="region" aria-roledescription="carousel" aria-label="Timer sessions">
+      <div className="timer-mode-viewport" ref={viewportRef}>
+        <motion.div
+          className="timer-mode-track"
+          style={{ x: trackX, '--mode-card-width': `${metrics.cardWidth}px`, gap: `${metrics.gap}px` }}
+          drag={reduceMotion ? false : 'x'}
+          dragConstraints={{
+            left: positionForIndex(addIndex),
+            right: positionForIndex(0)
+          }}
+          dragElastic={0.16}
+          dragMomentum={false}
+          onDragStart={() => {
+            draggedRef.current = true;
+          }}
+          onDragEnd={handleDragEnd}
+        >
+          {sessions.map((session, index) => (
+            <div className="timer-mode-card-wrap" key={session.id}>
+              <button
+                ref={(element) => {
+                  itemRefs.current[index] = element;
+                }}
+                type="button"
+                className={`timer-mode-card ${session.custom ? 'custom' : 'built-in'} ${session.id === activeId ? 'active' : ''}`}
+                aria-pressed={session.id === activeId}
+                aria-label={`${session.label}, ${session.minutes} minutes${session.custom ? ', custom session' : ''}`}
+                tabIndex={session.id === activeId ? 0 : -1}
+                onFocus={() => settleAt(index)}
+                onClick={() => {
+                  if (!draggedRef.current) selectIndex(index);
+                }}
+                onKeyDown={(event) => handleKeyDown(event, index)}
+              >
+                <span className="timer-mode-card-icon"><Glyph name={session.icon} className="h-[18px] w-[18px]" /></span>
+                <span className="timer-mode-card-copy">
+                  <strong>{session.label}</strong>
+                  <small>{session.minutes} min</small>
+                </span>
+                <span className="timer-mode-card-kind">{session.custom ? 'Custom' : 'Preset'}</span>
+              </button>
+              {session.custom && (
+                <button
+                  type="button"
+                  className="timer-mode-edit"
+                  aria-label={`Edit ${session.label}`}
+                  tabIndex={session.id === activeId ? 0 : -1}
+                  disabled={editingDisabled}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onFocus={() => settleAt(index)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onEdit(session);
+                  }}
+                >
+                  <Glyph name="settings" className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          ))}
+          <div className="timer-mode-card-wrap add" key="add-session">
+            <button
+              ref={(element) => {
+                itemRefs.current[addIndex] = element;
+              }}
+              type="button"
+              className="timer-mode-card add"
+              aria-label="Add custom timer session"
+              tabIndex="0"
+              onFocus={() => settleAt(addIndex)}
+              onClick={() => {
+                if (!draggedRef.current) {
+                  settleAt(activeIndex);
+                  onAdd();
+                }
+              }}
+              onKeyDown={(event) => handleKeyDown(event, addIndex)}
+            >
+              <span className="timer-mode-add-icon" aria-hidden="true">+</span>
+              <span className="timer-mode-card-copy">
+                <strong>New session</strong>
+                <small>Name your rhythm</small>
+              </span>
+            </button>
+          </div>
+        </motion.div>
+      </div>
+      {sessions.length > 3 && (
+        <div className="timer-mode-dots" role="img" aria-label={`Session ${activeIndex + 1} of ${sessions.length}`}>
+          {sessions.map((session) => <i className={session.id === activeId ? 'active' : ''} key={session.id} />)}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1288,6 +1505,7 @@ function GestureTimerRing({
   formattedTime,
   remainingRatio,
   activeMode,
+  blocked = false,
   onToggle,
   onReset,
   onScrub
@@ -1338,7 +1556,7 @@ function GestureTimerRing({
   };
 
   const handlePointerDown = (event) => {
-    if (event.button !== 0) return;
+    if (blocked || event.button !== 0) return;
     event.preventDefault();
     surfaceRef.current?.setPointerCapture(event.pointerId);
     const startAngle = angleAtPoint(event.clientX, event.clientY);
@@ -1424,7 +1642,9 @@ function GestureTimerRing({
     return () => window.clearTimeout(timeout);
   }, [showHint]);
 
-  const stateLabel = resetCommitted
+  const stateLabel = blocked
+    ? 'Choose above'
+    : resetCommitted
     ? 'Reset'
     : holding
       ? 'Keep holding'
@@ -1438,7 +1658,7 @@ function GestureTimerRing({
     <div className="timer-ring-shell">
       <div
         ref={surfaceRef}
-        className={`timer-hero timer-ring-control ${running ? 'is-running' : 'is-paused'} ${holding ? 'is-holding' : ''} ${scrubbing ? 'is-scrubbing' : ''} ${resetCommitted ? 'is-reset' : ''}`}
+        className={`timer-hero timer-ring-control ${running ? 'is-running' : 'is-paused'} ${holding ? 'is-holding' : ''} ${scrubbing ? 'is-scrubbing' : ''} ${resetCommitted ? 'is-reset' : ''} ${blocked ? 'is-blocked' : ''}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={(event) => finishPointerGesture(event)}
@@ -1520,7 +1740,7 @@ function GestureTimerRing({
         >
           <span>{stateLabel}</span>
           <strong>{formattedTime}</strong>
-          <small>{resetCommitted ? 'Timer restored' : holding ? 'Release to cancel' : activeMode === 'long' ? 'Long break' : activeMode}</small>
+          <small>{blocked ? 'Resume or discard' : resetCommitted ? 'Timer restored' : holding ? 'Release to cancel' : activeMode === 'long' ? 'Long break' : activeMode}</small>
         </motion.div>
         <AnimatePresence>
           {scrubTick && scrubbing && (
@@ -1539,7 +1759,7 @@ function GestureTimerRing({
       </div>
 
       <AnimatePresence>
-        {showHint && (
+        {showHint && !blocked && (
           <motion.div
             className="timer-gesture-hint"
             initial={reduceMotion ? false : { opacity: 0, y: 6 }}
@@ -1555,11 +1775,11 @@ function GestureTimerRing({
       </AnimatePresence>
 
       <div className="timer-accessible-controls" role="group" aria-label="Timer controls">
-        <button type="button" className="timer-accessible-control timer-primary-control" onClick={onToggle}>
+        <button type="button" className="timer-accessible-control timer-primary-control" onClick={onToggle} disabled={blocked}>
           <Glyph name={running ? 'pause' : 'play'} className="h-4 w-4" />
           {running ? 'Pause timer' : remainingRatio < 1 && timeLeft > 0 ? 'Resume timer' : 'Start timer'}
         </button>
-        <button type="button" className="timer-accessible-control timer-reset-control" onClick={onReset}>
+        <button type="button" className="timer-accessible-control timer-reset-control" onClick={onReset} disabled={blocked}>
           <Glyph name="reset" className="h-4 w-4" />
           Reset timer
         </button>
@@ -1578,9 +1798,12 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
   const [activeTab, setActiveTab] = useState('timer');
   const [activeMode, setActiveMode] = useState('work');
   const [durations, setDurations] = useState(readStudyDurations);
+  const [customSessions, setCustomSessions] = useState(readCustomSessions);
   const [timeLeft, setTimeLeft] = useState(() => readStudyDurations().work * 60);
   const [timerDuration, setTimerDuration] = useState(() => readStudyDurations().work * 60);
   const [running, setRunning] = useState(false);
+  const [interruptedSession, setInterruptedSession] = useState(null);
+  const [modeEditor, setModeEditor] = useState(null);
   const [setupOpen, setSetupOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sessionTitle, setSessionTitle] = useState(() => localStorage.getItem('bclss_study_session_title') || '');
@@ -1590,7 +1813,7 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
   const noteReady = useRef(false);
 
   const remainingRatio = Math.max(0, Math.min(1, timeLeft / timerDuration));
-  const formattedTime = `${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}`;
+  const formattedTime = formatTimerValue(timeLeft);
   const durationProfile = Object.entries(STUDY_DURATION_PROFILES).find(([, profile]) => (
     profile.work === durations.work && profile.break === durations.break && profile.long === durations.long
   ))?.[0] || 'Balanced';
@@ -1600,10 +1823,21 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
     : 0;
   const nextCard = activeDeck?.cards.find((card) => !card.done) || activeDeck?.cards[0];
   const studyStats = useMemo(() => buildStudyStats(studyHistory), [studyHistory]);
+  const timerSessions = useMemo(() => ([
+    { id: 'work', label: 'Work', minutes: durations.work, custom: false, icon: 'clock' },
+    { id: 'break', label: 'Break', minutes: durations.break, custom: false, icon: 'smile' },
+    { id: 'long', label: 'Long break', minutes: durations.long, custom: false, icon: 'spark' },
+    ...customSessions
+  ]), [customSessions, durations]);
+  const activeTimerSession = timerSessions.find((session) => session.id === activeMode) || timerSessions[0];
 
   useEffect(() => {
     localStorage.setItem('bclss_study_durations', JSON.stringify(durations));
   }, [durations]);
+
+  useEffect(() => {
+    localStorage.setItem('bclss_custom_sessions', JSON.stringify(customSessions));
+  }, [customSessions]);
 
   useEffect(() => {
     if (sessionTitle) localStorage.setItem('bclss_study_session_title', sessionTitle);
@@ -1652,7 +1886,7 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
         if (current <= 1) {
           window.clearInterval(timer);
           setRunning(false);
-          if (activeMode === 'work') {
+          if (activeMode === 'work' || activeTimerSession.custom) {
             const now = new Date();
             const entry = {
               id: now.getTime(),
@@ -1683,15 +1917,16 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
       });
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [running, activeMode, timerDuration, sessionNote, sessionTitle]);
+  }, [running, activeMode, activeTimerSession.custom, timerDuration, sessionNote, sessionTitle]);
 
   useEffect(() => {
-    if (!setupOpen && !settingsOpen) return undefined;
+    if (!setupOpen && !settingsOpen && !modeEditor) return undefined;
     const previousOverflow = document.body.style.overflow;
     const closeOnEscape = (event) => {
       if (event.key !== 'Escape') return;
       setSetupOpen(false);
       setSettingsOpen(false);
+      setModeEditor(null);
     };
     document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', closeOnEscape);
@@ -1699,21 +1934,73 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', closeOnEscape);
     };
-  }, [setupOpen, settingsOpen]);
+  }, [setupOpen, settingsOpen, modeEditor]);
 
-  const chooseMode = (mode) => {
-    const nextDuration = durations[mode] * 60;
-    setRunning(false);
-    setActiveMode(mode);
+  const chooseMode = (session) => {
+    if (!session || session.id === activeMode) return;
+    if (running) {
+      setInterruptedSession({
+        id: activeMode,
+        label: activeTimerSession.label,
+        timeLeft,
+        duration: timerDuration
+      });
+      setRunning(false);
+    }
+    const nextDuration = session.minutes * 60;
+    setActiveMode(session.id);
     setTimerDuration(nextDuration);
     setTimeLeft(nextDuration);
+  };
+
+  const resumeInterruptedSession = () => {
+    if (!interruptedSession) return;
+    setActiveMode(interruptedSession.id);
+    setTimerDuration(interruptedSession.duration);
+    setTimeLeft(interruptedSession.timeLeft);
+    setInterruptedSession(null);
+    setRunning(true);
+  };
+
+  const openModeEditor = (session = null) => {
+    setModeEditor(session
+      ? { id: session.id, label: session.label, minutes: session.minutes }
+      : { id: '', label: '', minutes: 25 });
+  };
+
+  const saveCustomSession = (event) => {
+    event.preventDefault();
+    if (!modeEditor) return;
+    const label = modeEditor.label.trim().slice(0, 40);
+    const minutes = Math.max(1, Math.min(120, Number(modeEditor.minutes) || 25));
+    if (!label) return;
+    const savedSession = {
+      id: modeEditor.id || `custom-${Date.now()}`,
+      label,
+      minutes,
+      custom: true,
+      icon: 'tag'
+    };
+    setCustomSessions((current) => (
+      modeEditor.id
+        ? current.map((session) => session.id === modeEditor.id ? savedSession : session)
+        : [...current, savedSession]
+    ));
+    setModeEditor(null);
+    if (!modeEditor.id) {
+      chooseMode(savedSession);
+    } else if (activeMode === savedSession.id && !running) {
+      const nextDuration = savedSession.minutes * 60;
+      setTimerDuration(nextDuration);
+      setTimeLeft(nextDuration);
+    }
   };
 
   const applyDurationProfile = (profileName) => {
     const profile = STUDY_DURATION_PROFILES[profileName] || DEFAULT_STUDY_DURATIONS;
     setDurations(profile);
     if (!running) {
-      const nextDuration = profile[activeMode] * 60;
+      const nextDuration = (activeTimerSession.custom ? activeTimerSession.minutes : profile[activeMode]) * 60;
       setTimerDuration(nextDuration);
       setTimeLeft(nextDuration);
     }
@@ -1807,29 +2094,48 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
                 <span className="session-summary-icon"><Glyph name="tag" className="h-4 w-4" /></span>
                 <span>
                   <strong>{sessionTitle || 'Focus session'}</strong>
-                  <small>{Math.round(timerDuration / 60)} minute focus</small>
+                  <small>{Math.round(timerDuration / 60)} minute {activeTimerSession.label.toLowerCase()}</small>
                 </span>
                 <Glyph name="chevron" className="ml-auto h-4 w-4 -rotate-90" />
               </motion.button>
 
-              <motion.div className="timer-mode-switch study-dimmable" animate={{ opacity: running ? 0.12 : 1 }} transition={SPRING}>
-                {[
-                  ['work', 'Work'],
-                  ['break', 'Break'],
-                  ['long', 'Long break']
-                ].map(([id, label]) => (
-                  <button type="button" className={activeMode === id ? 'active' : ''} onClick={() => chooseMode(id)} key={id}>
-                    {label}
-                  </button>
-                ))}
-              </motion.div>
+              <TimerModeCarousel
+                sessions={timerSessions}
+                activeId={activeMode}
+                onSelect={chooseMode}
+                onAdd={() => openModeEditor()}
+                onEdit={openModeEditor}
+                editingDisabled={running}
+              />
+
+              <AnimatePresence>
+                {interruptedSession && (
+                  <motion.div
+                    className="timer-interruption"
+                    role="status"
+                    initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -5, scale: 0.98 }}
+                    transition={SPRING}
+                  >
+                    <span className="timer-interruption-icon"><Glyph name="pause" className="h-4 w-4" /></span>
+                    <span>
+                      <strong>{interruptedSession.label} paused</strong>
+                      <small>{formatTimerValue(interruptedSession.timeLeft)} remains</small>
+                    </span>
+                    <button type="button" onClick={resumeInterruptedSession}>Resume</button>
+                    <button type="button" className="discard" onClick={() => setInterruptedSession(null)}>Discard</button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <GestureTimerRing
                 running={running}
                 timeLeft={timeLeft}
                 formattedTime={formattedTime}
                 remainingRatio={remainingRatio}
-                activeMode={activeMode}
+                activeMode={activeTimerSession.label}
+                blocked={Boolean(interruptedSession)}
                 onToggle={toggleTimer}
                 onReset={resetTimer}
                 onScrub={scrubTimer}
@@ -2025,6 +2331,45 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
           </span>
         </label>
         <button type="button" className="sheet-done-button" onClick={() => setSettingsOpen(false)}>Done</button>
+      </StudySheet>
+
+      <StudySheet
+        open={Boolean(modeEditor)}
+        title={modeEditor?.id ? 'Edit custom session' : 'New custom session'}
+        detail="Give this timer a name and duration."
+        onClose={() => setModeEditor(null)}
+      >
+        {modeEditor && (
+          <form className="mode-editor-form" onSubmit={saveCustomSession}>
+            <div className="sheet-field">
+              <label htmlFor="custom-session-name">Session name</label>
+              <input
+                id="custom-session-name"
+                value={modeEditor.label}
+                maxLength="40"
+                autoFocus
+                placeholder="Reading sprint"
+                onChange={(event) => setModeEditor((current) => ({ ...current, label: event.target.value }))}
+              />
+            </div>
+            <div className="sheet-field">
+              <label htmlFor="custom-session-duration">Duration in minutes</label>
+              <input
+                id="custom-session-duration"
+                type="number"
+                min="1"
+                max="120"
+                inputMode="numeric"
+                value={modeEditor.minutes}
+                onChange={(event) => setModeEditor((current) => ({ ...current, minutes: event.target.value }))}
+              />
+            </div>
+            <p className="mode-editor-note">Custom sessions appear after the three fixed presets.</p>
+            <button type="submit" className="sheet-done-button" disabled={!modeEditor.label.trim()}>
+              {modeEditor.id ? 'Save changes' : 'Add session'}
+            </button>
+          </form>
+        )}
       </StudySheet>
     </motion.section>
   );
