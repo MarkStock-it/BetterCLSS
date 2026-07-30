@@ -1491,28 +1491,132 @@ a:focus-visible {
 }
 
 .study-tabs {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  min-height: 39px;
-  padding: 3px;
-  border: 1px solid rgba(97, 115, 177, 0.14);
-  border-radius: 13px;
-  background: rgba(12, 15, 29, 0.58);
+  position: relative;
+  width: 100%;
+  min-height: 74px;
+  max-height: 74px;
+  overflow: visible;
+  touch-action: pan-y;
   transition: max-height 320ms ease, margin 320ms ease, padding 320ms ease, border-color 320ms ease;
 }
 
-.study-tabs button {
+.study-blob-tab {
+  position: absolute;
+  top: 32px;
+  display: flex;
   min-width: 0;
-  color: #687493;
-  border-radius: 10px;
-  font-size: 0.64rem;
-  font-weight: 680;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  color: #7783a7;
+  border: 1px solid rgba(110, 129, 196, 0.17);
+  border-radius: 47% 53% 43% 57% / 56% 43% 57% 44%;
+  background: linear-gradient(145deg, rgba(25, 31, 55, 0.94), rgba(13, 16, 32, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 25px rgba(0, 0, 0, 0.2);
+  font-size: 0.62rem;
+  font-weight: 720;
+  line-height: 1;
+  white-space: nowrap;
+  translate: -50% -50%;
+  transform-origin: 50% 70%;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.study-tabs button.active {
-  color: #dfe5ff;
-  background: rgba(104, 129, 231, 0.13);
-  box-shadow: inset 0 0 0 1px rgba(124, 145, 228, 0.12);
+.study-blob-tab:nth-of-type(2) {
+  border-radius: 56% 44% 51% 49% / 45% 55% 42% 58%;
+}
+
+.study-blob-tab:nth-of-type(3) {
+  border-radius: 44% 56% 58% 42% / 54% 47% 53% 46%;
+}
+
+.study-blob-tab:nth-of-type(4) {
+  border-radius: 52% 48% 45% 55% / 42% 57% 43% 58%;
+}
+
+.study-blob-tab.active {
+  color: #eef2ff;
+  border-color: rgba(142, 162, 244, 0.29);
+  background:
+    radial-gradient(circle at 30% 18%, rgba(197, 241, 148, 0.17), transparent 42%),
+    linear-gradient(145deg, rgba(92, 113, 215, 0.95), rgba(118, 77, 188, 0.94));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    0 12px 28px rgba(68, 83, 179, 0.27);
+}
+
+.study-blob-tabs.is-collapsed .study-blob-tab:not(.active) {
+  pointer-events: none;
+}
+
+.study-blob-tabs.is-expanded .study-blob-tab {
+  flex-direction: column;
+  gap: 3px;
+  padding: 5px 3px;
+}
+
+.study-blob-tab:hover {
+  color: #dce3ff;
+  border-color: rgba(135, 156, 237, 0.32);
+}
+
+.study-blob-tab[data-drag-target="true"] {
+  color: #f4f7ff;
+  border-color: rgba(190, 239, 146, 0.5);
+  background:
+    radial-gradient(circle at 32% 18%, rgba(205, 245, 158, 0.23), transparent 44%),
+    linear-gradient(145deg, rgba(80, 106, 200, 0.98), rgba(99, 72, 169, 0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 0 0 4px rgba(175, 228, 127, 0.08),
+    0 14px 30px rgba(54, 72, 164, 0.32);
+}
+
+.study-blob-tab-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+}
+
+.study-blob-tabs.is-expanded .study-blob-tab-icon {
+  color: #9fb0f3;
+}
+
+.study-blob-tabs.is-expanded .study-blob-tab.active .study-blob-tab-icon,
+.study-blob-tabs.is-expanded .study-blob-tab[data-drag-target="true"] .study-blob-tab-icon {
+  color: #dff4ba;
+}
+
+.study-blob-tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.study-blob-hint {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  color: #55617f;
+  font-size: 0.53rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.study-blob-tabs.is-dragging .study-blob-hint {
+  color: #8294d8;
+}
+
+.study-blob-tab:focus-visible {
+  outline: 2px solid #9bb0ff;
+  outline-offset: 3px;
 }
 
 .timer-workspace {
@@ -2462,24 +2566,55 @@ a:focus-visible {
 }
 
 :root[data-theme="light"] .view-mode-tabs,
-:root[data-theme="light"] .study-tabs,
 :root[data-theme="light"] .timer-mode-switch {
   border-color: rgba(71, 86, 137, 0.14);
   background: rgba(220, 225, 241, 0.52);
 }
 
 :root[data-theme="light"] .view-mode-tabs button,
-:root[data-theme="light"] .study-tabs button,
 :root[data-theme="light"] .timer-mode-switch button {
   color: #727c98;
 }
 
 :root[data-theme="light"] .view-mode-tabs button.active,
-:root[data-theme="light"] .study-tabs button.active,
 :root[data-theme="light"] .timer-mode-switch button.active {
   color: #33446f;
   background: rgba(255, 255, 255, 0.8);
   box-shadow: inset 0 0 0 1px rgba(91, 112, 185, 0.13), 0 5px 15px rgba(65, 79, 128, 0.08);
+}
+
+:root[data-theme="light"] .study-blob-tab {
+  color: #68748f;
+  border-color: rgba(71, 86, 137, 0.15);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(230, 234, 247, 0.94));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    0 10px 25px rgba(62, 76, 119, 0.1);
+}
+
+:root[data-theme="light"] .study-blob-tab.active,
+:root[data-theme="light"] .study-blob-tab[data-drag-target="true"] {
+  color: white;
+  border-color: rgba(91, 111, 194, 0.2);
+  background:
+    radial-gradient(circle at 30% 18%, rgba(207, 242, 159, 0.19), transparent 42%),
+    linear-gradient(145deg, #6b82e4, #8664c3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 12px 28px rgba(76, 91, 167, 0.2);
+}
+
+:root[data-theme="light"] .study-blob-tabs.is-expanded .study-blob-tab-icon {
+  color: #6679be;
+}
+
+:root[data-theme="light"] .study-blob-tabs.is-expanded .study-blob-tab.active .study-blob-tab-icon,
+:root[data-theme="light"] .study-blob-tabs.is-expanded .study-blob-tab[data-drag-target="true"] .study-blob-tab-icon {
+  color: #e3f5c4;
+}
+
+:root[data-theme="light"] .study-blob-hint {
+  color: #8992ab;
 }
 
 :root[data-theme="light"] .session-setup-summary,
