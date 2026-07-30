@@ -113,17 +113,21 @@ assert(
   'StudentHub must use the swipe drawer and page-level controls without a floating launchpad'
 );
 assert(
-  studentHubSource.includes("options={[\n            { value: 'focus', label: 'Focus' },\n            { value: 'cards', label: 'Cards' }") &&
-    studentHubSource.includes("studyMode === 'focus' && (") &&
+  studentHubSource.includes("{ id: 'cards', label: 'Cards', icon: 'study' }") &&
+    studentHubSource.includes('function CardsStudySection') &&
+    !studentHubSource.includes("{ value: 'focus', label: 'Focus' }") &&
     !studentHubSource.includes("{ value: 'database'") &&
     !studentHubSource.includes("{ value: 'algorithms'"),
-  'StudentHub must keep Study Area controls in Focus and course decks inside Cards'
+  'StudentHub must expose Cards as a peer in the five-option Study Area picker'
 );
 assert(
   studentHubSource.includes('buildCourseDecks(assignments, savedDecks)') &&
+    studentHubSource.includes('className="deck-selection-list"') &&
+    studentHubSource.includes("markCard('again')") &&
+    studentHubSource.includes("markCard('got-it')") &&
     studentHubSource.includes('drag="x"') &&
     studentHubSource.includes('onDragEnd={(_, info) => {'),
-  'StudentHub course decks must come from coursework and support horizontal swiping'
+  'StudentHub card review must use coursework decks with accessible review actions and horizontal swiping'
 );
 assert(
   !studentHubSource.includes('function CanvasBanner') &&

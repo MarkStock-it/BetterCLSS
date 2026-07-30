@@ -252,6 +252,10 @@ function buildCourseDecks(assignments, savedDecks = []) {
       title: course,
       cards: smartSort(cards),
       completed: cards.filter((card) => card.done).length,
+      dueToday: cards.filter((card) => {
+        const days = daysUntil(card.due);
+        return !card.done && days !== null && days <= 0;
+      }).length,
       generated: false
     }))
     .sort((a, b) => a.title.localeCompare(b.title));
@@ -263,11 +267,12 @@ function buildCourseDecks(assignments, savedDecks = []) {
       title: card.front,
       answer: card.back,
       done: Boolean(card.done),
-      due: null
+      due: card.due || null
     })) : [],
     completed: Array.isArray(deck.cards) ? deck.cards.filter((card) => card.done).length : 0,
+    dueToday: Array.isArray(deck.cards) ? deck.cards.filter((card) => !card.done).length : 0,
     generated: true
-  })).filter((deck) => deck.cards.length);
+  }));
   return [...generatedDecks, ...courseDecks];
 }
 
@@ -1339,7 +1344,8 @@ const STUDY_AREA_TABS = [
   { id: 'timer', label: 'Timer', icon: 'clock' },
   { id: 'notes', label: 'Notes', icon: 'notes' },
   { id: 'tasks', label: 'Tasks', icon: 'tasks' },
-  { id: 'progress', label: 'Progress', icon: 'progress' }
+  { id: 'progress', label: 'Progress', icon: 'progress' },
+  { id: 'cards', label: 'Cards', icon: 'study' }
 ];
 
 function StudyBlobTabs({ value, onChange }) {
@@ -1366,7 +1372,7 @@ function StudyBlobTabs({ value, onChange }) {
     let nearestDistance = 54;
     STUDY_AREA_TABS.forEach((tab, index) => {
       const distance = Math.hypot(
-        clientX - (wrapperBounds.left + (wrapperBounds.width * (0.125 + (index * 0.25)))),
+        clientX - (wrapperBounds.left + (wrapperBounds.width * ((index + 0.5) / STUDY_AREA_TABS.length))),
         clientY - (wrapperBounds.top + 28)
       );
       if (distance < nearestDistance) {
@@ -1523,8 +1529,8 @@ function StudyBlobTabs({ value, onChange }) {
             onClick={() => handleTabClick(tab.id)}
             onKeyDown={(event) => handleKeyDown(event, tab.id)}
             animate={{
-              left: isExpanded ? `${12.5 + (index * 25)}%` : '50%',
-              width: isExpanded ? 62 : active ? 128 : 48,
+              left: isExpanded ? `${((index + 0.5) / STUDY_AREA_TABS.length) * 100}%` : '50%',
+              width: isExpanded ? 54 : active ? 128 : 48,
               height: isExpanded ? 54 : active ? 50 : 44,
               opacity: isExpanded || active ? 1 : 0,
               scale: isExpanded || active ? 1 : 0.38,
@@ -1547,6 +1553,325 @@ function StudyBlobTabs({ value, onChange }) {
         {isExpanded ? 'Choose a space' : 'Tap or hold'}
       </span>
     </motion.div>
+  );
+}
+
+function CardsStudySection({ decks, onCreateDeck }) {
+  const reduceMotion = useReducedMotion();
+  const draggingRef = useRef(false);
+  const [selectedDeckId, setSelectedDeckId] = useState(null);
+  const [reviewCards, setReviewCards] = useState([]);
+  const [reviewIndex, setReviewIndex] = useState(0);
+  const [cardFlipped, setCardFlipped] = useState(false);
+  const [reviewDirection, setReviewDirection] = useState(0);
+  const [results, setResults] = useState({});
+  const [announcement, setAnnouncement] = useState('');
+  const [reviewLedger, setReviewLedger] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('bclss_card_reviews') || '{}');
+      return saved && typeof saved === 'object' ? saved : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const selectedDeck = decks.find((deck) => deck.id === selectedDeckId) || null;
+  const activeCard = reviewCards[reviewIndex] || null;
+  const reviewComplete = Boolean(selectedDeck && reviewCards.length && reviewIndex >= reviewCards.length);
+  const today = dateKey();
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('bclss_card_reviews', JSON.stringify(reviewLedger));
+    } catch {
+      // Review state remains available for the current session if storage is restricted.
+    }
+  }, [reviewLedger]);
+
+  const cardReviewKey = (deckId, cardId) => `${deckId}:${cardId}`;
+  const dueCountForDeck = (deck) => deck.cards.filter((card) => {
+    if (card.done) return false;
+    const review = reviewLedger[cardReviewKey(deck.id, card.id)];
+    if (review?.date === today) return review.rating !== 'got-it';
+    if (deck.generated) return true;
+    const days = daysUntil(card.due);
+    return days !== null && days <= 0;
+  }).length;
+
+  const startDeck = (deck, cardIds = null) => {
+    setSelectedDeckId(deck.id);
+    const cards = cardIds
+      ? cardIds.map((id) => deck.cards.find((card) => String(card.id) === String(id))).filter(Boolean)
+      : [...deck.cards];
+    setReviewCards(cards);
+    setReviewIndex(0);
+    setCardFlipped(false);
+    setReviewDirection(0);
+    setResults({});
+    setAnnouncement(cards.length ? `${deck.title} review started.` : `${deck.title} has no cards.`);
+  };
+
+  const leaveDeck = () => {
+    setSelectedDeckId(null);
+    setReviewCards([]);
+    setReviewIndex(0);
+    setCardFlipped(false);
+    setResults({});
+    setAnnouncement('Deck list opened.');
+  };
+
+  const markCard = (rating) => {
+    if (!activeCard) return;
+    const direction = rating === 'got-it' ? 1 : -1;
+    const currentNumber = reviewIndex + 1;
+    setReviewDirection(direction);
+    setCardFlipped(false);
+    setResults((current) => ({ ...current, [activeCard.id]: rating }));
+    setReviewLedger((current) => ({
+      ...current,
+      [cardReviewKey(selectedDeck.id, activeCard.id)]: {
+        rating,
+        date: today,
+        reviewedAt: new Date().toISOString()
+      }
+    }));
+    setAnnouncement(`${rating === 'got-it' ? 'Got it' : 'Review again'} marked for card ${currentNumber}.`);
+    setReviewIndex((current) => current + 1);
+  };
+
+  const toggleCard = () => {
+    if (!activeCard || draggingRef.current) return;
+    setCardFlipped((current) => !current);
+    setAnnouncement(cardFlipped ? 'Card front shown.' : 'Card answer shown.');
+  };
+
+  if (!selectedDeck) {
+    return (
+      <motion.section
+        className="cards-workspace"
+        id="study-panel-cards"
+        role="tabpanel"
+        aria-labelledby="study-tab-cards"
+        tabIndex="0"
+        initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={reduceMotion ? { duration: 0 } : SPRING}
+      >
+        <header className="cards-library-heading">
+          <span className="cards-library-mark" aria-hidden="true"><Glyph name="study" className="h-5 w-5" /></span>
+          <div>
+            <span className="eyebrow-mobile">Your library</span>
+            <h2>Choose a deck</h2>
+            <p>Flip, decide, and move through one card at a time.</p>
+          </div>
+        </header>
+
+        {decks.length ? (
+          <div className="deck-selection-list" role="group" aria-label="Available study decks">
+            {decks.map((deck, index) => {
+              const dueCount = dueCountForDeck(deck);
+              return (
+                <motion.button
+                  type="button"
+                  className="deck-selection-row"
+                  onClick={() => startDeck(deck)}
+                  key={deck.id}
+                  initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={reduceMotion ? { duration: 0 } : { ...SPRING, delay: index * 0.035 }}
+                  aria-label={`${deck.title}. ${deck.cards.length} cards. ${dueCount} due for review today.`}
+                >
+                  <span className={`deck-selection-glyph ${deck.generated ? 'generated' : ''}`} aria-hidden="true">
+                    <i /><i /><i />
+                  </span>
+                  <span className="deck-selection-copy">
+                    <strong>{deck.title}</strong>
+                    <small>{deck.cards.length} {deck.cards.length === 1 ? 'card' : 'cards'}</small>
+                  </span>
+                  <span className={`deck-due-count ${dueCount ? '' : 'clear'}`}>
+                    {dueCount ? `${dueCount} due today` : 'Caught up'}
+                  </span>
+                  <Glyph name="arrow" className="deck-selection-arrow h-4 w-4" />
+                </motion.button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="cards-library-empty">
+            <span className="cards-empty-stack" aria-hidden="true"><i /><i /><i /></span>
+            <h2>No decks yet</h2>
+            <p>Create a deck with BetterCLSS AI, then it will appear here ready to review.</p>
+            <button type="button" onClick={onCreateDeck}>Create your first deck</button>
+          </div>
+        )}
+        <span className="sr-only" aria-live="polite">{announcement}</span>
+      </motion.section>
+    );
+  }
+
+  if (!selectedDeck.cards.length) {
+    return (
+      <section
+        className="cards-workspace cards-review-shell"
+        id="study-panel-cards"
+        role="tabpanel"
+        aria-labelledby="study-tab-cards"
+        tabIndex="0"
+      >
+        <button type="button" className="cards-back-button" onClick={leaveDeck}>
+          <Glyph name="arrow" className="h-4 w-4 rotate-180" />
+          All decks
+        </button>
+        <div className="cards-library-empty deck-is-empty">
+          <span className="cards-empty-stack" aria-hidden="true"><i /><i /><i /></span>
+          <h2>{selectedDeck.title} is empty</h2>
+          <p>Add a few question-and-answer cards before starting a review.</p>
+          <button type="button" onClick={onCreateDeck}>Create cards</button>
+        </div>
+      </section>
+    );
+  }
+
+  if (reviewComplete) {
+    const reviewAgainIds = Object.entries(results)
+      .filter(([, rating]) => rating === 'again')
+      .map(([cardId]) => cardId);
+    const gotItCount = Object.values(results).filter((rating) => rating === 'got-it').length;
+    return (
+      <motion.section
+        className="cards-workspace cards-review-shell"
+        id="study-panel-cards"
+        role="tabpanel"
+        aria-labelledby="study-tab-cards"
+        tabIndex="0"
+        initial={reduceMotion ? false : { opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={reduceMotion ? { duration: 0 } : SPRING}
+      >
+        <button type="button" className="cards-back-button" onClick={leaveDeck}>
+          <Glyph name="arrow" className="h-4 w-4 rotate-180" />
+          All decks
+        </button>
+        <div className="cards-session-complete" role="status">
+          <span className="cards-complete-mark" aria-hidden="true"><Glyph name="spark" className="h-7 w-7" /></span>
+          <span className="eyebrow-mobile">Session complete</span>
+          <h2>Deck cleared.</h2>
+          <p>You worked through all {reviewCards.length} cards in {selectedDeck.title}.</p>
+          <div className="cards-session-summary">
+            <span><strong>{gotItCount}</strong><small>Got it</small></span>
+            <span><strong>{reviewAgainIds.length}</strong><small>Review again</small></span>
+          </div>
+          {reviewAgainIds.length > 0 && (
+            <button type="button" className="cards-review-missed" onClick={() => startDeck(selectedDeck, reviewAgainIds)}>
+              Review missed again
+            </button>
+          )}
+          <button type="button" className="cards-finish-button" onClick={leaveDeck}>Back to decks</button>
+        </div>
+      </motion.section>
+    );
+  }
+
+  const remaining = reviewCards.length - reviewIndex - 1;
+  const cardBack = activeCard.answer || [
+    activeCard.due ? `Due ${activeCard.due}` : 'No due date',
+    activeCard.priority ? `${activeCard.priority} priority` : 'Course review item',
+    activeCard.done ? 'Already completed' : 'Still open'
+  ].join(' · ');
+
+  return (
+    <section
+      className="cards-workspace cards-review-shell"
+      id="study-panel-cards"
+      role="tabpanel"
+      aria-labelledby="study-tab-cards"
+      tabIndex="0"
+    >
+      <header className="cards-review-heading">
+        <button type="button" className="cards-back-button" onClick={leaveDeck}>
+          <Glyph name="arrow" className="h-4 w-4 rotate-180" />
+          All decks
+        </button>
+        <span aria-live="polite"><strong>{reviewIndex + 1}</strong> of {reviewCards.length}</span>
+      </header>
+
+      <div className="cards-stack-stage">
+        {remaining > 1 && <span className="cards-stack-layer far" aria-hidden="true" />}
+        {remaining > 0 && <span className="cards-stack-layer near" aria-hidden="true" />}
+        <AnimatePresence initial={false} mode="popLayout">
+          <motion.article
+            className="cards-review-card"
+            key={activeCard.id}
+            drag={reduceMotion ? false : 'x'}
+            dragDirectionLock
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.72}
+            dragMomentum={false}
+            onDragStart={() => {
+              draggingRef.current = true;
+            }}
+            onDragEnd={(_, info) => {
+              if (info.offset.x > 82 || info.velocity.x > 520) markCard('got-it');
+              else if (info.offset.x < -82 || info.velocity.x < -520) markCard('again');
+              window.setTimeout(() => {
+                draggingRef.current = false;
+              }, 0);
+            }}
+            initial={reduceMotion ? false : { opacity: 0, y: 12, scale: 0.965 }}
+            animate={{ opacity: 1, x: 0, y: 0, rotate: 0, scale: 1 }}
+            exit={reduceMotion ? { opacity: 0 } : {
+              opacity: 0,
+              x: reviewDirection * 430,
+              y: -8,
+              rotate: reviewDirection * 11,
+              scale: 0.96
+            }}
+            transition={reduceMotion ? { duration: 0 } : SPRING}
+          >
+            <button
+              type="button"
+              className="cards-flip-surface"
+              onClick={toggleCard}
+              aria-label={`${cardFlipped ? 'Back' : 'Front'} of card ${reviewIndex + 1}: ${cardFlipped ? cardBack : activeCard.title}. Flip card.`}
+            >
+              <motion.span
+                className="cards-flip-inner"
+                animate={{ rotateY: cardFlipped ? 180 : 0 }}
+                transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 260, damping: 24 }}
+              >
+                <span className="cards-face cards-face-front">
+                  <small>Front</small>
+                  <strong>{activeCard.title}</strong>
+                  <em>Tap to reveal</em>
+                </span>
+                <span className="cards-face cards-face-back">
+                  <small>Back</small>
+                  <strong>{cardBack}</strong>
+                  <em>Tap to return</em>
+                </span>
+              </motion.span>
+            </button>
+          </motion.article>
+        </AnimatePresence>
+      </div>
+
+      <div className="cards-review-actions" role="group" aria-label="Card review actions">
+        <button type="button" className="again" onClick={() => markCard('again')}>
+          <Glyph name="reset" className="h-4 w-4" />
+          <span>Review again<small>Swipe left</small></span>
+        </button>
+        <button type="button" className="flip" onClick={toggleCard}>
+          <Glyph name="sync" className="h-4 w-4" />
+          <span>Flip<small>Show {cardFlipped ? 'front' : 'back'}</small></span>
+        </button>
+        <button type="button" className="got-it" onClick={() => markCard('got-it')}>
+          <Glyph name="spark" className="h-4 w-4" />
+          <span>Got it<small>Swipe right</small></span>
+        </button>
+      </div>
+      <span className="sr-only" aria-live="polite">{announcement}</span>
+    </section>
   );
 }
 
@@ -1842,11 +2167,8 @@ function GestureTimerRing({
   );
 }
 
-function StudyView({ studyMode, onModeChange, onRunningChange, assignments, savedDecks, initialTasks, initialHistory, initialNote }) {
+function StudyView({ activeTab, onTabChange, onRunningChange, onCreateDeck, assignments, savedDecks, initialTasks, initialHistory, initialNote }) {
   const decks = useMemo(() => buildCourseDecks(assignments, savedDecks), [assignments, savedDecks]);
-  const [deckIndex, setDeckIndex] = useState(0);
-  const [cardFlipped, setCardFlipped] = useState(false);
-  const [activeTab, setActiveTab] = useState('timer');
   const [activeMode, setActiveMode] = useState('work');
   const [durations, setDurations] = useState(readStudyDurations);
   const [customSessions, setCustomSessions] = useState(readCustomSessions);
@@ -1866,11 +2188,6 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
   const durationProfile = Object.entries(STUDY_DURATION_PROFILES).find(([, profile]) => (
     profile.work === durations.work && profile.break === durations.break && profile.long === durations.long
   ))?.[0] || 'Balanced';
-  const activeDeck = decks[Math.min(deckIndex, Math.max(0, decks.length - 1))];
-  const deckProgress = activeDeck?.cards.length
-    ? (activeDeck.completed / activeDeck.cards.length) * 100
-    : 0;
-  const nextCard = activeDeck?.cards.find((card) => !card.done) || activeDeck?.cards[0];
   const studyStats = useMemo(() => buildStudyStats(studyHistory), [studyHistory]);
   const timerSessions = useMemo(() => ([
     { id: 'work', label: 'Work', minutes: durations.work, custom: false, icon: 'clock' },
@@ -1906,22 +2223,14 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
   }, [sessionNote]);
 
   useEffect(() => {
-    setDeckIndex((current) => Math.min(current, Math.max(0, decks.length - 1)));
-  }, [decks.length]);
-
-  useEffect(() => {
-    setCardFlipped(false);
-  }, [deckIndex, nextCard?.id]);
-
-  useEffect(() => {
-    onRunningChange?.(running && studyMode === 'focus');
-  }, [onRunningChange, running, studyMode]);
+    onRunningChange?.(running);
+  }, [onRunningChange, running]);
 
   useEffect(() => () => onRunningChange?.(false), [onRunningChange]);
 
   useEffect(() => {
-    if (studyMode !== 'focus') setRunning(false);
-  }, [studyMode]);
+    if (activeTab !== 'timer') setRunning(false);
+  }, [activeTab]);
 
   useEffect(() => {
     if (!running) return undefined;
@@ -2050,7 +2359,7 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
   };
 
   const toggleTimer = () => {
-    setActiveTab('timer');
+    onTabChange('timer');
     if (timeLeft <= 0) setTimeLeft(timerDuration);
     setRunning((current) => !current);
   };
@@ -2066,11 +2375,6 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
     setTimeLeft(nextSeconds);
   };
 
-  const changeDeck = (direction) => {
-    if (decks.length < 2) return;
-    setDeckIndex((current) => (current + direction + decks.length) % decks.length);
-  };
-
   const toggleStudyTask = (taskId) => {
     setStudyTasks((current) => {
       const next = current.map((task) => task.id === taskId ? { ...task, done: !task.done } : task);
@@ -2082,36 +2386,23 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
   };
 
   return (
-    <motion.section key={`study-${studyMode}`} className={`study-view ${running ? 'timer-running' : ''}`} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
+    <motion.section className={`study-view ${running ? 'timer-running' : ''} ${activeTab === 'cards' ? 'cards-active' : ''}`} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
       <motion.header className="study-heading study-dimmable" animate={{ opacity: running ? 0.16 : 1, y: running ? -5 : 0 }} transition={SPRING}>
         <div>
           <span className="eyebrow-mobile">Deep work</span>
           <h1>Study</h1>
-          <p>{studyMode === 'focus' ? 'One session. Zero noise.' : 'Swipe through decks built from your courses.'}</p>
+          <p>{activeTab === 'cards' ? 'A tactile review space for every deck.' : 'One study space. Zero noise.'}</p>
         </div>
-        <button type="button" className="study-settings-button" onClick={() => setSettingsOpen(true)} aria-label="Open study settings">
-          <Glyph name="settings" className="h-5 w-5" />
-        </button>
+        {activeTab === 'timer' && (
+          <button type="button" className="study-settings-button" onClick={() => setSettingsOpen(true)} aria-label="Open timer settings">
+            <Glyph name="settings" className="h-5 w-5" />
+          </button>
+        )}
       </motion.header>
 
-      <motion.div className="study-mode-picker study-dimmable" animate={{ opacity: running ? 0.12 : 1 }} transition={SPRING}>
-        <ViewModeTabs
-          label="Study modes"
-          value={studyMode}
-          onChange={onModeChange}
-          options={[
-            { value: 'focus', label: 'Focus' },
-            { value: 'cards', label: 'Cards' }
-          ]}
-        />
-      </motion.div>
+      <StudyBlobTabs value={activeTab} onChange={onTabChange} />
 
-      {studyMode === 'focus' && (
-        <StudyBlobTabs value={activeTab} onChange={setActiveTab} />
-      )}
-
-      {studyMode === 'focus' ? (
-        <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait">
           {activeTab === 'timer' && (
             <motion.div
               className="timer-workspace"
@@ -2243,80 +2534,14 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
               </div>
             </motion.section>
           )}
-        </AnimatePresence>
-      ) : (
-        <section className="deck-carousel" aria-label="Course decks">
-          {activeDeck ? (
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.article
-                key={activeDeck.id}
-                className="study-deck-card"
-                initial={{ opacity: 0, x: 28, scale: 0.97 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: -28, scale: 0.97 }}
-                transition={SPRING}
-                drag="x"
-                dragDirectionLock
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.16}
-                dragMomentum={false}
-                onDragEnd={(_, info) => {
-                  if (info.offset.x < -55 || info.velocity.x < -450) changeDeck(1);
-                  if (info.offset.x > 55 || info.velocity.x > 450) changeDeck(-1);
-                }}
-              >
-                <div className="deck-orbit"><Glyph name="study" className="h-8 w-8" /></div>
-                <span className="eyebrow-mobile">Course deck</span>
-                <h2>{activeDeck.title}</h2>
-                <p>{activeDeck.cards.length} items · {activeDeck.cards.length - activeDeck.completed} pending</p>
-                {nextCard && (
-                  nextCard.answer ? (
-                    <button
-                      type="button"
-                      className={`deck-next-card generated-card-content ${cardFlipped ? 'flipped' : ''}`}
-                      onClick={() => setCardFlipped((current) => !current)}
-                    >
-                      <span>{cardFlipped ? 'Answer' : 'Question'}</span>
-                      <strong>{cardFlipped ? nextCard.answer : nextCard.title}</strong>
-                      <small>Tap to {cardFlipped ? 'show question' : 'reveal answer'}</small>
-                    </button>
-                  ) : (
-                    <div className="deck-next-card">
-                      <span>Next item</span>
-                      <strong>{nextCard.title}</strong>
-                      <small>{nextCard.due || 'No due date'}</small>
-                    </div>
-                  )
-                )}
-                <div className="deck-progress">
-                  <motion.span initial={{ width: 0 }} animate={{ width: `${deckProgress}%` }} transition={{ ...SPRING, delay: 0.12 }} />
-                </div>
-              </motion.article>
-            </AnimatePresence>
-          ) : (
-            <div className="study-deck-card deck-empty">
-              <div className="deck-orbit"><Glyph name="study" className="h-8 w-8" /></div>
-              <h2>No course decks yet</h2>
-              <p>Connect or sync Canvas to build decks from your coursework.</p>
-            </div>
+          {activeTab === 'cards' && (
+            <CardsStudySection
+              key="study-cards"
+              decks={decks}
+              onCreateDeck={onCreateDeck}
+            />
           )}
-          {decks.length > 1 && (
-            <div className="deck-navigation">
-              <button type="button" onClick={() => changeDeck(-1)} aria-label="Previous course deck">
-                <Glyph name="chevron" className="h-4 w-4 rotate-90" />
-              </button>
-              <div className="deck-dots" aria-label={`Deck ${deckIndex + 1} of ${decks.length}`}>
-                {decks.map((deck, index) => (
-                  <button type="button" className={index === deckIndex ? 'active' : ''} onClick={() => setDeckIndex(index)} aria-label={`Open ${deck.title} deck`} key={deck.id} />
-                ))}
-              </div>
-              <button type="button" onClick={() => changeDeck(1)} aria-label="Next course deck">
-                <Glyph name="chevron" className="h-4 w-4 -rotate-90" />
-              </button>
-            </div>
-          )}
-        </section>
-      )}
+      </AnimatePresence>
 
       <StudySheet
         open={settingsOpen}
@@ -2550,7 +2775,7 @@ export default function StudentHubMobileDashboard() {
   const [edgeDragging, setEdgeDragging] = useState(false);
   const [taskFilter, setTaskFilter] = useState('pending');
   const [calendarView, setCalendarView] = useState('month');
-  const [studyMode, setStudyMode] = useState('focus');
+  const [studySpace, setStudySpace] = useState('timer');
   const [studyRunning, setStudyRunning] = useState(false);
   const [studyDecks, setStudyDecks] = useState(data.studyDecks);
   const drawerX = useMotionValue(-DRAWER_TRAVEL);
@@ -2655,7 +2880,7 @@ export default function StudentHubMobileDashboard() {
       });
       return next;
     });
-    setStudyMode('cards');
+    setStudySpace('cards');
     setActiveView('study');
   };
 
@@ -2664,8 +2889,7 @@ export default function StudentHubMobileDashboard() {
   return (
     <div className={[
       'studenthub-shell',
-      activeView === 'study' && studyRunning ? 'focus-session-active' : '',
-      activeView === 'study' && studyMode === 'cards' ? 'cards-screen' : ''
+      activeView === 'study' && studyRunning ? 'focus-session-active' : ''
     ].filter(Boolean).join(' ')}>
       <div
         className="edge-swipe-zone"
@@ -2761,9 +2985,10 @@ export default function StudentHubMobileDashboard() {
             {activeView === 'study' && (
               <StudyView
                 key="study"
-                studyMode={studyMode}
-                onModeChange={setStudyMode}
+                activeTab={studySpace}
+                onTabChange={setStudySpace}
                 onRunningChange={setStudyRunning}
+                onCreateDeck={() => setAssistantOpen(true)}
                 assignments={assignments}
                 savedDecks={studyDecks}
                 initialTasks={data.studyTasks}
