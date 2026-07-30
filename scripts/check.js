@@ -113,7 +113,8 @@ assert(
   'StudentHub must use the swipe drawer and page-level controls without a floating launchpad'
 );
 assert(
-  studentHubSource.includes("{ id: 'cards', label: 'Cards', icon: 'study' }") &&
+  studentHubSource.includes("{ id: 'cards', label: 'Cards', icon: 'cards' }") &&
+    studentHubSource.includes("{ id: 'cards', label: 'Cards', icon: 'cards', section: 'Main' }") &&
     studentHubSource.includes('function CardsStudySection') &&
     !studentHubSource.includes("{ value: 'focus', label: 'Focus' }") &&
     !studentHubSource.includes("{ value: 'database'") &&
