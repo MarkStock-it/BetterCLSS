@@ -1627,53 +1627,9 @@ a:focus-visible {
   transition: margin 380ms ease;
 }
 
-.session-setup-summary {
-  display: flex;
-  width: 100%;
-  min-height: 57px;
-  align-items: center;
-  gap: 11px;
-  padding: 9px 12px;
-  overflow: hidden;
-  color: #8290b4;
-  border: 1px solid rgba(100, 118, 179, 0.14);
-  border-radius: 16px;
-  background: rgba(14, 18, 34, 0.5);
-  text-align: left;
-  transition: min-height 340ms ease, max-height 340ms ease, padding 340ms ease, border-color 340ms ease;
-}
-
-.session-summary-icon {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 auto;
-  place-items: center;
-  color: #8ea2f2;
-  border-radius: 11px;
-  background: rgba(100, 127, 233, 0.1);
-}
-
-.session-setup-summary strong,
-.session-setup-summary small {
-  display: block;
-}
-
-.session-setup-summary strong {
-  color: #cdd5f1;
-  font-size: 0.72rem;
-  font-weight: 680;
-}
-
-.session-setup-summary small {
-  margin-top: 4px;
-  color: #667292;
-  font-size: 0.6rem;
-}
-
 .timer-mode-carousel {
   width: 100%;
-  margin-top: 21px;
+  margin-top: 12px;
 }
 
 .timer-mode-viewport {
@@ -1681,7 +1637,6 @@ a:focus-visible {
   width: 100%;
   height: 84px;
   overflow: hidden;
-  mask-image: linear-gradient(90deg, transparent, black 7%, black 93%, transparent);
 }
 
 .timer-mode-track {
@@ -1866,13 +1821,28 @@ a:focus-visible {
   font-weight: 450;
 }
 
+.timer-mode-position {
+  display: flex;
+  min-height: 18px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+  color: #65708e;
+  font-size: 0.57rem;
+  font-weight: 680;
+}
+
+.timer-mode-position strong {
+  color: #93a1d0;
+  font-weight: 770;
+}
+
 .timer-mode-dots {
   display: flex;
-  min-height: 11px;
   align-items: center;
   justify-content: center;
   gap: 5px;
-  margin-top: 3px;
 }
 
 .timer-mode-dots i {
@@ -2242,8 +2212,7 @@ a:focus-visible {
 
 .timer-running .study-heading,
 .timer-running .study-mode-picker,
-.timer-running .study-tabs,
-.timer-running .session-setup-summary {
+.timer-running .study-tabs {
   min-height: 0;
   max-height: 0;
   margin: 0;
@@ -3162,6 +3131,22 @@ a:focus-visible {
   background: rgba(229, 247, 239, 0.92);
 }
 
+:root[data-theme="light"] .timer-mode-position {
+  color: #7c87a3;
+}
+
+:root[data-theme="light"] .timer-mode-position strong {
+  color: #52638f;
+}
+
+:root[data-theme="light"] .timer-mode-dots i {
+  background: #c3c9dc;
+}
+
+:root[data-theme="light"] .timer-mode-dots i.active {
+  background: #6c82d7;
+}
+
 :root[data-theme="light"] .timer-interruption {
   color: #725e48;
   border-color: rgba(190, 123, 55, 0.17);
@@ -3220,7 +3205,6 @@ a:focus-visible {
   color: #8992ab;
 }
 
-:root[data-theme="light"] .session-setup-summary,
 :root[data-theme="light"] .study-task-row,
 :root[data-theme="light"] .focus-metrics div,
 :root[data-theme="light"] .secondary-row,
@@ -3257,7 +3241,6 @@ a:focus-visible {
   background: rgba(232, 235, 246, 0.8);
 }
 
-:root[data-theme="light"] .session-setup-summary strong,
 :root[data-theme="light"] .focus-metrics strong,
 :root[data-theme="light"] .deck-next-card strong,
 :root[data-theme="light"] .timer-readout strong {

@@ -3,6 +3,7 @@ import {
   AnimatePresence,
   animate,
   motion,
+  useDragControls,
   useMotionValue,
   useReducedMotion,
   useTransform
@@ -1094,11 +1095,14 @@ function StudySheet({ open, title, detail, onClose, children }) {
 
 function TimerModeCarousel({ sessions, activeId, onSelect, onAdd, onEdit, editingDisabled = false }) {
   const reduceMotion = useReducedMotion();
+  const dragControls = useDragControls();
   const viewportRef = useRef(null);
   const itemRefs = useRef([]);
   const draggedRef = useRef(false);
+  const pressRef = useRef(null);
+  const holdTimerRef = useRef(null);
   const trackX = useMotionValue(0);
-  const [metrics, setMetrics] = useState({ width: 280, cardWidth: 208, gap: 12 });
+  const [metrics, setMetrics] = useState({ width: 280, cardWidth: 280, gap: 12 });
   const activeIndex = Math.max(0, sessions.findIndex((session) => session.id === activeId));
   const stride = metrics.cardWidth + metrics.gap;
   const inset = (metrics.width - metrics.cardWidth) / 2;
@@ -1121,7 +1125,7 @@ function TimerModeCarousel({ sessions, activeId, onSelect, onAdd, onEdit, editin
       const width = viewport.getBoundingClientRect().width || 280;
       setMetrics({
         width,
-        cardWidth: Math.min(224, Math.max(188, width * 0.76)),
+        cardWidth: width,
         gap: 12
       });
     };
@@ -1138,6 +1142,43 @@ function TimerModeCarousel({ sessions, activeId, onSelect, onAdd, onEdit, editin
   useEffect(() => {
     settleAt(activeIndex);
   }, [activeIndex, metrics.width, metrics.cardWidth]);
+
+  const cancelPressHold = () => {
+    if (holdTimerRef.current) window.clearTimeout(holdTimerRef.current);
+    holdTimerRef.current = null;
+  };
+
+  const handlePointerDown = (event) => {
+    if (reduceMotion || event.button !== 0 || event.target.closest('.timer-mode-edit')) return;
+    pressRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY
+    };
+    cancelPressHold();
+    holdTimerRef.current = window.setTimeout(() => {
+      if (!pressRef.current || pressRef.current.pointerId !== event.pointerId) return;
+      draggedRef.current = true;
+      dragControls.start(event, { snapToCursor: false });
+      navigator.vibrate?.(7);
+    }, 180);
+  };
+
+  const handlePointerMove = (event) => {
+    const press = pressRef.current;
+    if (!press || press.pointerId !== event.pointerId || draggedRef.current) return;
+    if (Math.hypot(event.clientX - press.startX, event.clientY - press.startY) > 8) {
+      cancelPressHold();
+      pressRef.current = null;
+    }
+  };
+
+  const finishPress = (event) => {
+    if (pressRef.current?.pointerId === event.pointerId) pressRef.current = null;
+    cancelPressHold();
+  };
+
+  useEffect(() => () => cancelPressHold(), []);
 
   const selectIndex = (index, { focus = false } = {}) => {
     const safeIndex = Math.max(0, Math.min(addIndex, index));
@@ -1189,11 +1230,20 @@ function TimerModeCarousel({ sessions, activeId, onSelect, onAdd, onEdit, editin
 
   return (
     <div className="timer-mode-carousel" role="region" aria-roledescription="carousel" aria-label="Timer sessions">
-      <div className="timer-mode-viewport" ref={viewportRef}>
+      <div
+        className="timer-mode-viewport"
+        ref={viewportRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={finishPress}
+        onPointerCancel={finishPress}
+      >
         <motion.div
           className="timer-mode-track"
           style={{ x: trackX, '--mode-card-width': `${metrics.cardWidth}px`, gap: `${metrics.gap}px` }}
           drag={reduceMotion ? false : 'x'}
+          dragControls={dragControls}
+          dragListener={false}
           dragConstraints={{
             left: positionForIndex(addIndex),
             right: positionForIndex(0)
@@ -1275,11 +1325,12 @@ function TimerModeCarousel({ sessions, activeId, onSelect, onAdd, onEdit, editin
           </div>
         </motion.div>
       </div>
-      {sessions.length > 3 && (
-        <div className="timer-mode-dots" role="img" aria-label={`Session ${activeIndex + 1} of ${sessions.length}`}>
+      <div className="timer-mode-position" aria-live="polite">
+        <span><strong>{sessions[activeIndex]?.label}</strong> · {activeIndex + 1} of {sessions.length}</span>
+        <div className="timer-mode-dots" aria-hidden="true">
           {sessions.map((session) => <i className={session.id === activeId ? 'active' : ''} key={session.id} />)}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -1804,9 +1855,7 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
   const [running, setRunning] = useState(false);
   const [interruptedSession, setInterruptedSession] = useState(null);
   const [modeEditor, setModeEditor] = useState(null);
-  const [setupOpen, setSetupOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [sessionTitle, setSessionTitle] = useState(() => localStorage.getItem('bclss_study_session_title') || '');
   const [sessionNote, setSessionNote] = useState(initialNote);
   const [studyTasks, setStudyTasks] = useState(initialTasks);
   const [studyHistory, setStudyHistory] = useState(initialHistory);
@@ -1838,11 +1887,6 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
   useEffect(() => {
     localStorage.setItem('bclss_custom_sessions', JSON.stringify(customSessions));
   }, [customSessions]);
-
-  useEffect(() => {
-    if (sessionTitle) localStorage.setItem('bclss_study_session_title', sessionTitle);
-    else localStorage.removeItem('bclss_study_session_title');
-  }, [sessionTitle]);
 
   useEffect(() => {
     if (!noteReady.current) {
@@ -1894,7 +1938,7 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
               date: dateKey(now),
               week: weekStartKey(now),
               durationSecs: timerDuration,
-              tagList: sessionTitle ? [sessionTitle] : [],
+              tagList: [activeTimerSession.label],
               notePreview: sessionNote.slice(0, 180),
               noteFull: sessionNote
             };
@@ -1917,14 +1961,13 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
       });
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [running, activeMode, activeTimerSession.custom, timerDuration, sessionNote, sessionTitle]);
+  }, [running, activeMode, activeTimerSession.custom, activeTimerSession.label, timerDuration, sessionNote]);
 
   useEffect(() => {
-    if (!setupOpen && !settingsOpen && !modeEditor) return undefined;
+    if (!settingsOpen && !modeEditor) return undefined;
     const previousOverflow = document.body.style.overflow;
     const closeOnEscape = (event) => {
       if (event.key !== 'Escape') return;
-      setSetupOpen(false);
       setSettingsOpen(false);
       setModeEditor(null);
     };
@@ -1934,7 +1977,7 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', closeOnEscape);
     };
-  }, [setupOpen, settingsOpen, modeEditor]);
+  }, [settingsOpen, modeEditor]);
 
   const chooseMode = (session) => {
     if (!session || session.id === activeMode) return;
@@ -2008,7 +2051,6 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
 
   const toggleTimer = () => {
     setActiveTab('timer');
-    setSetupOpen(false);
     if (timeLeft <= 0) setTimeLeft(timerDuration);
     setRunning((current) => !current);
   };
@@ -2083,22 +2125,6 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <motion.button
-                type="button"
-                className="session-setup-summary study-dimmable"
-                onClick={() => setSetupOpen(true)}
-                animate={{ opacity: running ? 0.1 : 1, scale: running ? 0.97 : 1 }}
-                transition={SPRING}
-                aria-label="Open session setup"
-              >
-                <span className="session-summary-icon"><Glyph name="tag" className="h-4 w-4" /></span>
-                <span>
-                  <strong>{sessionTitle || 'Focus session'}</strong>
-                  <small>{Math.round(timerDuration / 60)} minute {activeTimerSession.label.toLowerCase()}</small>
-                </span>
-                <Glyph name="chevron" className="ml-auto h-4 w-4 -rotate-90" />
-              </motion.button>
-
               <TimerModeCarousel
                 sessions={timerSessions}
                 activeId={activeMode}
@@ -2291,19 +2317,6 @@ function StudyView({ studyMode, onModeChange, onRunningChange, assignments, save
           )}
         </section>
       )}
-
-      <StudySheet
-        open={setupOpen}
-        title="Session setup"
-        detail="Name what you’re working on."
-        onClose={() => setSetupOpen(false)}
-      >
-        <div className="sheet-field">
-          <label htmlFor="study-session-title">Session title</label>
-          <input id="study-session-title" value={sessionTitle} onChange={(event) => setSessionTitle(event.target.value)} />
-        </div>
-        <button type="button" className="sheet-done-button" onClick={() => setSetupOpen(false)}>Save session</button>
-      </StudySheet>
 
       <StudySheet
         open={settingsOpen}
