@@ -1705,6 +1705,48 @@ a:focus-visible {
   transition: transform 420ms cubic-bezier(.2, .8, .2, 1), margin 420ms ease;
 }
 
+.timer-ring-shell {
+  position: relative;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+}
+
+.timer-ring-control {
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.timer-ring-control.is-paused {
+  cursor: grab;
+}
+
+.timer-ring-control.is-scrubbing {
+  cursor: grabbing;
+}
+
+.timer-ring-control::after {
+  position: absolute;
+  inset: 6%;
+  content: "";
+  pointer-events: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  transition: border-color 180ms ease, transform 180ms ease;
+}
+
+.timer-ring-control:hover::after {
+  border-color: rgba(132, 154, 239, 0.11);
+  transform: scale(1.015);
+}
+
+.timer-ring-control.is-holding::after {
+  border-color: rgba(248, 154, 124, 0.18);
+}
+
 .timer-aura {
   position: absolute;
   inset: 12%;
@@ -1731,7 +1773,9 @@ a:focus-visible {
 
 .timer-track,
 .timer-ring-glow,
-.timer-ring-progress {
+.timer-ring-progress,
+.timer-reset-commit,
+.timer-scrub-tick {
   fill: none;
   transform: rotate(-90deg);
   transform-origin: 50% 50%;
@@ -1749,19 +1793,55 @@ a:focus-visible {
 }
 
 .timer-ring-glow {
-  opacity: 0.55;
+  opacity: 0.2;
   stroke-width: 16;
   filter: url("#focus-ring-glow");
+  transition: opacity 320ms ease, stroke-width 320ms ease;
 }
 
 .timer-ring-progress {
   stroke-width: 8;
+  opacity: 0.72;
+  transition: opacity 320ms ease, stroke-width 320ms ease, filter 320ms ease;
+}
+
+.timer-ring-control.is-running .timer-ring-glow {
+  opacity: 0.9;
+  stroke-width: 19;
+  animation: timer-ring-pulse 2.2s ease-in-out infinite;
+}
+
+.timer-ring-control.is-running .timer-ring-progress {
+  opacity: 1;
+  stroke-width: 9;
+  filter: drop-shadow(0 0 5px rgba(104, 139, 255, 0.52));
+}
+
+.timer-ring-control.is-scrubbing .timer-ring-progress {
+  opacity: 1;
+  stroke-width: 10;
+  filter: drop-shadow(0 0 6px rgba(78, 218, 184, 0.44));
+}
+
+.timer-reset-commit {
+  stroke: url("#reset-ring-gradient");
+  stroke-width: 5;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px rgba(255, 116, 134, 0.38));
+}
+
+.timer-scrub-tick {
+  stroke: #b9ed98;
+  stroke-width: 3;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 5px rgba(177, 235, 143, 0.5));
 }
 
 .timer-readout {
   position: relative;
   z-index: 2;
   text-align: center;
+  pointer-events: none;
 }
 
 .timer-readout span,
@@ -1798,39 +1878,97 @@ a:focus-visible {
   text-transform: uppercase;
 }
 
-.timer-controls {
+.timer-scrub-feedback {
+  position: absolute;
+  z-index: 3;
+  bottom: 19%;
+  padding: 5px 9px;
+  color: #d9f4bd;
+  border: 1px solid rgba(177, 229, 139, 0.2);
+  border-radius: 999px;
+  background: rgba(18, 43, 37, 0.78);
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.17);
+  font-size: 0.58rem;
+  font-weight: 780;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
+
+.timer-gesture-hint {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 11px;
-  margin-top: 14px;
+  flex-wrap: wrap;
+  gap: 7px 13px;
+  margin-top: -2px;
+  color: #6e7a9c;
+  font-size: 0.57rem;
+  font-weight: 700;
 }
 
-.timer-primary-control,
-.timer-reset-control {
+.timer-gesture-hint span {
   display: inline-flex;
-  min-height: 51px;
+  align-items: center;
+  gap: 4px;
+}
+
+.timer-gesture-hint svg {
+  color: #899ced;
+}
+
+.timer-accessible-controls {
+  position: absolute;
+  z-index: 9;
+  bottom: 42px;
+  left: 50%;
+  display: flex;
+  width: 1px;
+  height: 1px;
+  gap: 8px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.timer-accessible-controls:focus-within {
+  width: max-content;
+  height: auto;
+  overflow: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.timer-accessible-control {
+  display: inline-flex;
+  min-height: 45px;
   align-items: center;
   justify-content: center;
-  color: white;
-  border: 1px solid rgba(160, 177, 255, 0.2);
-  box-shadow: 0 14px 34px rgba(71, 89, 193, 0.24);
+  gap: 7px;
+  padding: 0 14px;
+  color: #f4f6ff;
+  border: 1px solid rgba(154, 173, 249, 0.25);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #647eea, #805bbf);
+  box-shadow: 0 14px 34px rgba(51, 66, 148, 0.3);
+  font-size: 0.68rem;
+  font-weight: 760;
+  white-space: nowrap;
 }
 
-.timer-primary-control {
-  min-width: 154px;
-  gap: 9px;
-  padding: 0 21px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #6f87ff, #8960d7);
-  font-size: 0.75rem;
-  font-weight: 750;
+.timer-accessible-control.timer-reset-control {
+  background: rgba(22, 27, 48, 0.96);
 }
 
-.timer-reset-control {
-  width: 51px;
-  border-radius: 16px;
-  background: rgba(24, 29, 51, 0.86);
+.timer-screenreader-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .timer-running .study-dimmable {
@@ -2094,21 +2232,122 @@ a:focus-visible {
   font-weight: 700;
 }
 
-.timer-profile-select select {
-  width: 100%;
-  height: 50px;
+.timer-profile-control {
+  position: relative;
   margin-top: 9px;
-  padding: 0 42px 0 14px;
-  color: #e6ebff;
-  border: 1px solid rgba(107, 126, 188, 0.18);
-  border-radius: 14px;
-  outline: none;
-  background: rgba(7, 10, 21, 0.53);
-  font-size: 0.73rem;
 }
 
-.timer-profile-select select:focus {
+.timer-profile-control select {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 56px;
+  padding: 0 47px 0 47px;
+  appearance: none;
+  -webkit-appearance: none;
+  color: #e6ebff;
+  border: 1px solid rgba(122, 142, 212, 0.22);
+  border-radius: 17px;
+  outline: none;
+  background:
+    radial-gradient(120px 65px at 4% 0%, rgba(128, 151, 246, 0.13), transparent 74%),
+    linear-gradient(145deg, rgba(24, 30, 53, 0.96), rgba(10, 13, 27, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 10px 24px rgba(0, 0, 0, 0.17);
+  font-size: 0.76rem;
+  font-weight: 740;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.timer-profile-control select:hover {
+  border-color: rgba(133, 155, 236, 0.36);
+}
+
+.timer-profile-control select option {
+  color: #e6ebff;
+  background: #12172a;
+}
+
+.timer-profile-icon,
+.timer-profile-chevron {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.timer-profile-icon {
+  left: 15px;
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  color: #9fb1f4;
+  border-radius: 9px;
+  background: rgba(111, 137, 235, 0.12);
+}
+
+.timer-profile-chevron {
+  right: 16px;
+  width: 16px;
+  height: 16px;
+  color: #8492bc;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.timer-profile-control:focus-within .timer-profile-chevron {
+  color: #b7c4f7;
+}
+
+.timer-profile-control select:focus-visible {
   border-color: rgba(123, 147, 239, 0.48);
+  box-shadow:
+    0 0 0 3px rgba(100, 127, 231, 0.1),
+    0 12px 28px rgba(0, 0, 0, 0.19);
+}
+
+.timer-profile-select > .timer-profile-breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 10px;
+  overflow: hidden;
+  color: inherit;
+  border: 1px solid rgba(105, 124, 187, 0.14);
+  border-radius: 15px;
+  background: rgba(8, 11, 23, 0.35);
+}
+
+.timer-profile-breakdown > span {
+  display: flex;
+  min-width: 0;
+  min-height: 58px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.timer-profile-breakdown > span + span {
+  border-left: 1px solid rgba(105, 124, 187, 0.12);
+}
+
+.timer-profile-breakdown strong {
+  color: #e7ebff;
+  font-size: 0.92rem;
+  font-weight: 820;
+  line-height: 1;
+}
+
+.timer-profile-breakdown small {
+  color: #6f7a9a;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 
 .sheet-done-button {
@@ -2133,6 +2372,12 @@ a:focus-visible {
   0%,
   100% { transform: scale(1.08); }
   50% { transform: scale(1.2); }
+}
+
+@keyframes timer-ring-pulse {
+  0%,
+  100% { opacity: 0.58; stroke-width: 17; }
+  50% { opacity: 1; stroke-width: 21; }
 }
 
 .study-deck-card {
@@ -2661,6 +2906,31 @@ a:focus-visible {
   color: #28324b;
 }
 
+:root[data-theme="light"] .timer-ring-control::after {
+  border-color: rgba(73, 91, 153, 0.06);
+}
+
+:root[data-theme="light"] .timer-gesture-hint {
+  color: #77829e;
+}
+
+:root[data-theme="light"] .timer-gesture-hint svg {
+  color: #667bc9;
+}
+
+:root[data-theme="light"] .timer-scrub-feedback {
+  color: #267956;
+  border-color: rgba(46, 145, 103, 0.18);
+  background: rgba(238, 251, 244, 0.9);
+  box-shadow: 0 7px 18px rgba(59, 75, 115, 0.09);
+}
+
+:root[data-theme="light"] .timer-accessible-control.timer-reset-control {
+  color: #33405f;
+  border-color: rgba(71, 86, 137, 0.18);
+  background: rgba(255, 255, 255, 0.96);
+}
+
 :root[data-theme="light"] .study-deck-card {
   border-color: rgba(77, 94, 153, 0.17);
   background:
@@ -2685,6 +2955,46 @@ a:focus-visible {
   color: #28324b;
   border-color: rgba(71, 86, 137, 0.16);
   background: rgba(255, 255, 255, 0.82);
+}
+
+:root[data-theme="light"] .timer-profile-control select {
+  background:
+    radial-gradient(120px 65px at 4% 0%, rgba(111, 136, 229, 0.1), transparent 74%),
+    rgba(255, 255, 255, 0.88);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 10px 24px rgba(65, 78, 120, 0.08);
+}
+
+:root[data-theme="light"] .timer-profile-control select option {
+  color: #28324b;
+  background: #f7f8fd;
+}
+
+:root[data-theme="light"] .timer-profile-icon {
+  color: #586fc4;
+  background: rgba(86, 111, 211, 0.1);
+}
+
+:root[data-theme="light"] .timer-profile-chevron {
+  color: #727e9d;
+}
+
+:root[data-theme="light"] .timer-profile-select > .timer-profile-breakdown {
+  border-color: rgba(71, 86, 137, 0.13);
+  background: rgba(231, 235, 247, 0.58);
+}
+
+:root[data-theme="light"] .timer-profile-breakdown > span + span {
+  border-color: rgba(71, 86, 137, 0.12);
+}
+
+:root[data-theme="light"] .timer-profile-breakdown strong {
+  color: #29334d;
+}
+
+:root[data-theme="light"] .timer-profile-breakdown small {
+  color: #747f9c;
 }
 
 :root[data-theme="light"] .study-sheet {
