@@ -124,11 +124,14 @@ assert(
 assert(
   studentHubSource.includes('buildCourseDecks(assignments, savedDecks)') &&
     studentHubSource.includes('className="deck-selection-list"') &&
+    studentHubSource.includes('const DECKS_PER_PAGE = 5;') &&
+    studentHubSource.includes('aria-label="Deck pages"') &&
+    studentHubSource.includes("activeTab !== 'cards' && <StudyBlobTabs") &&
     studentHubSource.includes("markCard('again')") &&
     studentHubSource.includes("markCard('got-it')") &&
     studentHubSource.includes('drag="x"') &&
     studentHubSource.includes('onDragEnd={(_, info) => {'),
-  'StudentHub card review must use coursework decks with accessible review actions and horizontal swiping'
+  'StudentHub card review must use paginated coursework decks with accessible review actions and horizontal swiping'
 );
 assert(
   !studentHubSource.includes('function CanvasBanner') &&

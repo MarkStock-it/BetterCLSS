@@ -13,6 +13,7 @@ import brandLogoUrl from '../../icons/icon-192.png';
 const DRAWER_TRAVEL = 360;
 const SPRING = { type: 'spring', stiffness: 430, damping: 38, mass: 0.86 };
 const TASKS_PER_PAGE = 5;
+const DECKS_PER_PAGE = 5;
 const WORKLOAD_STEPS = [
   { x: 11, bottom: 14 },
   { x: 27, bottom: 25 },
@@ -1561,7 +1562,9 @@ function StudyBlobTabs({ value, onChange }) {
 function CardsStudySection({ decks, onCreateDeck }) {
   const reduceMotion = useReducedMotion();
   const draggingRef = useRef(false);
+  const deckListRef = useRef(null);
   const [selectedDeckId, setSelectedDeckId] = useState(null);
+  const [deckPage, setDeckPage] = useState(1);
   const [reviewCards, setReviewCards] = useState([]);
   const [reviewIndex, setReviewIndex] = useState(0);
   const [cardFlipped, setCardFlipped] = useState(false);
@@ -1581,6 +1584,10 @@ function CardsStudySection({ decks, onCreateDeck }) {
   const activeCard = reviewCards[reviewIndex] || null;
   const reviewComplete = Boolean(selectedDeck && reviewCards.length && reviewIndex >= reviewCards.length);
   const today = dateKey();
+  const deckPageCount = Math.max(1, Math.ceil(decks.length / DECKS_PER_PAGE));
+  const safeDeckPage = Math.min(deckPage, deckPageCount);
+  const deckPageStart = (safeDeckPage - 1) * DECKS_PER_PAGE;
+  const visibleDecks = decks.slice(deckPageStart, deckPageStart + DECKS_PER_PAGE);
 
   useEffect(() => {
     try {
@@ -1589,6 +1596,19 @@ function CardsStudySection({ decks, onCreateDeck }) {
       // Review state remains available for the current session if storage is restricted.
     }
   }, [reviewLedger]);
+
+  useEffect(() => {
+    setDeckPage((current) => Math.min(current, deckPageCount));
+  }, [deckPageCount]);
+
+  const changeDeckPage = (nextPage) => {
+    const clampedPage = Math.max(1, Math.min(nextPage, deckPageCount));
+    if (clampedPage === safeDeckPage) return;
+    setDeckPage(clampedPage);
+    window.requestAnimationFrame(() => {
+      deckListRef.current?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    });
+  };
 
   const cardReviewKey = (deckId, cardId) => `${deckId}:${cardId}`;
   const dueCountForDeck = (deck) => deck.cards.filter((card) => {
@@ -1652,8 +1672,8 @@ function CardsStudySection({ decks, onCreateDeck }) {
       <motion.section
         className="cards-workspace"
         id="study-panel-cards"
-        role="tabpanel"
-        aria-labelledby="study-tab-cards"
+        role="region"
+        aria-label="Cards"
         tabIndex="0"
         initial={reduceMotion ? false : { opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1670,35 +1690,74 @@ function CardsStudySection({ decks, onCreateDeck }) {
         </header>
 
         {decks.length ? (
-          <div className="deck-selection-list" role="group" aria-label="Available study decks">
-            {decks.map((deck, index) => {
-              const dueCount = dueCountForDeck(deck);
-              return (
-                <motion.button
-                  type="button"
-                  className="deck-selection-row"
-                  onClick={() => startDeck(deck)}
-                  key={deck.id}
-                  initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={reduceMotion ? { duration: 0 } : { ...SPRING, delay: index * 0.035 }}
-                  aria-label={`${deck.title}. ${deck.cards.length} cards. ${dueCount} due for review today.`}
+          <>
+            <div className="deck-page-summary" aria-live="polite">
+              Showing {deckPageStart + 1}–{Math.min(deckPageStart + DECKS_PER_PAGE, decks.length)} of {decks.length} decks
+            </div>
+            <div className="deck-selection-list" ref={deckListRef} role="group" aria-label="Available study decks">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  className="deck-selection-page"
+                  key={`deck-page-${safeDeckPage}`}
+                  initial={reduceMotion ? false : { opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -8 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.18 }}
                 >
-                  <span className={`deck-selection-glyph ${deck.generated ? 'generated' : ''}`} aria-hidden="true">
-                    <i /><i /><i />
-                  </span>
-                  <span className="deck-selection-copy">
-                    <strong>{deck.title}</strong>
-                    <small>{deck.cards.length} {deck.cards.length === 1 ? 'card' : 'cards'}</small>
-                  </span>
-                  <span className={`deck-due-count ${dueCount ? '' : 'clear'}`}>
-                    {dueCount ? `${dueCount} due today` : 'Caught up'}
-                  </span>
-                  <Glyph name="arrow" className="deck-selection-arrow h-4 w-4" />
-                </motion.button>
-              );
-            })}
-          </div>
+                  {visibleDecks.map((deck, index) => {
+                    const dueCount = dueCountForDeck(deck);
+                    return (
+                      <motion.button
+                        type="button"
+                        className="deck-selection-row"
+                        onClick={() => startDeck(deck)}
+                        key={deck.id}
+                        initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={reduceMotion ? { duration: 0 } : { ...SPRING, delay: index * 0.035 }}
+                        aria-label={`${deck.title}. ${deck.cards.length} cards. ${dueCount} due for review today.`}
+                      >
+                        <span className={`deck-selection-glyph ${deck.generated ? 'generated' : ''}`} aria-hidden="true">
+                          <i /><i /><i />
+                        </span>
+                        <span className="deck-selection-copy">
+                          <strong>{deck.title}</strong>
+                          <small>{deck.cards.length} {deck.cards.length === 1 ? 'card' : 'cards'}</small>
+                        </span>
+                        <span className={`deck-due-count ${dueCount ? '' : 'clear'}`}>
+                          {dueCount ? `${dueCount} due today` : 'Caught up'}
+                        </span>
+                        <Glyph name="arrow" className="deck-selection-arrow h-4 w-4" />
+                      </motion.button>
+                    );
+                  })}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+            {deckPageCount > 1 && (
+              <nav className="deck-pagination" aria-label="Deck pages">
+                <button
+                  type="button"
+                  onClick={() => changeDeckPage(safeDeckPage - 1)}
+                  disabled={safeDeckPage === 1}
+                  aria-label="Previous deck page"
+                >
+                  <Glyph name="chevron" className="h-4 w-4 rotate-90" />
+                  <span>Previous</span>
+                </button>
+                <span className="deck-page-status"><strong>{safeDeckPage}</strong><span>of {deckPageCount}</span></span>
+                <button
+                  type="button"
+                  onClick={() => changeDeckPage(safeDeckPage + 1)}
+                  disabled={safeDeckPage === deckPageCount}
+                  aria-label="Next deck page"
+                >
+                  <span>Next</span>
+                  <Glyph name="chevron" className="h-4 w-4 -rotate-90" />
+                </button>
+              </nav>
+            )}
+          </>
         ) : (
           <div className="cards-library-empty">
             <span className="cards-empty-stack" aria-hidden="true"><i /><i /><i /></span>
@@ -1717,8 +1776,8 @@ function CardsStudySection({ decks, onCreateDeck }) {
       <section
         className="cards-workspace cards-review-shell"
         id="study-panel-cards"
-        role="tabpanel"
-        aria-labelledby="study-tab-cards"
+        role="region"
+        aria-label="Cards"
         tabIndex="0"
       >
         <button type="button" className="cards-back-button" onClick={leaveDeck}>
@@ -1744,8 +1803,8 @@ function CardsStudySection({ decks, onCreateDeck }) {
       <motion.section
         className="cards-workspace cards-review-shell"
         id="study-panel-cards"
-        role="tabpanel"
-        aria-labelledby="study-tab-cards"
+        role="region"
+        aria-label="Cards"
         tabIndex="0"
         initial={reduceMotion ? false : { opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -1786,8 +1845,8 @@ function CardsStudySection({ decks, onCreateDeck }) {
     <section
       className="cards-workspace cards-review-shell"
       id="study-panel-cards"
-      role="tabpanel"
-      aria-labelledby="study-tab-cards"
+      role="region"
+      aria-label="Cards"
       tabIndex="0"
     >
       <header className="cards-review-heading">
@@ -2402,7 +2461,7 @@ function StudyView({ activeTab, onTabChange, onRunningChange, onCreateDeck, assi
         )}
       </motion.header>
 
-      <StudyBlobTabs value={activeTab} onChange={onTabChange} />
+      {activeTab !== 'cards' && <StudyBlobTabs value={activeTab} onChange={onTabChange} />}
 
       <AnimatePresence mode="wait">
           {activeTab === 'timer' && (

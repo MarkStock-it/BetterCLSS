@@ -2620,7 +2620,20 @@ a:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 12px;
+  scroll-margin-top: 18px;
+}
+
+.deck-page-summary {
+  margin: 14px 2px 9px;
+  color: #77727a;
+  font-size: 0.58rem;
+  font-weight: 680;
+}
+
+.deck-selection-page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .deck-selection-row {
@@ -2717,6 +2730,56 @@ a:focus-visible {
 
 .deck-selection-arrow {
   color: #696974;
+}
+
+.deck-pagination {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-top: 17px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(190, 154, 96, 0.13);
+}
+
+.deck-pagination > button {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  color: #b5a183;
+  border: 1px solid rgba(190, 154, 96, 0.15);
+  border-radius: 11px 15px 12px 14px;
+  background: rgba(39, 31, 29, 0.68);
+  font-size: 0.62rem;
+  font-weight: 720;
+}
+
+.deck-pagination > button:last-child {
+  justify-self: end;
+}
+
+.deck-pagination > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.32;
+}
+
+.deck-page-status {
+  display: inline-flex;
+  min-width: 52px;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  color: #746e73;
+  font-size: 0.56rem;
+}
+
+.deck-page-status strong {
+  color: #dfb875;
+  font-size: 0.76rem;
 }
 
 .cards-library-empty,
@@ -3563,11 +3626,27 @@ a:focus-visible {
 
 :root[data-theme="light"] .cards-library-heading p,
 :root[data-theme="light"] .deck-selection-copy small,
+:root[data-theme="light"] .deck-page-summary,
+:root[data-theme="light"] .deck-page-status,
 :root[data-theme="light"] .cards-library-empty p,
 :root[data-theme="light"] .cards-session-complete p,
 :root[data-theme="light"] .cards-back-button,
 :root[data-theme="light"] .cards-review-heading > span {
   color: #777078;
+}
+
+:root[data-theme="light"] .deck-pagination {
+  border-color: rgba(145, 102, 51, 0.13);
+}
+
+:root[data-theme="light"] .deck-pagination > button {
+  color: #765f42;
+  border-color: rgba(145, 102, 51, 0.15);
+  background: rgba(250, 247, 240, 0.92);
+}
+
+:root[data-theme="light"] .deck-page-status strong {
+  color: #9a6d34;
 }
 
 :root[data-theme="light"] .cards-library-empty,
