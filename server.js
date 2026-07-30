@@ -50,6 +50,7 @@ const MAX_OVERDUE_DAYS = Number(process.env.MAX_OVERDUE_DAYS || 30);
 const OPENCLAUDE_BASE_URL = (process.env.OPENCLAUDE_BASE_URL || 'http://127.0.0.1:1337/v1').replace(/\/+$/, '');
 const OPENCLAUDE_MODEL = process.env.OPENCLAUDE_MODEL || 'qwen2.5-coder:7b';
 const OPENCLAUDE_API_KEY = process.env.OPENCLAUDE_API_KEY || '';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 const AI_AUTOSTART_OLLAMA = process.env.AI_AUTOSTART_OLLAMA !== '0';
 const AI_MODEL_KEEP_ALIVE = process.env.AI_MODEL_KEEP_ALIVE || '0m';
 const CORS_ALLOW_ORIGIN = process.env.CORS_ALLOW_ORIGIN || 'https://betterclss.onrender.com';
@@ -338,8 +339,6 @@ function parseAssistantResult(content) {
 }
 
 async function assistantChat(message, context = {}, history = [], callerApiKey = '') {
-  await ensureOllamaRunning();
-
   const safeHistory = Array.isArray(history)
     ? history.slice(-12).filter((m) => m && typeof m.role === 'string' && typeof m.content === 'string')
     : [];
@@ -372,12 +371,57 @@ async function assistantChat(message, context = {}, history = [], callerApiKey =
     ],
   };
 
+  if (callerApiKey) {
+    const geminiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'x-goog-api-key': callerApiKey,
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{
+              text: `${systemPrompt}\n\nDashboard summary:\n${contextSummary}\n\nDashboard context JSON: ${JSON.stringify(context).slice(0, 12000)}`,
+            }],
+          },
+          contents: [
+            ...safeHistory.map((entry) => ({
+              role: entry.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: entry.content }],
+            })),
+            { role: 'user', parts: [{ text: String(message || '').slice(0, 4000) }] },
+          ],
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 700,
+          },
+        }),
+      }
+    );
+    if (!geminiResponse.ok) {
+      const detail = await geminiResponse.text().catch(() => '');
+      throw new Error(`AI_HTTP_${geminiResponse.status}${detail ? `:${detail.slice(0, 300)}` : ''}`);
+    }
+    const geminiData = await geminiResponse.json();
+    const geminiContent = geminiData?.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text || '')
+      .join('')
+      .trim();
+    if (!geminiContent) throw new Error('AI_EMPTY');
+    return parseAssistantResult(geminiContent);
+  }
+
+  await ensureOllamaRunning();
+
   const headers = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   };
 
-  const effectiveApiKey = callerApiKey || OPENCLAUDE_API_KEY;
+  const effectiveApiKey = OPENCLAUDE_API_KEY;
   if (effectiveApiKey) {
     headers.Authorization = `Bearer ${effectiveApiKey}`;
   }

@@ -4,6 +4,7 @@ import {
   animate,
   motion,
   useMotionValue,
+  useReducedMotion,
   useTransform
 } from 'motion/react';
 import brandLogoUrl from '../../icons/icon-192.png';
@@ -11,6 +12,15 @@ import brandLogoUrl from '../../icons/icon-192.png';
 const DRAWER_TRAVEL = 360;
 const SPRING = { type: 'spring', stiffness: 430, damping: 38, mass: 0.86 };
 const TASKS_PER_PAGE = 5;
+const WORKLOAD_STEPS = [
+  { x: 11, bottom: 14 },
+  { x: 27, bottom: 25 },
+  { x: 42, bottom: 36 },
+  { x: 58, bottom: 47 },
+  { x: 73, bottom: 58 },
+  { x: 89, bottom: 69 }
+];
+const WORKLOAD_SPRING = { type: 'spring', stiffness: 230, damping: 17, mass: 0.82 };
 const LEGACY_SEEDED_LINKS = new Set([
   'https://usc.instructure.com',
   'https://mail.usc.edu',
@@ -275,25 +285,149 @@ function smartSort(assignments) {
   ));
 }
 
-function StatCard({ label, value, detail, tone, icon, index }) {
+function WorkloadProgress({ assignments, overdueCount, announcementCount }) {
+  const reduceMotion = useReducedMotion();
+  const total = assignments.length;
+  const completed = assignments.filter((item) => item.done).length;
+  const remaining = Math.max(0, total - completed);
+  const progress = total ? completed / total : 1;
+  const stepIndex = total ? Math.round(progress * (WORKLOAD_STEPS.length - 1)) : WORKLOAD_STEPS.length - 1;
+  const previousStepRef = useRef(stepIndex);
+  const previousStep = previousStepRef.current;
+  const currentPosition = WORKLOAD_STEPS[stepIndex];
+  const previousPosition = WORKLOAD_STEPS[previousStep];
+  const caughtUp = remaining === 0;
+
+  useEffect(() => {
+    previousStepRef.current = stepIndex;
+  }, [stepIndex]);
+
   return (
-    <motion.article
-      className={`stat-card-mobile stat-${tone}`}
-      initial={{ opacity: 0, y: 18, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ ...SPRING, delay: index * 0.055 }}
-      whileTap={{ scale: 0.975 }}
+    <motion.section
+      className={`workload-progress ${caughtUp ? 'is-complete' : ''}`}
+      aria-labelledby="workload-title"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={SPRING}
     >
-      <div className="flex items-start justify-between">
-        <span className="stat-icon"><Glyph name={icon} className="h-[18px] w-[18px]" /></span>
-        <span className="stat-glow" />
+      <div className="workload-progress-head">
+        <div>
+          <span className="eyebrow-mobile">Today’s workload</span>
+          <h2 id="workload-title">{caughtUp ? 'You made it to the top.' : 'A little closer with every task.'}</h2>
+        </div>
+        <div className="workload-complete-count" aria-label={`${completed} of ${total} tasks completed`}>
+          <strong>{completed}</strong>
+          <span>/ {total || 0} done</span>
+        </div>
       </div>
-      <div className="mt-5">
-        <div className="text-[1.9rem] font-extrabold leading-none tracking-[-0.055em] text-white">{value}</div>
-        <div className="mt-3 text-[0.68rem] font-bold uppercase tracking-[0.13em] text-slate-300">{label}</div>
-        <div className="mt-1 text-[0.68rem] text-slate-500">{detail}</div>
+
+      <div
+        className="workload-scene"
+        role="progressbar"
+        aria-label="Today’s task progress"
+        aria-valuemin="0"
+        aria-valuemax={total || 1}
+        aria-valuenow={completed}
+        aria-valuetext={caughtUp ? 'Fully caught up' : `${remaining} ${remaining === 1 ? 'task' : 'tasks'} remaining`}
+      >
+        <svg className="workload-stairs" viewBox="0 0 360 220" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="workload-step-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop stopColor="#263057" />
+              <stop offset="1" stopColor="#151a32" />
+            </linearGradient>
+            <linearGradient id="workload-step-reached" x1="0" y1="0" x2="1" y2="1">
+              <stop stopColor="#758cff" />
+              <stop offset="1" stopColor="#9d72ea" />
+            </linearGradient>
+          </defs>
+          {WORKLOAD_STEPS.map((_, index) => {
+            const x = 12 + (index * 56);
+            const y = 190 - (index * 24);
+            return (
+              <g className={index <= stepIndex ? 'is-reached' : ''} key={index}>
+                <rect x={x} y={y} width="56" height={220 - y} rx="4" fill="url(#workload-step-fill)" />
+                <path d={`M ${x + 5} ${y + 1} H ${x + 51}`} />
+              </g>
+            );
+          })}
+          <path className="workload-stair-outline" d="M12 190h56v-24h56v-24h56v-24h56V94h56V70h56" />
+        </svg>
+
+        <motion.div
+          key={`${completed}-${total}`}
+          className={`workload-climber ${stepIndex >= WORKLOAD_STEPS.length - 2 ? 'near-top' : ''}`}
+          initial={reduceMotion ? false : {
+            left: `${previousPosition.x}%`,
+            bottom: `${previousPosition.bottom}%`,
+            y: 7,
+            scaleX: 1.08,
+            scaleY: 0.9
+          }}
+          animate={{
+            left: `${currentPosition.x}%`,
+            bottom: `${currentPosition.bottom}%`,
+            y: 0,
+            scaleX: 1,
+            scaleY: 1
+          }}
+          transition={reduceMotion ? { duration: 0 } : WORKLOAD_SPRING}
+        >
+          <span className="workload-remaining-label">
+            {caughtUp ? 'Fully caught up!' : `${remaining} ${remaining === 1 ? 'task' : 'tasks'} left`}
+          </span>
+          <motion.div
+            className="workload-blob-wrap"
+            animate={!reduceMotion && caughtUp ? {
+              y: [0, -4, 0],
+              rotate: [0, 2, 0, -2, 0]
+            } : { y: 0, rotate: 0 }}
+            transition={!reduceMotion && caughtUp ? {
+              duration: 2.5,
+              ease: 'easeInOut',
+              repeat: Infinity,
+              repeatDelay: 0.35
+            } : { duration: 0 }}
+          >
+            <svg className="workload-blob" viewBox="0 0 64 58" aria-hidden="true">
+              <defs>
+                <linearGradient id="workload-blob-fill" x1="0" y1="0" x2="1" y2="1">
+                  <stop stopColor="#b6f37f" />
+                  <stop offset="1" stopColor="#72d8a0" />
+                </linearGradient>
+              </defs>
+              <path d="M10 42C5 29 9 13 23 7c13-6 29 2 33 16 3 11-2 26-14 30-12 4-28 1-32-11Z" fill="url(#workload-blob-fill)" />
+              <ellipse cx="25" cy="29" rx="2.7" ry="3.5" fill="#172337" />
+              <ellipse cx="43" cy="28" rx="2.7" ry="3.5" fill="#172337" />
+              <path d={caughtUp ? 'M27 39c4 4 9 4 13-1' : 'M28 39c3 2 7 2 10 0'} fill="none" stroke="#172337" strokeWidth="2.4" strokeLinecap="round" />
+              <circle cx="50" cy="35" r="3" fill="#f5a0ad" opacity=".58" />
+              <circle cx="18" cy="36" r="3" fill="#f5a0ad" opacity=".58" />
+            </svg>
+          </motion.div>
+          {caughtUp && (
+            <div className="workload-celebration" aria-hidden="true">
+              <motion.i animate={reduceMotion ? {} : { opacity: [0, 1, 0], y: [3, -8, -13], scale: [0.7, 1, 0.8] }} transition={{ duration: 1.8, repeat: Infinity }}>✦</motion.i>
+              <motion.i animate={reduceMotion ? {} : { opacity: [0, 1, 0], y: [5, -6, -11], scale: [0.6, 1, 0.7] }} transition={{ duration: 2.1, delay: 0.45, repeat: Infinity }}>✦</motion.i>
+            </div>
+          )}
+        </motion.div>
       </div>
-    </motion.article>
+
+      <div className="workload-progress-foot">
+        <div className="workload-progress-track" aria-hidden="true">
+          <motion.span
+            initial={false}
+            animate={{ width: `${Math.round(progress * 100)}%` }}
+            transition={reduceMotion ? { duration: 0 } : WORKLOAD_SPRING}
+          />
+        </div>
+        <div className="workload-progress-meta">
+          <span>{Math.round(progress * 100)}% complete</span>
+          <span>{overdueCount ? `${overdueCount} overdue` : 'Nothing overdue'}</span>
+          <span>{announcementCount} {announcementCount === 1 ? 'course update' : 'course updates'}</span>
+        </div>
+      </div>
+    </motion.section>
   );
 }
 
@@ -334,7 +468,7 @@ function EmptyDeadlines({ connected, onConnect }) {
   );
 }
 
-function DeadlineList({ assignments, connected, onConnect }) {
+function DeadlineList({ assignments, connected, onConnect, onToggleDone }) {
   const upcoming = smartSort(assignments).filter((item) => !item.done).slice(0, 5);
 
   return (
@@ -349,25 +483,30 @@ function DeadlineList({ assignments, connected, onConnect }) {
       {upcoming.length === 0 ? (
         <EmptyDeadlines connected={connected} onConnect={onConnect} />
       ) : (
-        <div className="mt-4 space-y-3">
+        <div className="home-deadline-list">
           {upcoming.map((item, index) => {
             const days = daysUntil(item.due);
             const dueText = days === null ? 'No due date' : days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'Due today' : `${days}d left`;
             return (
-              <motion.article
+              <motion.button
+                type="button"
                 key={item.id || `${item.title}-${index}`}
-                className="deadline-row"
+                className="home-deadline-row"
                 initial={{ opacity: 0, x: 12 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ ...SPRING, delay: index * 0.05 }}
+                onClick={() => onToggleDone(item)}
+                aria-label={`Mark complete: ${item.title}`}
               >
                 <span className={`priority-rail ${item.priority || 'medium'}`} />
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate text-sm font-semibold text-slate-100">{item.title || 'Untitled assignment'}</h3>
-                  <p className="mt-1 truncate text-xs text-slate-500">{item.subject || 'Course'}</p>
+                  <p className="mt-1 truncate text-xs text-slate-500">{item.subject || 'Course'} · {dueText}</p>
                 </div>
-                <span className={`due-pill ${days !== null && days < 0 ? 'overdue' : ''}`}>{dueText}</span>
-              </motion.article>
+                <span className="home-deadline-check" aria-hidden="true">
+                  <Glyph name="spark" className="h-4 w-4" />
+                </span>
+              </motion.button>
             );
           })}
         </div>
@@ -1488,11 +1627,11 @@ function SecondaryView({ view, announcements, grades, links, connected, onConnec
             <div className="ai-key-settings-head">
               <span className="secondary-icon"><Glyph name="spark" className="h-5 w-5" /></span>
               <div>
-                <h2>Personal AI API key</h2>
-                <p>Stored only in this browser’s local cache and sent directly to the BetterCLSS AI backend.</p>
+                <h2>Gemini API key</h2>
+                <p>Stored only in this browser’s local cache. BetterCLSS sends it through the backend to Google Gemini.</p>
               </div>
             </div>
-            <label htmlFor="studenthub-ai-api-key">AI API key</label>
+            <label htmlFor="studenthub-ai-api-key">Gemini API key</label>
             <input
               id="studenthub-ai-api-key"
               type="password"
@@ -1501,7 +1640,7 @@ function SecondaryView({ view, announcements, grades, links, connected, onConnec
                 setAiApiKey(event.target.value);
                 setAiKeyStatus('');
               }}
-              placeholder="Paste your API key"
+              placeholder="Paste your Google AI Studio key"
               autoComplete="off"
               autoCapitalize="none"
               spellCheck="false"
@@ -1527,16 +1666,12 @@ function SecondaryView({ view, announcements, grades, links, connected, onConnec
 export default function StudentHubMobileDashboard() {
   const data = useMemo(readDashboardData, []);
   const [assignments, setAssignments] = useState(data.assignments);
-  const { pending, overdue, submitted } = useMemo(() => {
+  const overdue = useMemo(() => {
     const nextPending = assignments.filter((item) => !item.done);
-    return {
-      pending: nextPending,
-      overdue: nextPending.filter((item) => {
-        const days = daysUntil(item.due);
-        return days !== null && days < 0;
-      }),
-      submitted: assignments.filter((item) => item.done)
-    };
+    return nextPending.filter((item) => {
+      const days = daysUntil(item.due);
+      return days !== null && days < 0;
+    });
   }, [assignments]);
 
   const [activeView, setActiveView] = useState('home');
@@ -1727,22 +1862,18 @@ export default function StudentHubMobileDashboard() {
                   <p>Priorities, deadlines, and focus tools without the noise.</p>
                 </header>
 
-                <section>
-                  <div className="mb-4 flex items-end justify-between">
-                    <div>
-                      <span className="eyebrow-mobile">At a glance</span>
-                      <h2 className="mt-1 text-lg font-bold tracking-[-0.025em] text-white">Today’s workload</h2>
-                    </div>
-                  </div>
-                  <div className="stats-grid-mobile">
-                    <StatCard index={0} label="Pending" value={pending.length} detail="assignments" tone="blue" icon="tasks" />
-                    <StatCard index={1} label="Overdue" value={overdue.length} detail="need attention" tone="red" icon="bell" />
-                    <StatCard index={2} label="Submitted" value={submitted.length} detail="completed" tone="green" icon="spark" />
-                    <StatCard index={3} label="Announcements" value={data.announcements.length} detail="course updates" tone="violet" icon="bell" />
-                  </div>
-                </section>
+                <WorkloadProgress
+                  assignments={assignments}
+                  overdueCount={overdue.length}
+                  announcementCount={data.announcements.length}
+                />
 
-                <DeadlineList assignments={assignments} connected={data.connected} onConnect={connectCanvas} />
+                <DeadlineList
+                  assignments={assignments}
+                  connected={data.connected}
+                  onConnect={connectCanvas}
+                  onToggleDone={toggleAssignmentDone}
+                />
               </motion.div>
             )}
             {activeView === 'tasks' && (

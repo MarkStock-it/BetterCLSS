@@ -552,12 +552,12 @@
     <div class="assistant-panel" id="assistantPanel">
       <div class="assistant-head">
         <div class="assistant-title">BetterCLSS AI</div>
-        <button class="assistant-key-btn" title="Set your own AI API key" onclick="toggleAiKeyRow()">⚙</button>
+        <button class="assistant-key-btn" title="Set your Gemini API key" onclick="toggleAiKeyRow()">⚙</button>
         <button class="assistant-close" onclick="toggleAssistant(false)">×</button>
       </div>
       <div class="assistant-key-row" id="assistantKeyRow" style="display:none">
-        <input type="password" id="aiKeyInput" placeholder="Paste your AI API key (optional)" autocomplete="off" oninput="saveAiApiKey()" />
-        <span class="assistant-key-hint">Stored locally on this device only. Leave blank to use the shared key.</span>
+        <input type="password" id="aiKeyInput" placeholder="Paste your Gemini API key (optional)" autocomplete="off" oninput="saveAiApiKey()" />
+        <span class="assistant-key-hint">Stored locally on this device only. Leave blank to use the shared BetterCLSS provider.</span>
       </div>
       <div class="assistant-messages" id="assistantMessages"></div>
       <div class="assistant-input-row">

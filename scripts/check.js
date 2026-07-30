@@ -135,8 +135,10 @@ assert(
 assert(
   read('server.js').includes('<betterclss_action>') &&
     read('server.js').includes("type: 'create_deck'") &&
-    read('server.js').includes("replace(/\\*\\*([^*]+)\\*\\*/g, '$1')"),
-  'The AI backend must support validated deck actions and normalize broken Markdown bold markers'
+    read('server.js').includes("replace(/\\*\\*([^*]+)\\*\\*/g, '$1')") &&
+    read('server.js').includes('generativelanguage.googleapis.com') &&
+    read('server.js').includes("'x-goog-api-key': callerApiKey"),
+  'The AI backend must support Gemini keys, validated deck actions, and normalized Markdown'
 );
 assert(
   !studentHubSource.includes('Course progress') &&
