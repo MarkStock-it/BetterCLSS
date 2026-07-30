@@ -1,0 +1,245 @@
+/* ============================================================
+   CALENDAR
+   ============================================================ */
+.cal-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.cal-month-label {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+.cal-nav-btns { display: flex; gap: 6px; }
+.cal-nav-btns button {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 5px 12px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-family: var(--font-ui);
+  transition: border-color 0.15s;
+}
+.cal-nav-btns button:hover { border-color: var(--accent); }
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+.cal-day-name {
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 5px 0;
+}
+.cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s;
+  position: relative;
+  border: 1px solid transparent;
+}
+.cal-day:hover { background: var(--surface-2); }
+.cal-day.other-month { color: var(--text-muted); opacity: 0.35; }
+.cal-day.today { background: var(--accent); color: white; font-weight: 700; }
+.cal-day.has-due::after {
+  content: '';
+  width: 4px; height: 4px;
+  background: var(--red);
+  border-radius: 50%;
+  position: absolute;
+  bottom: 3px;
+}
+.cal-day.today.has-due::after { background: white; }
+.cal-day.selected:not(.today) { border-color: var(--accent); background: var(--surface-2); }
+
+.cal-events-panel {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.cal-event-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.84rem;
+}
+.cal-event-row:last-child { border-bottom: none; }
+
+/* ============================================================
+   GRADES
+   ============================================================ */
+.grades-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.grade-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  text-align: center;
+}
+.grade-course { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.grade-val {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  line-height: 1;
+}
+.grade-val.a { color: var(--green); }
+.grade-val.b { color: var(--accent); }
+.grade-val.c { color: var(--yellow); }
+.grade-val.d, .grade-val.f { color: var(--red); }
+.grade-letter { font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; }
+
+.grade-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+.grade-table th {
+  text-align: left;
+  padding: 8px;
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.grade-table td {
+  padding: 9px 8px;
+  border-bottom: 1px solid rgba(44,49,72,0.6);
+  vertical-align: middle;
+}
+.grade-table tr:last-child td { border-bottom: none; }
+
+/* ============================================================
+   NOTES
+   ============================================================ */
+.notes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+}
+.note-card {
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  min-height: 120px;
+  position: relative;
+  border: 1px solid transparent;
+  transition: transform 0.18s;
+  cursor: pointer;
+}
+.note-card:hover { transform: translateY(-2px); }
+.note-card.yellow { background: rgba(255,184,79, 0.1); border-color: rgba(255,184,79, 0.2); }
+.note-card.blue   { background: rgba(91,127,255, 0.1); border-color: rgba(91,127,255, 0.2); }
+.note-card.pink   { background: rgba(255,100,150,0.1); border-color: rgba(255,100,150,0.2); }
+.note-card.green  { background: rgba(79,221,170, 0.1); border-color: rgba(79,221,170, 0.2); }
+
+.note-title   { font-weight: 600; font-size: 0.875rem; margin-bottom: 7px; }
+.note-body    { font-size: 0.78rem; color: var(--text-dim); line-height: 1.55; }
+.note-date    { position: absolute; bottom: 10px; right: 12px; font-size: 0.68rem; color: var(--text-muted); }
+.note-del-btn {
+  position: absolute; top: 8px; right: 8px;
+  background: none; border: none; color: var(--text-muted);
+  cursor: pointer; font-size: 13px; opacity: 0;
+  transition: opacity 0.15s;
+}
+.note-card:hover .note-del-btn { opacity: 1; }
+
+.add-note-card {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  transition: all 0.15s;
+}
+.add-note-card:hover { border-color: var(--accent); color: var(--accent); background: rgba(91,127,255,0.05); }
+.add-note-card .plus { font-size: 1.4rem; }
+
+/* ============================================================
+   POMODORO
+   ============================================================ */
+.pomo-wrap {
+  max-width: 340px;
+  margin: 0 auto;
+  text-align: center;
+}
+.pomo-modes {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.pomo-mode-btn {
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  transition: all 0.15s;
+}
+.pomo-mode-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.pomo-ring {
+  width: 150px; height: 150px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 5px solid var(--surface-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+.pomo-time {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  color: var(--text);
+}
+.pomo-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+.pomo-controls { display: flex; gap: 8px; justify-content: center; }
+.pomo-stats {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.pomo-stats span { color: var(--accent); font-weight: 700; }
+

@@ -43,7 +43,7 @@ jobs:
         run: |
           mkdir -p _site
           cp StudentHub.html index.html styles.css canvas-api.js config.js user-auth.js push-notifications.js service-worker.js manifest.json _site/
-          cp -R icons studenthub _site/
+          cp -R desktop-app icons studenthub styles _site/
           if [ -d assets ]; then cp -R assets _site/; fi
 
       - name: Upload artifact

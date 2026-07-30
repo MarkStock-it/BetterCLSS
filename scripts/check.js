@@ -16,16 +16,44 @@ function checkScript(relativePath) {
   new vm.Script(read(relativePath), { filename: relativePath });
 }
 
-[
+const checkedScripts = [
   'server.js',
+  'server/app.js',
+  'server/config.js',
+  'server/lib/http.js',
+  'server/middleware/cors.js',
+  'server/routes/api.js',
+  'server/routes/assistant-route.js',
+  'server/routes/canvas-routes.js',
+  'server/routes/notification-routes.js',
+  'server/routes/user-routes.js',
+  'server/services/assistant-service.js',
+  'server/services/canvas-service.js',
+  'server/services/notification-service.js',
+  'server/services/static-service.js',
   'user-auth.js',
   'user-storage.js',
   'canvas-api.js',
   'push-notifications.js',
-  'service-worker.js'
-].forEach(checkScript);
+  'service-worker.js',
+  'desktop-app/state-and-shell.js',
+  'desktop-app/assistant.js',
+  'desktop-app/canvas-and-navigation.js',
+  'desktop-app/coursework-views.js',
+  'desktop-app/study-area.js',
+  'desktop-app/bootstrap.js'
+];
+checkedScripts.forEach(checkScript);
 
 const html = read('index.html');
+const desktopSource = [
+  'desktop-app/state-and-shell.js',
+  'desktop-app/assistant.js',
+  'desktop-app/canvas-and-navigation.js',
+  'desktop-app/coursework-views.js',
+  'desktop-app/study-area.js',
+  'desktop-app/bootstrap.js'
+].map(read).join('\n');
 const inlineScripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)]
   .map((match) => match[1])
   .filter((script) => script.trim());
@@ -57,11 +85,11 @@ assert(
 );
 
 assert(
-  html.includes("switchPage('dashboard');"),
+  desktopSource.includes("switchPage('dashboard');"),
   'Startup must explicitly open the dashboard'
 );
 assert(
-  !html.includes('if (fromStartup) openTutorialModal();'),
+  !desktopSource.includes('if (fromStartup) openTutorialModal();'),
   'Startup sync failures must not cover the dashboard with a modal'
 );
 assert(
@@ -73,12 +101,47 @@ assert(
   'The service worker must bypass its cache for API requests'
 );
 assert(
-  html.includes("assignSort: 'smart'"),
+  read('service-worker.js').includes("'./desktop-app/bootstrap.js?v=7'") &&
+    read('service-worker.js').includes("'./styles/dashboard.css'"),
+  'The offline cache must include the modular desktop scripts and imported styles'
+);
+assert(
+  html.includes('desktop-app/state-and-shell.js?v=7') &&
+    html.includes('desktop-app/bootstrap.js?v=7') &&
+    read('styles.css').includes('@import "styles/dashboard.css";'),
+  'The desktop entrypoint must load the modular application and stylesheet boundaries'
+);
+assert(
+  desktopSource.includes("assignSort: 'smart'"),
   'Assignments must default to smart priority sorting'
 );
 
 const studentHubRedirect = read('StudentHub.html');
 const studentHubSource = read('studenthub-app/src/StudentHubMobileDashboard.jsx');
+const studentHubFiles = [
+  'studenthub-app/src/StudentHubMobileDashboard.jsx',
+  'studenthub-app/src/components/assistant/AssistantDrawer.jsx',
+  'studenthub-app/src/components/calendar/CalendarView.jsx',
+  'studenthub-app/src/components/cards/CardsStudySection.jsx',
+  'studenthub-app/src/components/home/HomeOverview.jsx',
+  'studenthub-app/src/components/navigation/SidebarDrawer.jsx',
+  'studenthub-app/src/components/secondary/SecondaryView.jsx',
+  'studenthub-app/src/components/study/StudyBlobTabs.jsx',
+  'studenthub-app/src/components/study/StudySheet.jsx',
+  'studenthub-app/src/components/study/StudyView.jsx',
+  'studenthub-app/src/components/study/timer/GestureTimerRing.jsx',
+  'studenthub-app/src/components/study/timer/TimerModeCarousel.jsx',
+  'studenthub-app/src/components/study/timer/timer-config.js',
+  'studenthub-app/src/components/tasks/TasksView.jsx',
+  'studenthub-app/src/components/ui/Icons.jsx',
+  'studenthub-app/src/components/ui/ViewControls.jsx',
+  'studenthub-app/src/lib/dashboard-data.js'
+];
+const studentHubImplementation = studentHubFiles.map(read).join('\n');
+const backendSource = checkedScripts
+  .filter((file) => file === 'server.js' || file.startsWith('server/'))
+  .map(read)
+  .join('\n');
 const packageConfig = JSON.parse(read('package.json'));
 const pagesWorkflow = read('.github/workflows/deploy-pages.yml');
 const manifest = JSON.parse(read('manifest.json'));
@@ -94,90 +157,90 @@ assert(
   'StudentHub Canvas setup must preserve StudentHub as the post-authentication destination'
 );
 assert(
-  studentHubSource.includes('const TASKS_PER_PAGE = 5;') &&
-    studentHubSource.includes('className="task-pagination"') &&
-    studentHubSource.includes('aria-label="Task pages"'),
+  studentHubImplementation.includes('const TASKS_PER_PAGE = 5;') &&
+    studentHubImplementation.includes('className="task-pagination"') &&
+    studentHubImplementation.includes('aria-label="Task pages"'),
   'StudentHub task management must show five assignments per page'
 );
 assert(
-  html.includes("launchParams.get('returnTo') === 'studenthub'") &&
-    html.includes("storedReturn === 'studenthub'") &&
-    html.includes("localStorage.removeItem('bclss_connect_return')") &&
-    html.includes('window.location.replace(returnUrl)'),
+  desktopSource.includes("launchParams.get('returnTo') === 'studenthub'") &&
+    desktopSource.includes("storedReturn === 'studenthub'") &&
+    desktopSource.includes("localStorage.removeItem('bclss_connect_return')") &&
+    desktopSource.includes('window.location.replace(returnUrl)'),
   'Canvas authentication must return mobile users to StudentHub across Safari tabs'
 );
 assert(
-  studentHubSource.includes('handleEdgeMove') &&
-    studentHubSource.includes('function ViewModeTabs') &&
-    !studentHubSource.includes('BottomLaunchpad'),
+  studentHubImplementation.includes('handleEdgeMove') &&
+    studentHubImplementation.includes('function ViewModeTabs') &&
+    !studentHubImplementation.includes('BottomLaunchpad'),
   'StudentHub must use the swipe drawer and page-level controls without a floating launchpad'
 );
 assert(
-  studentHubSource.includes("{ id: 'cards', label: 'Cards', icon: 'cards' }") &&
-    studentHubSource.includes("{ id: 'cards', label: 'Cards', icon: 'cards', section: 'Main' }") &&
-    studentHubSource.includes('function CardsStudySection') &&
-    !studentHubSource.includes("{ value: 'focus', label: 'Focus' }") &&
-    !studentHubSource.includes("{ value: 'database'") &&
-    !studentHubSource.includes("{ value: 'algorithms'"),
+  studentHubImplementation.includes("{ id: 'cards', label: 'Cards', icon: 'cards' }") &&
+    studentHubImplementation.includes("{ id: 'cards', label: 'Cards', icon: 'cards', section: 'Main' }") &&
+    studentHubImplementation.includes('function CardsStudySection') &&
+    !studentHubImplementation.includes("{ value: 'focus', label: 'Focus' }") &&
+    !studentHubImplementation.includes("{ value: 'database'") &&
+    !studentHubImplementation.includes("{ value: 'algorithms'"),
   'StudentHub must expose Cards as a peer in the five-option Study Area picker'
 );
 assert(
-  studentHubSource.includes('buildCourseDecks(assignments, savedDecks)') &&
-    studentHubSource.includes('className="deck-selection-list"') &&
-    studentHubSource.includes('const DECKS_PER_PAGE = 5;') &&
-    studentHubSource.includes('aria-label="Deck pages"') &&
-    studentHubSource.includes("activeTab !== 'cards' && <StudyBlobTabs") &&
-    studentHubSource.includes("markCard('again')") &&
-    studentHubSource.includes("markCard('got-it')") &&
-    studentHubSource.includes('drag="x"') &&
-    studentHubSource.includes('onDragEnd={(_, info) => {'),
+  studentHubImplementation.includes('buildCourseDecks(assignments, savedDecks)') &&
+    studentHubImplementation.includes('className="deck-selection-list"') &&
+    studentHubImplementation.includes('const DECKS_PER_PAGE = 5;') &&
+    studentHubImplementation.includes('aria-label="Deck pages"') &&
+    studentHubImplementation.includes("activeTab !== 'cards' && <StudyBlobTabs") &&
+    studentHubImplementation.includes("markCard('again')") &&
+    studentHubImplementation.includes("markCard('got-it')") &&
+    studentHubImplementation.includes('drag="x"') &&
+    studentHubImplementation.includes('onDragEnd={(_, info) => {'),
   'StudentHub card review must use paginated coursework decks with accessible review actions and horizontal swiping'
 );
 assert(
-  studentHubSource.includes('function CalendarView({ calendarView, onViewChange, assignments, savedEvents, onToggleDone })') &&
-    studentHubSource.includes('className="calendar-task-dot"') &&
-    studentHubSource.includes('className="calendar-task-count"') &&
-    studentHubSource.includes('className="calendar-day-task-list"') &&
-    studentHubSource.includes('Nothing due') &&
-    studentHubSource.includes('onToggleDone={toggleAssignmentDone}'),
+  studentHubImplementation.includes('function CalendarView({ calendarView, onViewChange, assignments, savedEvents, onToggleDone })') &&
+    studentHubImplementation.includes('className="calendar-task-dot"') &&
+    studentHubImplementation.includes('className="calendar-task-count"') &&
+    studentHubImplementation.includes('className="calendar-day-task-list"') &&
+    studentHubImplementation.includes('Nothing due') &&
+    studentHubImplementation.includes('onToggleDone={toggleAssignmentDone}'),
   'StudentHub calendar dates must expose unfinished-task indicators and inline completion controls'
 );
 assert(
-  !studentHubSource.includes('function CanvasBanner') &&
-    studentHubSource.includes('function AssistantDrawer') &&
-    studentHubSource.includes("local.studyDecks = next") &&
-    studentHubSource.includes('/api/assistant/chat'),
+  !studentHubImplementation.includes('function CanvasBanner') &&
+    studentHubImplementation.includes('function AssistantDrawer') &&
+    studentHubImplementation.includes("local.studyDecks = next") &&
+    studentHubImplementation.includes('/api/assistant/chat'),
   'StudentHub must replace the dashboard Canvas banner with a backend-connected AI deck helper'
 );
 assert(
-  read('server.js').includes('<betterclss_action>') &&
-    read('server.js').includes("type: 'create_deck'") &&
-    read('server.js').includes("replace(/\\*\\*([^*]+)\\*\\*/g, '$1')") &&
-    read('server.js').includes('generativelanguage.googleapis.com') &&
-    read('server.js').includes("'x-goog-api-key': callerApiKey"),
+  backendSource.includes('<betterclss_action>') &&
+    backendSource.includes("type: 'create_deck'") &&
+    backendSource.includes("replace(/\\*\\*([^*]+)\\*\\*/g, '$1')") &&
+    backendSource.includes('generativelanguage.googleapis.com') &&
+    backendSource.includes("'x-goog-api-key': callerApiKey"),
   'The AI backend must support Gemini keys, validated deck actions, and normalized Markdown'
 );
 assert(
-  !studentHubSource.includes('Course progress') &&
-    !studentHubSource.includes('What-if scores') &&
-    !studentHubSource.includes('All caught up') &&
-    !studentHubSource.includes('Study workspace'),
+  !studentHubImplementation.includes('Course progress') &&
+    !studentHubImplementation.includes('What-if scores') &&
+    !studentHubImplementation.includes('All caught up') &&
+    !studentHubImplementation.includes('Study workspace'),
   'StudentHub secondary pages must not render hard-coded demo cards'
 );
 assert(
-  studentHubSource.includes("from 'motion/react'"),
+  studentHubImplementation.includes("from 'motion/react'"),
   'StudentHub gestures must use Motion for React'
 );
 assert(
-  studentHubSource.includes('function StudySheet') && studentHubSource.includes('timer-primary-control'),
+  studentHubImplementation.includes('function StudySheet') && studentHubImplementation.includes('timer-primary-control'),
   'The Study area must include bottom sheets and a focused timer workspace'
 );
 assert(
-  studentHubSource.includes('bclss_study_durations') && studentHubSource.includes('STUDY_DURATION_PROFILES'),
+  studentHubImplementation.includes('bclss_study_durations') && studentHubImplementation.includes('STUDY_DURATION_PROFILES'),
   'Study duration profiles must be selectable and persisted'
 );
 assert(
-  !studentHubSource.includes('type="range"'),
+  !studentHubImplementation.includes('type="range"'),
   'The simplified Study settings must not expose multiple duration sliders'
 );
 assert(
@@ -206,8 +269,8 @@ assert(
   'GitHub Pages must build StudentHub before creating the deployment artifact'
 );
 assert(
-  pagesWorkflow.includes('cp -R icons studenthub _site/'),
-  'GitHub Pages must publish the compiled StudentHub and icon directories'
+  pagesWorkflow.includes('cp -R desktop-app icons studenthub styles _site/'),
+  'GitHub Pages must publish the modular desktop app, styles, StudentHub, and icon directories'
 );
 [
   'user-auth.js',
@@ -221,4 +284,4 @@ assert(
   );
 });
 
-console.log(`Checks passed: 6 JavaScript files, ${inlineScripts.length} inline script, ${ids.length} unique HTML ids, React StudentHub build.`);
+console.log(`Checks passed: ${checkedScripts.length} JavaScript modules, ${inlineScripts.length} inline scripts, ${ids.length} unique HTML ids, React StudentHub build.`);

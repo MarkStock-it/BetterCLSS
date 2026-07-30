@@ -1,0 +1,415 @@
+/* ============================================================
+   BetterCLSS — Student-focused Canvas companion
+   Clean dark theme, USC Canvas integration
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --font-ui: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-display: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --bg: #0c0e18;
+  --surface: #141720;
+  --surface-2: #1a1e2e;
+  --surface-3: #222638;
+  --border: #2a2f4a;
+  --text: #dfe3f8;
+  --text-muted: #56608a;
+  --text-dim: #8691be;
+  --accent: #6080ff;
+  --accent-hover: #4d6ef5;
+  --red: #ff4f5e;
+  --yellow: #ffb84f;
+  --green: #3dd9a4;
+  --purple: #b06fff;
+  --shadow: 0 4px 32px rgba(0, 0, 0, 0.55);
+  --radius: 14px;
+  --radius-sm: 9px;
+  --nav-h: 44px;
+  --mobile-nav-h: 70px;
+  --top-h: 0px;
+}
+
+[data-theme="light"] {
+  --bg: #f1f3fb;
+  --surface: #ffffff;
+  --surface-2: #eaedfa;
+  --surface-3: #dfe3f5;
+  --border: #cdd2ec;
+  --text: #161929;
+  --text-muted: #7880b0;
+  --text-dim: #4c5480;
+  --shadow: 0 4px 24px rgba(20, 28, 70, 0.10);
+}
+
+html {
+  font-size: 15px;
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+button {
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+body.modal-open .main-content {
+  overflow: hidden;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ============================================================
+   TOPBAR
+   ============================================================ */
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: var(--top-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  gap: 12px;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  letter-spacing: -0.01em;
+}
+
+.logo-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.topbar-center {
+  flex: 1;
+  max-width: 420px;
+  position: relative;
+}
+
+.search-input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 7px 16px 7px 36px;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-input::placeholder { color: var(--text-muted); }
+.search-input:focus { border-color: var(--accent); }
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.topbar-badge {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 13px;
+  font-size: 0.765rem;
+  color: var(--text-dim);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.theme-toggle {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.theme-toggle:hover { border-color: var(--accent); background: var(--surface-3); }
+
+.canvas-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 13px;
+  font-size: 0.765rem;
+  color: var(--text-dim);
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.25s ease;
+}
+.canvas-status:hover { border-color: var(--accent); }
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: background-color 0.2s;
+}
+.status-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.status-dot.error { background: var(--red); }
+
+/* ============================================================
+   NAV TABS — mobile-only horizontal strip (hidden on desktop)
+   ============================================================ */
+.nav-tabs {
+  display: none; /* shown only on ≤900px via media query */
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  padding: 0 14px;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+  height: var(--nav-h);
+  position: sticky;
+  top: 0;
+  z-index: 500;
+  touch-action: pan-x;
+}
+.nav-tabs::-webkit-scrollbar { display: none; }
+
+/* ============================================================
+   NAV TAB — shared base style (used in sidebar + mobile bar)
+   ============================================================ */
+.nav-tab {
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: color 0.15s, background-color 0.15s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-ui);
+  width: 100%;
+  justify-content: flex-start;
+  user-select: none;
+}
+.nav-tab:hover { color: var(--text); background: var(--surface-2); }
+.nav-tab.active {
+  color: var(--accent);
+  background: rgba(96, 128, 255, 0.12);
+  font-weight: 600;
+}
+
+/* Mobile nav: inline pills */
+.nav-tabs .nav-tab {
+  width: auto;
+  justify-content: flex-start;
+  height: 30px;
+  padding: 0 12px;
+  flex-shrink: 0;
+}
+
+.nav-tabs .nav-tab svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.nav-mobile-badge {
+  display: none;
+}
+
+.nav-mobile-badge.empty {
+  display: none !important;
+}
+
+#mobileMoreTab circle {
+  fill: currentColor;
+  stroke: none;
+}
+
+.nav-tab-util {
+  font-size: 0.785rem;
+  opacity: 0.8;
+}
+
+.nav-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 6px;
+  flex-shrink: 0;
+}
+
+.tab-count {
+  background: var(--surface-3);
+  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 1px 6px;
+  font-size: 0.67rem;
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.6;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.tab-count.alert { background: rgba(255, 79, 94, 0.15); color: var(--red); }
+.tab-count.active-count { background: rgba(96, 128, 255, 0.15); color: var(--accent); }
+
+/* ============================================================
+   SIDEBAR BRAND
+   ============================================================ */
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+
+.sidebar-logo {
+  width: 28px;
+  height: 28px;
+  color: var(--accent);
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px rgba(96,128,255,0.35));
+}
+
+.sidebar-brand-text {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.nav-icon {
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.nav-tab:hover .nav-icon,
+.nav-tab.active .nav-icon {
+  opacity: 1;
+}
+
+/* ============================================================
+   SIDENAV — vertical nav inside sidebar
+   ============================================================ */
+.sidenav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidenav-section-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  padding: 0 10px;
+  margin-bottom: 4px;
+}
+
+.sidenav-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
+  flex-shrink: 0;
+}
+

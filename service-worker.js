@@ -1,16 +1,28 @@
 /* global importScripts, firebase */
 
-const CACHE_NAME = 'betterclss-v7';
+const CACHE_NAME = 'betterclss-v8';
 const OFFLINE_URLS = [
   './',
   './index.html',
   './StudentHub.html',
   './studenthub/index.html',
   './styles.css?v=6',
+  './styles/base-and-navigation.css',
+  './styles/dashboard.css',
+  './styles/coursework.css',
+  './styles/study.css',
+  './styles/components.css',
+  './styles/responsive.css',
   './canvas-api.js?v=6',
   './user-auth.js?v=6',
   './config.js?v=6',
   './push-notifications.js?v=6',
+  './desktop-app/state-and-shell.js?v=7',
+  './desktop-app/assistant.js?v=7',
+  './desktop-app/canvas-and-navigation.js?v=7',
+  './desktop-app/coursework-views.js?v=7',
+  './desktop-app/study-area.js?v=7',
+  './desktop-app/bootstrap.js?v=7',
   './manifest.json',
   './icons/apple-touch-icon.png',
   './icons/icon-192.png',
