@@ -911,8 +911,40 @@ function TasksView({ assignments, filter, onFilterChange, connected, onConnect, 
   );
 }
 
-function CalendarView({ calendarView, onViewChange, assignments, savedEvents }) {
-  const days = Array.from({ length: 35 }, (_, index) => index < 3 ? 27 + index : index - 2);
+function CalendarView({ calendarView, onViewChange, assignments, savedEvents, onToggleDone }) {
+  const [selectedDate, setSelectedDate] = useState(null);
+  const today = new Date();
+  const calendarDateKey = (date) => [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0')
+  ].join('-');
+  const todayKey = calendarDateKey(today);
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const monthGridStart = new Date(today.getFullYear(), today.getMonth(), 1 - monthStart.getDay());
+  const monthCellCount = Math.ceil((monthStart.getDay() + new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()) / 7) * 7;
+  const monthDates = Array.from({ length: monthCellCount }, (_, index) => {
+    const date = new Date(monthGridStart);
+    date.setDate(monthGridStart.getDate() + index);
+    return date;
+  });
+  const mondayOffset = today.getDay() === 0 ? -6 : 1 - today.getDay();
+  const weekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() + mondayOffset);
+  const weekDates = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + index);
+    return date;
+  });
+  const tasksByDate = useMemo(() => {
+    const grouped = new Map();
+    assignments.forEach((assignment) => {
+      const dueKey = String(assignment.due || '').slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dueKey)) return;
+      if (!grouped.has(dueKey)) grouped.set(dueKey, []);
+      grouped.get(dueKey).push(assignment);
+    });
+    return grouped;
+  }, [assignments]);
   const events = useMemo(
     () => smartSort([
       ...assignments.filter((item) => !item.done),
@@ -926,6 +958,118 @@ function CalendarView({ calendarView, onViewChange, assignments, savedEvents }) 
       }))
     ]).slice(0, 8),
     [assignments, savedEvents]
+  );
+
+  useEffect(() => {
+    setSelectedDate(null);
+  }, [calendarView]);
+
+  const tasksForDate = (key, includeCompleted = true) => (
+    (tasksByDate.get(key) || []).filter((task) => includeCompleted || !task.done)
+  );
+
+  const urgencyForDate = (key) => {
+    const pendingCount = tasksForDate(key, false).length;
+    if (!pendingCount) return null;
+    if (key < todayKey) return 'overdue';
+    if (key === todayKey) return 'due-today';
+    return 'upcoming';
+  };
+
+  const toggleSelectedDate = (key) => {
+    setSelectedDate((current) => current === key ? null : key);
+  };
+
+  const dateButton = (date, { muted = false, week = false } = {}) => {
+    const key = calendarDateKey(date);
+    const pendingCount = tasksForDate(key, false).length;
+    const urgency = urgencyForDate(key);
+    const isToday = key === todayKey;
+    const isSelected = key === selectedDate;
+    const dateLabel = date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric'
+    });
+    const urgencyLabel = urgency === 'overdue'
+      ? 'overdue'
+      : urgency === 'due-today'
+        ? 'due today'
+        : 'scheduled';
+    const className = [
+      week ? 'week-column' : 'calendar-day-mobile',
+      muted ? 'muted' : '',
+      isToday ? (week ? 'current' : 'today') : '',
+      isSelected ? 'selected' : '',
+      urgency ? `has-tasks ${urgency}` : ''
+    ].filter(Boolean).join(' ');
+    return (
+      <motion.button
+        type="button"
+        className={className}
+        onClick={() => toggleSelectedDate(key)}
+        aria-pressed={isSelected}
+        aria-label={`${isToday ? 'Today, ' : ''}${dateLabel}. ${pendingCount ? `${pendingCount} ${pendingCount === 1 ? 'task' : 'tasks'} ${urgencyLabel}.` : 'Nothing due.'}`}
+        whileTap={{ scale: 0.9 }}
+        key={key}
+      >
+        {week && <span>{date.toLocaleDateString('en-US', { weekday: 'short' })}</span>}
+        <strong className={week ? undefined : 'calendar-date-number'}>{date.getDate()}</strong>
+        {pendingCount > 0 && (
+          pendingCount > 1
+            ? <span className="calendar-task-count" aria-hidden="true">{pendingCount > 9 ? '9+' : pendingCount}</span>
+            : <span className="calendar-task-dot" aria-hidden="true"><i /></span>
+        )}
+      </motion.button>
+    );
+  };
+
+  const selectedTasks = selectedDate ? tasksForDate(selectedDate) : [];
+  const selectedDateValue = selectedDate ? new Date(`${selectedDate}T00:00:00`) : null;
+  const dateTaskPanel = selectedDate && (
+    <motion.section
+      className="calendar-day-tasks"
+      key={`calendar-tasks-${selectedDate}`}
+      aria-label={`Tasks due ${selectedDateValue.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`}
+      initial={{ opacity: 0, y: -6, height: 0 }}
+      animate={{ opacity: 1, y: 0, height: 'auto' }}
+      exit={{ opacity: 0, y: -4, height: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <header>
+        <div>
+          <span className="eyebrow-mobile">Due this day</span>
+          <h3>{selectedDateValue.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</h3>
+        </div>
+        <button type="button" onClick={() => setSelectedDate(null)} aria-label="Collapse daily tasks">
+          <Glyph name="chevron" className="h-4 w-4" />
+        </button>
+      </header>
+      {selectedTasks.length ? (
+        <div className="calendar-day-task-list">
+          {selectedTasks.map((task, index) => (
+            <label className={`calendar-day-task ${task.done ? 'done' : ''}`} key={`${task.source || 'task'}-${task.id || index}`}>
+              <input
+                type="checkbox"
+                checked={Boolean(task.done)}
+                onChange={() => onToggleDone(task)}
+                aria-label={`${task.done ? 'Mark incomplete' : 'Mark complete'}: ${task.title}`}
+              />
+              <span className="calendar-task-check" aria-hidden="true"><Glyph name="spark" className="h-3.5 w-3.5" /></span>
+              <span>
+                <strong>{task.title || 'Untitled task'}</strong>
+                <small>{task.subject || 'Coursework'}</small>
+              </span>
+            </label>
+          ))}
+        </div>
+      ) : (
+        <div className="calendar-nothing-due" role="status">
+          <Glyph name="spark" className="h-4 w-4" />
+          <span><strong>Nothing due</strong><small>This date is clear.</small></span>
+        </div>
+      )}
+    </motion.section>
   );
 
   return (
@@ -952,18 +1096,12 @@ function CalendarView({ calendarView, onViewChange, assignments, savedEvents }) 
         </div>
         <AnimatePresence mode="wait">
           {calendarView === 'month' && (
-            <motion.div key="month-grid" className="mt-6 grid grid-cols-7 gap-2 text-center" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
-              {'SMTWTFS'.split('').map((day, index) => <span key={`${day}-${index}`} className="pb-2 text-[0.62rem] font-bold text-slate-600">{day}</span>)}
-              {days.map((day, index) => (
-                <motion.button
-                  type="button"
-                  key={`${day}-${index}`}
-                  className={`calendar-day-mobile ${day === new Date().getDate() && index >= 3 ? 'today' : ''} ${index < 3 ? 'muted' : ''}`}
-                  whileTap={{ scale: 0.86 }}
-                >
-                  {day}
-                </motion.button>
-              ))}
+            <motion.div key="month-grid" className="calendar-month-view" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
+              <div className="calendar-month-grid">
+                {'SMTWTFS'.split('').map((day, index) => <span key={`${day}-${index}`} className="calendar-weekday-label">{day}</span>)}
+                {monthDates.map((date) => dateButton(date, { muted: date.getMonth() !== today.getMonth() }))}
+              </div>
+              <AnimatePresence initial={false}>{dateTaskPanel}</AnimatePresence>
             </motion.div>
           )}
 
@@ -982,14 +1120,11 @@ function CalendarView({ calendarView, onViewChange, assignments, savedEvents }) 
           )}
 
           {calendarView === 'week' && (
-            <motion.div key="week-board" className="week-board" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((day, index) => (
-                <div className={`week-column ${index === 2 ? 'current' : ''}`} key={day}>
-                  <span>{day}</span>
-                  <strong>{new Date().getDate() + index - 2}</strong>
-                  {(index === 1 || index === 2 || index === 4) && <i style={{ '--event-offset': `${18 + index * 9}px` }} />}
-                </div>
-              ))}
+            <motion.div key="week-board" className="calendar-week-view" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
+              <div className="week-board">
+                {weekDates.map((date) => dateButton(date, { week: true }))}
+              </div>
+              <AnimatePresence initial={false}>{dateTaskPanel}</AnimatePresence>
             </motion.div>
           )}
 
@@ -3048,7 +3183,16 @@ export default function StudentHubMobileDashboard() {
                 onToggleDone={toggleAssignmentDone}
               />
             )}
-            {activeView === 'calendar' && <CalendarView key="calendar" calendarView={calendarView} onViewChange={setCalendarView} assignments={assignments} savedEvents={data.events} />}
+            {activeView === 'calendar' && (
+              <CalendarView
+                key="calendar"
+                calendarView={calendarView}
+                onViewChange={setCalendarView}
+                assignments={assignments}
+                savedEvents={data.events}
+                onToggleDone={toggleAssignmentDone}
+              />
+            )}
             {activeView === 'study' && (
               <StudyView
                 key="study"

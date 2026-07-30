@@ -134,6 +134,15 @@ assert(
   'StudentHub card review must use paginated coursework decks with accessible review actions and horizontal swiping'
 );
 assert(
+  studentHubSource.includes('function CalendarView({ calendarView, onViewChange, assignments, savedEvents, onToggleDone })') &&
+    studentHubSource.includes('className="calendar-task-dot"') &&
+    studentHubSource.includes('className="calendar-task-count"') &&
+    studentHubSource.includes('className="calendar-day-task-list"') &&
+    studentHubSource.includes('Nothing due') &&
+    studentHubSource.includes('onToggleDone={toggleAssignmentDone}'),
+  'StudentHub calendar dates must expose unfinished-task indicators and inline completion controls'
+);
+assert(
   !studentHubSource.includes('function CanvasBanner') &&
     studentHubSource.includes('function AssistantDrawer') &&
     studentHubSource.includes("local.studyDecks = next") &&
