@@ -9,7 +9,7 @@ function createHttpHelpers(corsAllowOrigin) {
       'Referrer-Policy': 'strict-origin-when-cross-origin',
       'Access-Control-Allow-Origin': corsAllowOrigin,
       'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Accept, x-canvas-token, x-canvas-domain, x-ai-key, x-admin-key',
+      'Access-Control-Allow-Headers': 'Content-Type, Accept, x-canvas-token, x-canvas-domain, x-ai-key, x-groq-key, x-admin-key',
       Vary: 'Origin',
     });
     res.end(JSON.stringify(data));

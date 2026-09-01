@@ -85,11 +85,13 @@ export function AssistantDrawer({ open, onClose, data, assignments, onCreateDeck
     try {
       let apiBase = '';
       let aiKey = '';
+      let groqKey = '';
       let canvasToken = '';
       let canvasDomain = '';
       try {
         apiBase = (localStorage.getItem('bclss_api_base') || 'https://betterclss.onrender.com').replace(/\/+$/, '');
         aiKey = localStorage.getItem('bclss_ai_key') || '';
+        groqKey = localStorage.getItem('bclss_groq_key') || '';
         canvasToken = localStorage.getItem('bclss_canvas_token') || '';
         canvasDomain = localStorage.getItem('bclss_canvas_domain') || '';
       } catch {
@@ -97,6 +99,7 @@ export function AssistantDrawer({ open, onClose, data, assignments, onCreateDeck
       }
       const headers = { 'Content-Type': 'application/json' };
       if (aiKey) headers['x-ai-key'] = aiKey;
+      if (groqKey) headers['x-groq-key'] = groqKey;
       if (canvasToken) headers['x-canvas-token'] = canvasToken;
       if (canvasDomain) headers['x-canvas-domain'] = canvasDomain;
       const response = await fetch(`${apiBase}/api/assistant/chat`, {

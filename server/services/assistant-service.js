@@ -154,7 +154,7 @@ function createAssistantService(config) {
     ].join(' ');
   }
 
-  async function chat(message, context = {}, history = [], callerApiKey = '') {
+  async function chat(message, context = {}, history = [], callerApiKey = '', callerGroqKey = '') {
     const safeHistory = Array.isArray(history)
       ? history.slice(-12).filter((entry) => (
         entry && typeof entry.role === 'string' && typeof entry.content === 'string'
@@ -163,6 +163,7 @@ function createAssistantService(config) {
     const contextSummary = summarizeDashboardContext(context);
     const systemPrompt = buildSystemPrompt();
     const userMessage = String(message || '').slice(0, 4000);
+    const fullSystem = `${systemPrompt}\n\nDashboard summary:\n${contextSummary}\n\nDashboard context JSON: ${JSON.stringify(context).slice(0, 12000)}`;
     const payload = {
       model: config.openClaudeModel,
       temperature: 0.4,
@@ -219,6 +220,48 @@ function createAssistantService(config) {
       return parseAssistantResult(content);
     }
 
+    // BYOK Groq path (bring-your-own-key): the user's Groq key, saved in
+    // Settings and sent as `x-groq-key`, is honored for chat just like Gemini.
+    if (callerGroqKey) {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${callerGroqKey}`,
+        },
+        body: JSON.stringify({
+          model: config.groqModel,
+          temperature: 0.4,
+          max_tokens: 700,
+          messages: [
+            { role: 'system', content: fullSystem },
+            ...safeHistory,
+            { role: 'user', content: userMessage },
+          ],
+        }),
+      });
+      if (!response.ok) {
+        const detail = await response.text().catch(() => '');
+        throw new Error(`AI_HTTP_${response.status}${detail ? `:${detail.slice(0, 300)}` : ''}`);
+      }
+      const data = await response.json();
+      const content = data?.choices?.[0]?.message?.content;
+      if (!content) throw new Error('AI_EMPTY');
+      return parseAssistantResult(content);
+    }
+
+    // No user-supplied key. Only attempt a server-side fallback if the server
+    // is actually configured with a reachable provider (an OpenAI-compatible
+    // endpoint with a key, or a local Ollama that autostarts). The deployed
+    // config is bring-your-own-key with no server provider and Ollama
+    // autostart disabled, so the default localhost URL is never reachable —
+    // surface a clear error instead of a confusing "fetch failed".
+    const hasServerFallback = Boolean(
+      config.openClaudeApiKey
+      || (config.aiAutostartOllama && isLocalOllamaBaseUrl(config.openClaudeBaseUrl))
+    );
+    if (!hasServerFallback) throw new Error('NO_AI_KEY_CONFIGURED');
+
     await ensureOllamaRunning();
     const headers = {
       'Content-Type': 'application/json',
@@ -270,6 +313,29 @@ function createAssistantService(config) {
 
   function normalizeError(error) {
     const rawMessage = String(error?.message || 'UNKNOWN_ASSISTANT_ERROR');
+    const rawMessageLower = rawMessage.toLowerCase();
+
+    if (rawMessage === 'NO_AI_KEY_CONFIGURED') {
+      return {
+        status: 400,
+        code: 'no_ai_key',
+        message: 'No AI provider key is configured for chat.',
+        hint: 'Add a Gemini or Groq API key in Settings, or set a server-side AI provider key. The deployed backend is bring-your-own-key.',
+      };
+    }
+
+    const networkErrorSignals = [
+      'fetch failed', 'econnrefused', 'econnreset', 'enotfound',
+      'eai_again', 'getaddrinfo', 'network', 'socket hang up', 'timeout',
+    ];
+    if (networkErrorSignals.some((signal) => rawMessageLower.includes(signal))) {
+      return {
+        status: 502,
+        code: 'ai_provider_unreachable',
+        message: 'The AI provider is unreachable.',
+        hint: 'No AI key is configured for chat and the server cannot reach its default AI endpoint. Add a Gemini or Groq API key in Settings.',
+      };
+    }
 
     if (rawMessage === 'OLLAMA_NOT_AVAILABLE') {
       return {

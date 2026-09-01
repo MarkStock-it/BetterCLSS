@@ -25,7 +25,8 @@ function createAssistantRoute({
       }
 
       const callerApiKey = String(req.headers['x-ai-key'] || '').trim();
-      const result = await assistantService.chat(message, context, history, callerApiKey);
+      const callerGroqKey = String(req.headers['x-groq-key'] || '').trim();
+      const result = await assistantService.chat(message, context, history, callerApiKey, callerGroqKey);
       if (result.actions.length && req.headers['x-canvas-token']) {
         try {
           const canvasAuth = canvasService.resolveAuth(req);
