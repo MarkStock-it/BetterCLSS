@@ -621,38 +621,25 @@ a:focus-visible {
   margin-left: 8px;
   -webkit-user-select: none;
   user-select: none;
-  touch-action: pan-y;
-  cursor: grab;
 }
-.deadline-slider:active { cursor: grabbing; }
 
-/* The two action buttons sit behind the thumb */
+/* Actions: two buttons stacked to the LEFT of the thumb rest position */
 .deadline-slider-actions {
   position: absolute;
-  top: 0;
+  top: 1px;
   left: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 100%;
-  width: max-content;
-  pointer-events: none;
-}
-.slider-action-btn { pointer-events: auto; }
-
-/* The sliding thumb track */
-.deadline-slider-track {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 36px;
-  height: 36px;
-  z-index: 2;
+  gap: 5px;
+  z-index: 1;
 }
 
+/* The draggable thumb */
 .deadline-slider-thumb {
-  width: 36px;
-  height: 36px;
+  position: relative;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -661,32 +648,30 @@ a:focus-visible {
   border-radius: 999px;
   background: linear-gradient(145deg, #1c2240, #151b33);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1), color 140ms ease, border-color 140ms ease, background 140ms ease;
+  cursor: grab;
+  touch-action: none;
+  transition: transform 200ms cubic-bezier(0.2, 0, 0, 1), color 140ms ease;
   will-change: transform;
 }
+.deadline-slider-thumb:active { cursor: grabbing; }
 
-/* Snapped-open state: thumb stays at full reveal */
-.deadline-slider .deadline-slider-thumb {
-  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), color 140ms ease;
-}
-
-/* Action buttons base */
+/* Action button base */
 .slider-action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   flex: 0 0 auto;
   padding: 0;
   border-radius: 999px;
   cursor: pointer;
-  transition: transform 120ms ease, background 140ms ease;
+  transition: transform 100ms ease, background 120ms ease;
 }
 .slider-action-btn:active:not(:disabled) { transform: scale(0.88); }
 .slider-action-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-/* Done button — green checkmark */
+/* Done — green */
 .slider-action-btn.done-btn {
   color: #34d399;
   background: rgba(16, 185, 129, 0.14);
@@ -697,7 +682,7 @@ a:focus-visible {
   border-color: rgba(52, 211, 153, 0.55);
 }
 
-/* Agent button — purple/blue spark */
+/* Agent — purple */
 .slider-action-btn.agent-btn {
   color: #a78bfa;
   background: rgba(139, 92, 246, 0.14);
@@ -718,6 +703,25 @@ a:focus-visible {
   animation: agent-spin 0.7s linear infinite;
 }
 @keyframes agent-spin { to { transform: rotate(360deg); } }
+
+/* Undo button (submitted tasks) */
+.undo-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  padding: 0;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1.5px solid rgba(245, 158, 11, 0.25);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+.undo-btn:hover { background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.45); }
+.undo-btn:active { transform: scale(0.88); }
 
 .task-row-item { margin-bottom: 12px; }
 .task-row-item:last-child { margin-bottom: 0; }

@@ -197,26 +197,23 @@ export function EmptyDeadlines({ connected, onConnect }) {
   );
 }
 
-export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob, creatingJobId, setCreatingJobId }) {
+export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob, creatingJobId, setCreatingJobId, onClose }) {
   const [open, setOpen] = useState(false);
   const [dragX, setDragX] = useState(0);
-  const trackRef = useRef(null);
   const dragRef = useRef({ startX: 0, dragging: false });
-  const HANDLE = 36;
-  const REVEAL = 82;
+  const REVEAL = 84;
   const THRESHOLD = REVEAL * 0.55;
 
-  const collapse = () => { setOpen(false); setDragX(0); };
+  const collapse = () => { setOpen(false); setDragX(0); onClose?.(); };
 
   const onPointerDown = (e) => {
     if (e.button && e.button !== 0) return;
-    dragRef.current = { startX: e.clientX || e.touches?.[0]?.clientX || 0, dragging: true };
-    e.currentTarget.setPointerCapture?.(e.pointerId);
+    dragRef.current = { startX: e.clientX, dragging: true };
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e) => {
     if (!dragRef.current.dragging) return;
-    const x = e.clientX || e.touches?.[0]?.clientX || 0;
-    const delta = dragRef.current.startX - x;
+    const delta = dragRef.current.startX - e.clientX;
     setDragX(Math.max(0, Math.min(delta, REVEAL)));
   };
   const onPointerUp = () => {
@@ -228,15 +225,12 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
   };
 
   const handleDone = (e) => {
-    e.stopPropagation();
-    collapse();
-    onToggleDone(item);
+    e.stopPropagation(); collapse(); onToggleDone(item);
   };
   const handleAgent = async (e) => {
     e.stopPropagation();
     if (creatingJobId) return;
-    const canCreate = canCreateAgentJob(item);
-    if (!canCreate) { alert('This assignment type may not be supported by Agentic Helper yet.'); collapse(); return; }
+    if (!canCreateAgentJob(item)) { alert('This assignment type may not be supported by Agentic Helper yet.'); collapse(); return; }
     setCreatingJobId(item.id);
     try {
       const job = await createAgentJobSafe(item, (err) => alert(`Could not create agent job:\n\n${err}`));
@@ -248,19 +242,24 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
   const offset = open ? REVEAL : dragX;
 
   return (
-    <div className="deadline-slider" ref={trackRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={() => { dragRef.current.dragging = false; setDragX(0); }}>
+    <div className="deadline-slider">
       <div className="deadline-slider-actions">
-        <button type="button" className="slider-action-btn done-btn" onPointerDown={(e) => e.stopPropagation()} onClick={handleDone} aria-label="Mark complete">
+        <button type="button" className="slider-action-btn done-btn" onClick={handleDone} aria-label="Mark complete">
           <Glyph name="tasks" className="h-4 w-4" />
         </button>
-        <button type="button" className="slider-action-btn agent-btn" onPointerDown={(e) => e.stopPropagation()} onClick={handleAgent} disabled={isCreating || !connected} aria-label="Create agent job">
+        <button type="button" className="slider-action-btn agent-btn" onClick={handleAgent} disabled={isCreating || !connected} aria-label="Create agent job">
           {isCreating ? <span className="agent-spinner-tiny" /> : <Glyph name="spark" className="h-4 w-4" />}
         </button>
       </div>
-      <div className="deadline-slider-track">
-        <div className="deadline-slider-thumb" style={{ transform: `translateX(-${offset}px)` }}>
-          <Glyph name="spark" className="h-4 w-4" />
-        </div>
+      <div
+        className="deadline-slider-thumb"
+        style={{ transform: `translateX(-${offset}px)` }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={() => { dragRef.current.dragging = false; setDragX(0); }}
+      >
+        <Glyph name="spark" className="h-4 w-4" />
       </div>
     </div>
   );
@@ -268,10 +267,20 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
 
 export function DeadlineList({ assignments, connected, onConnect, onToggleDone, onCreateAgentJob }) {
   const [creatingJobId, setCreatingJobId] = useState(null);
+  const [activeId, setActiveId] = useState(null);
+  const holdTimerRef = useRef(null);
   const upcoming = smartSort(assignments).filter((item) => !item.done).slice(0, 5);
 
+  const startHold = (id) => {
+    holdTimerRef.current = setTimeout(() => setActiveId(id), 350);
+  };
+  const cancelHold = () => {
+    clearTimeout(holdTimerRef.current);
+  };
+  const clearActive = () => setActiveId(null);
+
   return (
-    <section className="section-card">
+    <section className="section-card" onClick={clearActive}>
       <div className="section-card-head">
         <div>
           <span className="eyebrow-mobile">Next up</span>
@@ -286,13 +295,17 @@ export function DeadlineList({ assignments, connected, onConnect, onToggleDone, 
           {upcoming.map((item, index) => {
             const days = daysUntil(item.due);
             const dueText = days === null ? 'No due date' : days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'Due today' : `${days}d left`;
+            const isActive = activeId === (item.id || item.title);
             return (
               <motion.div
                 key={item.id || `${item.title}-${index}`}
-                className="deadline-row-animated"
+                className={`deadline-row-animated ${isActive ? 'is-active' : ''}`}
                 initial={{ opacity: 0, x: 12 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ ...SPRING, delay: index * 0.05 }}
+                onPointerDown={(e) => { e.stopPropagation(); startHold(item.id || item.title); }}
+                onPointerUp={cancelHold}
+                onPointerLeave={cancelHold}
               >
                 <div className="home-deadline-row">
                   <span className={`priority-rail ${item.priority || 'medium'}`} />
@@ -300,7 +313,11 @@ export function DeadlineList({ assignments, connected, onConnect, onToggleDone, 
                     <h3 className="truncate text-sm font-semibold text-slate-100">{item.title || 'Untitled assignment'}</h3>
                     <p className="mt-1 truncate text-xs text-slate-500">{item.subject || 'Course'} · {dueText}</p>
                   </div>
-                  <DeadlineSlider item={item} connected={connected} onToggleDone={onToggleDone} onCreateAgentJob={onCreateAgentJob} creatingJobId={creatingJobId} setCreatingJobId={setCreatingJobId} />
+                  {isActive ? (
+                    <DeadlineSlider item={item} connected={connected} onToggleDone={onToggleDone} onCreateAgentJob={onCreateAgentJob} creatingJobId={creatingJobId} setCreatingJobId={setCreatingJobId} onClose={clearActive} />
+                  ) : (
+                    <span className="home-deadline-check" aria-hidden="true"><Glyph name="spark" className="h-4 w-4" /></span>
+                  )}
                 </div>
               </motion.div>
             );

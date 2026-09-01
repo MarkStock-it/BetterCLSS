@@ -11,7 +11,13 @@ const TASKS_PER_PAGE = 5;
 export function TasksView({ assignments, filter, onFilterChange, connected, onConnect, onToggleDone, onCreateAgentJob }) {
   const [page, setPage] = useState(1);
   const [creatingJobId, setCreatingJobId] = useState(null);
+  const [activeId, setActiveId] = useState(null);
+  const holdTimerRef = useRef(null);
   const listStartRef = useRef(null);
+
+  const startHold = (id) => { holdTimerRef.current = setTimeout(() => setActiveId(id), 350); };
+  const cancelHold = () => { clearTimeout(holdTimerRef.current); };
+  const clearActive = () => setActiveId(null);
   const visible = useMemo(() => smartSort(assignments).filter((item) => {
     const days = daysUntil(item.due);
     if (filter === 'overdue') return !item.done && days !== null && days < 0;
@@ -40,6 +46,8 @@ export function TasksView({ assignments, filter, onFilterChange, connected, onCo
     });
   };
 
+  const isSubmitted = filter === 'submitted';
+
   return (
     <motion.section key={`tasks-${filter}`} className="view-stack tasks-view" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
       <ViewHeading eyebrow="Coursework" title="Tasks" detail={`${filter[0].toUpperCase()}${filter.slice(1)} assignments`} />
@@ -53,7 +61,7 @@ export function TasksView({ assignments, filter, onFilterChange, connected, onCo
           { value: 'submitted', label: 'Submitted' }
         ]}
       />
-      <section className="section-card tasks-card" ref={listStartRef}>
+      <section className="section-card tasks-card" ref={listStartRef} onClick={clearActive}>
         {visible.length ? (
           <>
             <div className="task-page-summary" aria-live="polite">
@@ -67,18 +75,43 @@ export function TasksView({ assignments, filter, onFilterChange, connected, onCo
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -8 }}
                 transition={{ duration: 0.18 }}
-              >                {pageItems.map((item, index) => (
-                    <div key={`${item.id || item.title}-${startIndex + index}`} className="deadline-row-animated task-row-item mb-3 last:mb-0">
+              >
+                {pageItems.map((item, index) => {
+                  const rowId = item.id || item.title;
+                  const isActive = activeId === rowId;
+                  return (
+                    <div
+                      key={`${rowId}-${startIndex + index}`}
+                      className={`deadline-row-animated task-row-item mb-3 last:mb-0 ${isActive ? 'is-active' : ''}`}
+                      onPointerDown={(e) => { e.stopPropagation(); startHold(rowId); }}
+                      onPointerUp={cancelHold}
+                      onPointerLeave={cancelHold}
+                    >
                       <div className="deadline-row task-toggle-row">
                         <span className={`priority-rail ${item.priority || 'medium'}`} />
                         <div className="min-w-0 flex-1">
                           <h3 className="task-title truncate text-sm font-semibold">{item.title}</h3>
                           <p className="task-meta mt-1 text-xs">{item.subject || 'Course'} · {item.due || 'No due date'}</p>
                         </div>
-                        <DeadlineSlider item={item} connected={connected} onToggleDone={onToggleDone} onCreateAgentJob={onCreateAgentJob} creatingJobId={creatingJobId} setCreatingJobId={setCreatingJobId} />
+                        {isSubmitted ? (
+                          <button
+                            type="button"
+                            className="undo-btn"
+                            onClick={(e) => { e.stopPropagation(); onToggleDone(item); }}
+                            title="Move back to pending"
+                            aria-label={`Undo submission: ${item.title}`}
+                          >
+                            <Glyph name="reset" className="h-4 w-4" />
+                          </button>
+                        ) : isActive ? (
+                          <DeadlineSlider item={item} connected={connected} onToggleDone={onToggleDone} onCreateAgentJob={onCreateAgentJob} creatingJobId={creatingJobId} setCreatingJobId={setCreatingJobId} onClose={clearActive} />
+                        ) : (
+                          <span className="task-done-control" aria-hidden="true"><Glyph name="tasks" className="h-4 w-4" /></span>
+                        )}
                       </div>
                     </div>
-                ))}
+                  );
+                })}
               </motion.div>
             </AnimatePresence>
             {pageCount > 1 && (
