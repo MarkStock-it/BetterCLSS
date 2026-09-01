@@ -236,6 +236,7 @@ async function connectCanvas() {
     CanvasAPI.saveCredentials(token, domain);
     CanvasAPI.setApiBase(apiBase);
     localStorage.setItem('bclss_student_name', authResult.name || '');
+    localStorage.setItem('bclss_student_id', String(authResult.userId || ''));
     mergeLocalData(authResult.localData);
     mergeCanvasData(authResult.canvasData);
     
@@ -267,6 +268,7 @@ async function disconnectCanvas() {
   CanvasAPI.clearCredentials();
   localStorage.removeItem('bclss_canvas_cache');
   localStorage.removeItem('bclss_student_name');
+  localStorage.removeItem('bclss_student_id');
   APP.canvas.connected = false;
   APP.canvas.assignments = [];
   APP.canvas.announcements = [];
@@ -292,6 +294,7 @@ async function restoreUserSession() {
   try {
     const authResult = await UserAuth.authenticateUser(token, domain, apiBase);
     localStorage.setItem('bclss_student_name', authResult.name || '');
+    localStorage.setItem('bclss_student_id', String(authResult.userId || ''));
     mergeLocalData(authResult.localData);
     mergeCanvasData(authResult.canvasData);
     APP.canvas.connected = true;
