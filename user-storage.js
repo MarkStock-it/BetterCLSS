@@ -74,11 +74,11 @@ function getDefaultUserData() {
       pomoSessions: 0,
       nextId: 100
     },
-    // Agentic Helper settings (experimental feature, OFF by default)
+    // Agentic Helper settings (experimental feature, ON by default)
     agentSettings: {
-      enabled: false,
-      enabledAt: null,
-      lastToggledAt: null,
+      enabled: true,
+      enabledAt: new Date().toISOString(),
+      lastToggledAt: new Date().toISOString(),
       // Granular permissions (child controls, only active when master switch is ON)
       permissions: {
         contentGeneration: true,    // AI text/essay generation

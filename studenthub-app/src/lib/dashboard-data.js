@@ -503,6 +503,7 @@ export async function createAgentJob(courseId, assignmentId, manifest) {
   const token = localStorage.getItem('bclss_canvas_token') || '';
   const domain = localStorage.getItem('bclss_canvas_domain') || '';
   try {
+    console.log('[DIAGNOSTIC] Creating agent job:', { userId, courseId, assignmentId, base });
     const res = await fetch(`${base}/api/agent/jobs/${userId}`, {
       method: 'POST',
       headers: {
@@ -512,8 +513,10 @@ export async function createAgentJob(courseId, assignmentId, manifest) {
       },
       body: JSON.stringify({ courseId, assignmentId, manifest }),
     });
+    console.log('[DIAGNOSTIC] Response received:', { status: res.status, ok: res.ok });
     if (!res.ok) return null;
     const data = await res.json();
+    console.log('[DIAGNOSTIC] Parsed response:', { hasJob: !!data.job, jobKeys: data.job ? Object.keys(data.job) : 'N/A', responseKeys: Object.keys(data) });
     return data.job || null;
   } catch {
     return null;
@@ -607,8 +610,10 @@ export function canCreateAgentJob(assignment) {
 export async function createAgentJobSafe(assignment, onError) {
   const courseId = assignment?.courseId;
   const assignmentId = assignment?.canvasId || assignment?.id;
+  console.log('[DIAGNOSTIC] createAgentJobSafe called with assignment:', { courseId, assignmentId, assignmentKeys: assignment ? Object.keys(assignment) : 'N/A' });
   if (!courseId || !assignmentId) {
     const err = 'Missing assignment data (courseId or id)';
+    console.log('[DIAGNOSTIC] Assignment validation failed:', { courseId, assignmentId });
     onError?.(err);
     return null;
   }
@@ -623,12 +628,15 @@ export async function createAgentJobSafe(assignment, onError) {
     );
     if (!job) {
       const err = 'Server returned empty job';
+      console.log('[DIAGNOSTIC] Job creation returned empty:', { job });
       onError?.(err);
       return null;
     }
+    console.log('[DIAGNOSTIC] Job created successfully:', { jobId: job.id });
     return job;
   } catch (error) {
     const errorMsg = error?.message || 'Unknown error creating job';
+    console.log('[DIAGNOSTIC] Exception creating job:', { errorMsg });
     onError?.(errorMsg);
     return null;
   }
