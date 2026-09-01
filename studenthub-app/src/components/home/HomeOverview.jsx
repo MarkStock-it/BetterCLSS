@@ -198,59 +198,69 @@ export function EmptyDeadlines({ connected, onConnect }) {
 }
 
 export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob, creatingJobId, setCreatingJobId }) {
-  const [held, setHeld] = useState(false);
-  const timerRef = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [dragX, setDragX] = useState(0);
+  const trackRef = useRef(null);
+  const dragRef = useRef({ startX: 0, dragging: false });
+  const HANDLE = 36;
+  const REVEAL = 82;
+  const THRESHOLD = REVEAL * 0.55;
 
-  const startHold = () => {
-    timerRef.current = setTimeout(() => setHeld(true), 400);
+  const collapse = () => { setOpen(false); setDragX(0); };
+
+  const onPointerDown = (e) => {
+    if (e.button && e.button !== 0) return;
+    dragRef.current = { startX: e.clientX || e.touches?.[0]?.clientX || 0, dragging: true };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
   };
-  const cancelHold = () => {
-    clearTimeout(timerRef.current);
-    if (!held) setHeld(false);
+  const onPointerMove = (e) => {
+    if (!dragRef.current.dragging) return;
+    const x = e.clientX || e.touches?.[0]?.clientX || 0;
+    const delta = dragRef.current.startX - x;
+    setDragX(Math.max(0, Math.min(delta, REVEAL)));
   };
-  const collapse = () => setHeld(false);
+  const onPointerUp = () => {
+    dragRef.current.dragging = false;
+    setDragX((prev) => {
+      if (prev >= THRESHOLD) { setOpen(true); return REVEAL; }
+      return 0;
+    });
+  };
 
   const handleDone = (e) => {
     e.stopPropagation();
     collapse();
     onToggleDone(item);
   };
-
   const handleAgent = async (e) => {
     e.stopPropagation();
     if (creatingJobId) return;
     const canCreate = canCreateAgentJob(item);
-    if (!canCreate) {
-      alert('This assignment type may not be supported by Agentic Helper yet.');
-      collapse();
-      return;
-    }
+    if (!canCreate) { alert('This assignment type may not be supported by Agentic Helper yet.'); collapse(); return; }
     setCreatingJobId(item.id);
     try {
       const job = await createAgentJobSafe(item, (err) => alert(`Could not create agent job:\n\n${err}`));
       if (job) onCreateAgentJob?.(job);
-    } finally {
-      setCreatingJobId(null);
-      collapse();
-    }
+    } finally { setCreatingJobId(null); collapse(); }
   };
 
   const isCreating = creatingJobId === item.id;
+  const offset = open ? REVEAL : dragX;
 
   return (
-    <div className={`deadline-slider ${held ? 'held' : ''}`} onMouseDown={startHold} onMouseUp={cancelHold} onMouseLeave={cancelHold} onTouchStart={startHold} onTouchEnd={cancelHold}>
-      {held && (
-        <div className="deadline-slider-actions">
-          <button type="button" className="slider-action-btn done-btn" onClick={handleDone} aria-label="Mark complete">
-            <Glyph name="spark" className="h-4 w-4" />
-          </button>
-          <button type="button" className="slider-action-btn agent-btn" onClick={handleAgent} disabled={isCreating || !connected} aria-label="Create agent job">
-            {isCreating ? <span className="agent-spinner-tiny" /> : <Glyph name="spark" className="h-4 w-4" />}
-          </button>
+    <div className="deadline-slider" ref={trackRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={() => { dragRef.current.dragging = false; setDragX(0); }}>
+      <div className="deadline-slider-actions">
+        <button type="button" className="slider-action-btn done-btn" onPointerDown={(e) => e.stopPropagation()} onClick={handleDone} aria-label="Mark complete">
+          <Glyph name="tasks" className="h-4 w-4" />
+        </button>
+        <button type="button" className="slider-action-btn agent-btn" onPointerDown={(e) => e.stopPropagation()} onClick={handleAgent} disabled={isCreating || !connected} aria-label="Create agent job">
+          {isCreating ? <span className="agent-spinner-tiny" /> : <Glyph name="spark" className="h-4 w-4" />}
+        </button>
+      </div>
+      <div className="deadline-slider-track">
+        <div className="deadline-slider-thumb" style={{ transform: `translateX(-${offset}px)` }}>
+          <Glyph name="spark" className="h-4 w-4" />
         </div>
-      )}
-      <div className="deadline-slider-handle">
-        <Glyph name="spark" className="h-4 w-4" />
       </div>
     </div>
   );

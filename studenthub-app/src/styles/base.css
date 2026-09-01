@@ -609,59 +609,68 @@ a:focus-visible {
   background: rgba(75, 184, 132, 0.09);
 }
 
-/* ─── Deadline Slider (hold-to-reveal) ─────────────────────── */
+/* ─── Deadline Slider (drag-to-reveal) ─────────────────────── */
 
 .deadline-row-animated { position: relative; }
 
 .deadline-slider {
-  display: flex;
-  align-items: center;
-  flex: 0 0 auto;
   position: relative;
+  flex: 0 0 auto;
+  width: 36px;
   height: 36px;
   margin-left: 8px;
   -webkit-user-select: none;
   user-select: none;
   touch-action: pan-y;
+  cursor: grab;
 }
+.deadline-slider:active { cursor: grabbing; }
 
-.deadline-slider-handle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  color: #7186cf;
-  border: 1px solid rgba(115, 137, 221, 0.2);
-  border-radius: 999px;
-  background: rgba(89, 111, 202, 0.08);
-  cursor: pointer;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 2;
-}
-
-.deadline-slider.held .deadline-slider-handle {
-  color: #8da3ff;
-  border-color: rgba(141, 163, 255, 0.4);
-  background: rgba(109, 133, 255, 0.15);
-  transform: scale(1.08);
-}
-
+/* The two action buttons sit behind the thumb */
 .deadline-slider-actions {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: flex;
   align-items: center;
   gap: 6px;
+  height: 100%;
+  width: max-content;
+  pointer-events: none;
+}
+.slider-action-btn { pointer-events: auto; }
+
+/* The sliding thumb track */
+.deadline-slider-track {
   position: absolute;
-  right: 44px;
-  opacity: 0;
-  transform: translateX(12px);
-  animation: slider-reveal 220ms cubic-bezier(0.2, 0, 0, 1) forwards;
+  top: 0;
+  left: 0;
+  width: 36px;
+  height: 36px;
+  z-index: 2;
 }
 
-@keyframes slider-reveal {
-  to { opacity: 1; transform: translateX(0); }
+.deadline-slider-thumb {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7186cf;
+  border: 1px solid rgba(115, 137, 221, 0.22);
+  border-radius: 999px;
+  background: linear-gradient(145deg, #1c2240, #151b33);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1), color 140ms ease, border-color 140ms ease, background 140ms ease;
+  will-change: transform;
 }
 
+/* Snapped-open state: thumb stays at full reveal */
+.deadline-slider .deadline-slider-thumb {
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), color 140ms ease;
+}
+
+/* Action buttons base */
 .slider-action-btn {
   display: flex;
   align-items: center;
@@ -670,47 +679,43 @@ a:focus-visible {
   height: 34px;
   flex: 0 0 auto;
   padding: 0;
-  border: 1px solid rgba(115, 137, 221, 0.2);
   border-radius: 999px;
   cursor: pointer;
-  transition: all 140ms ease;
+  transition: transform 120ms ease, background 140ms ease;
 }
+.slider-action-btn:active:not(:disabled) { transform: scale(0.88); }
+.slider-action-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
+/* Done button — green checkmark */
 .slider-action-btn.done-btn {
-  color: #6ee7a8;
-  background: rgba(75, 184, 132, 0.1);
-  border-color: rgba(91, 209, 154, 0.25);
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1.5px solid rgba(52, 211, 153, 0.3);
 }
-.slider-action-btn.done-btn:hover {
-  background: rgba(75, 184, 132, 0.2);
-  border-color: rgba(91, 209, 154, 0.45);
+.slider-action-btn.done-btn:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.26);
+  border-color: rgba(52, 211, 153, 0.55);
 }
 
+/* Agent button — purple/blue spark */
 .slider-action-btn.agent-btn {
-  color: #8da3ff;
-  background: rgba(109, 133, 255, 0.1);
-  border-color: rgba(141, 163, 255, 0.25);
+  color: #a78bfa;
+  background: rgba(139, 92, 246, 0.14);
+  border: 1.5px solid rgba(167, 139, 250, 0.3);
 }
-.slider-action-btn.agent-btn:hover {
-  background: rgba(109, 133, 255, 0.2);
-  border-color: rgba(141, 163, 255, 0.45);
-}
-.slider-action-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.slider-action-btn:active:not(:disabled) {
-  transform: scale(0.9);
+.slider-action-btn.agent-btn:hover:not(:disabled) {
+  background: rgba(139, 92, 246, 0.26);
+  border-color: rgba(167, 139, 250, 0.55);
 }
 
 .agent-spinner-tiny {
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(141, 163, 255, 0.3);
-  border-top-color: #8da3ff;
+  border: 2px solid rgba(167, 139, 250, 0.3);
+  border-top-color: #a78bfa;
   border-radius: 50%;
-  animation: agent-spin 0.8s linear infinite;
+  animation: agent-spin 0.7s linear infinite;
 }
 @keyframes agent-spin { to { transform: rotate(360deg); } }
 
