@@ -357,8 +357,14 @@ function createAgentRoutes({
       const jobId = jobCancelMatch[2];
       try {
         await canvasService.verifyUserRequest(req, userId);
-        const job = agentJobService.cancelJob(userId, jobId);
-        json(res, 200, { success: true, job: agentJobService.sanitizeJob(job) });
+        // Abort any in-flight run AND mark the job cancelled (Phase 33).
+        const aborted = agentOrchestrator.cancelRunningJob(userId, jobId);
+        const job = agentJobService.getJob(userId, jobId);
+        json(res, 200, {
+          success: true,
+          aborted,
+          job: job ? agentJobService.sanitizeJob(job) : null,
+        });
       } catch (error) {
         if (error.message === 'JOB_NOT_FOUND') {
           json(res, 404, { error: 'job_not_found', message: 'Job not found.' });

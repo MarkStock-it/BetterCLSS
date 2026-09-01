@@ -301,6 +301,12 @@ function createAgentOrchestrator({
     },
   });
 
+  // Phase 33: Job cancellation — track running jobs so a user can abort them.
+  // Each running job gets its own AbortController. Aborting it (1) surfaces as a
+  // between-step cancel check below, and (2) is combined with the per-request
+  // timeout in the AI providers so an in-flight call can be aborted too.
+  const runningJobs = new Map(); // key: `${userId}:${jobId}` -> AbortController
+
   /**
    * Run an agent job through the execution plan pipeline.
    *
@@ -311,7 +317,46 @@ function createAgentOrchestrator({
    * @param {object} [options.canvasAuth] - Canvas auth credentials for tool execution
    * @returns {Promise<object>} Run result with final status
    */
+  /**
+   * Run an agent job with cancellation support.
+   * Wraps the actual work in an AbortController so a running job (including an
+   * in-flight AI call) can be aborted via cancelRunningJob().
+   */
   async function runJob(jobId, userId, options = {}) {
+    const runKey = `${userId}:${jobId}`;
+    const abortController = new AbortController();
+    runningJobs.set(runKey, abortController);
+    try {
+      return await runJobInternal(jobId, userId, options, abortController);
+    } finally {
+      runningJobs.delete(runKey);
+    }
+  }
+
+  /**
+   * Cancel a running job. Aborts the in-flight run (AI call + between-step
+   * checks) and marks the job cancelled if it is still in a cancellable state.
+   * @param {number} userId
+   * @param {string} jobId
+   * @returns {boolean} Whether an in-flight run was aborted.
+   */
+  function cancelRunningJob(userId, jobId) {
+    const runKey = `${userId}:${jobId}`;
+    const controller = runningJobs.get(runKey);
+    if (controller) {
+      controller.abort();
+    }
+    try {
+      const job = agentJobService.getJob(userId, jobId);
+      if (job && job.state !== JOB_STATES.CANCELLED && job.state !== JOB_STATES.FAILED && job.state !== JOB_STATES.COMPLETED) {
+        agentJobService.cancelJob(userId, jobId);
+      }
+    } catch { /* job may not exist — ignore */ }
+    return Boolean(controller);
+  }
+
+  async function runJobInternal(jobId, userId, options = {}, abortController) {
+    const signal = abortController ? abortController.signal : null;
     const startTime = Date.now();
 
     // ─── Step 1: Load and validate job ─────────────────────────────
@@ -565,6 +610,10 @@ function createAgentOrchestrator({
       while (true) {
         // Check limits
         const now = Date.now();
+        // Phase 33: Cancellation — stop promptly when the user aborts the job.
+        if (signal && signal.aborted) {
+          throw new AgentLimitError('CANCELLED', 'Job cancelled by user');
+        }
         if (now - startTime > limits.maxExecutionTimeMs) {
           throw new AgentLimitError('TIMEOUT', `Execution exceeded ${limits.maxExecutionTimeMs}ms`);
         }
@@ -614,6 +663,7 @@ function createAgentOrchestrator({
             job,  // Phase 29: pass job for artifact retrieval
             userInput: options.userInput,  // Phase 29: pass user input for retrieval
             aiKeys: options.aiKeys,  // BYOK: per-user AI keys from request headers
+            signal,  // Phase 33: abort signal for in-flight AI calls
           });
 
           // Track counts from step execution
@@ -785,7 +835,11 @@ function createAgentOrchestrator({
 
       // Phase 31: Use classifyAiFailure for AI errors to get accurate job states
       let targetState;
-      if (error instanceof AgentLimitError) {
+      if (error && error.code === 'CANCELLED') {
+        // Phase 33: user aborted the job — keep it CANCELLED, not USER_ACTION_REQUIRED/FAILED
+        targetState = JOB_STATES.CANCELLED;
+        plan.state = PLAN_STATES.FAILED;
+      } else if (error instanceof AgentLimitError) {
         targetState = JOB_STATES.USER_ACTION_REQUIRED;
         plan.state = PLAN_STATES.PAUSED;
       } else if (error instanceof AIError) {
@@ -935,6 +989,7 @@ function createAgentOrchestrator({
       history: getBoundedHistory(ctx.conversation, limits),
       jobId: ctx.jobId,
       aiKeys: ctx.aiKeys,  // BYOK: per-user AI keys from request headers
+      signal: ctx.signal,  // Phase 33: abort signal for in-flight AI calls
       generationConfig: {
         temperature: 0.2,
         maxOutputTokens: getStepOutputLimit('analyze'),
@@ -1008,6 +1063,7 @@ function createAgentOrchestrator({
         history: getBoundedHistory(ctx.conversation, limits),
         jobId: ctx.jobId,
         aiKeys: ctx.aiKeys,  // BYOK: per-user AI keys from request headers
+        signal: ctx.signal,  // Phase 33: abort signal for in-flight AI calls
         // Hybrid routing: this is the tool-utilization loop, so send it to the
         // tools provider (Groq). Analysis/refinement/chat stay on Gemini.
         routing: 'tools',
@@ -1112,7 +1168,7 @@ function createAgentOrchestrator({
     const pipeline = createRefinementPipeline(ctx.manifest);
     const refinementResult = await pipeline.refine(
       { text: contentToRefine },
-      { jobId: ctx.jobId, aiKeys: ctx.aiKeys }
+      { jobId: ctx.jobId, aiKeys: ctx.aiKeys, signal: ctx.signal }
     );
 
     return {
@@ -1344,6 +1400,7 @@ function createAgentOrchestrator({
 
   return {
     runJob,
+    cancelRunningJob,  // Phase 33: abort a running job
     limits,
     // Phase 28: Usage metering
     usageTracker,

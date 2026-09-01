@@ -55,6 +55,40 @@ function createGroqProvider(config) {
   }
 
   /**
+   * Resolve the fetch abort signal for a request: combine the per-request
+   * timeout with the job's cancellation signal (Phase 33). If the job was
+   * already cancelled, throw immediately so we don't fire a doomed request.
+   * @param {object} request - AIRequest (may carry `request.signal`)
+   * @returns {AbortSignal}
+   */
+  function resolveSignal(request) {
+    const timeoutSignal = base.createTimeoutSignal();
+    const jobSignal = request && request.signal;
+    if (!jobSignal) return timeoutSignal;
+    if (jobSignal.aborted) {
+      throw new AIError({
+        category: AI_ERROR_CATEGORIES.CANCELLED,
+        message: 'Job cancelled by user.',
+        provider: 'groq',
+        code: 'CANCELLED',
+        retryable: false,
+      });
+    }
+    return AbortSignal.any([jobSignal, timeoutSignal]);
+  }
+
+  /**
+   * Map an abort that came from the job's cancellation signal to a clean,
+   * non-retryable CANCELLED error (so the reliability wrapper doesn't retry it).
+   * @param {Error} error - The error from the failed fetch
+   * @param {object} request - AIRequest
+   * @returns {boolean}
+   */
+  function isJobAbort(error, request) {
+    return Boolean(request && request.signal && request.signal.aborted && error && error.name === 'AbortError');
+  }
+
+  /**
    * Make a raw request to the Groq API (OpenAI-compatible chat completions).
    * @param {object} body - Request body
    * @param {AbortSignal} signal - Timeout signal
@@ -184,7 +218,7 @@ function createGroqProvider(config) {
 
     const requestId = base.generateRequestId();
     const startTime = Date.now();
-    const signal = base.createTimeoutSignal();
+    const signal = resolveSignal(request);
 
     const body = {
       model,
@@ -218,6 +252,16 @@ function createGroqProvider(config) {
         durationMs,
       };
     } catch (error) {
+      if (isJobAbort(error, request)) {
+        throw new AIError({
+          category: AI_ERROR_CATEGORIES.CANCELLED,
+          message: 'Job cancelled by user.',
+          provider: 'groq',
+          code: 'CANCELLED',
+          retryable: false,
+          cause: error,
+        });
+      }
       if (error instanceof AIError) throw error;
       throw fromNetworkError(error, 'groq');
     }
@@ -279,7 +323,7 @@ function createGroqProvider(config) {
 
     const requestId = base.generateRequestId();
     const startTime = Date.now();
-    const signal = base.createTimeoutSignal();
+    const signal = resolveSignal(request);
 
     const body = {
       model,
@@ -341,6 +385,16 @@ function createGroqProvider(config) {
         durationMs,
       };
     } catch (error) {
+      if (isJobAbort(error, request)) {
+        throw new AIError({
+          category: AI_ERROR_CATEGORIES.CANCELLED,
+          message: 'Job cancelled by user.',
+          provider: 'groq',
+          code: 'CANCELLED',
+          retryable: false,
+          cause: error,
+        });
+      }
       if (error instanceof AIError) throw error;
       throw fromNetworkError(error, 'groq');
     }

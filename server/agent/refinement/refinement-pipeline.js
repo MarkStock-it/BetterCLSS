@@ -65,7 +65,7 @@ function createRefinementPipeline({ aiProvider, manifest, config: pipelineConfig
    * @returns {Promise<object>} Refinement result
    */
   async function refine(content, options = {}) {
-    const { jobId, styleContext, aiKeys } = options;
+    const { jobId, styleContext, aiKeys, signal } = options;
     const startTime = Date.now();
 
     // Normalize content
@@ -111,7 +111,7 @@ function createRefinementPipeline({ aiProvider, manifest, config: pipelineConfig
       // ─── AI Refinement ─────────────────────────────────────
       let aiResult;
       try {
-        aiResult = await callRefinementAI(currentContent, styleContext, jobId, aiKeys);
+        aiResult = await callRefinementAI(currentContent, styleContext, jobId, aiKeys, signal);
       } catch (error) {
         allWarnings.push({
           type: 'ai_error',
@@ -213,7 +213,7 @@ function createRefinementPipeline({ aiProvider, manifest, config: pipelineConfig
    * @param {string} [jobId]
    * @returns {Promise<object>} AI refinement response
    */
-  async function callRefinementAI(content, styleContext, jobId, aiKeys) {
+  async function callRefinementAI(content, styleContext, jobId, aiKeys, signal) {
     const systemInstruction = buildRefinementSystemInstruction(manifest, styleContext);
     const prompt = buildRefinementPrompt(content, manifest);
 
@@ -223,6 +223,7 @@ function createRefinementPipeline({ aiProvider, manifest, config: pipelineConfig
       schema: REFINEMENT_RESPONSE_SCHEMA,
       jobId,
       aiKeys,  // BYOK: per-user AI keys from request headers
+      signal,  // Phase 33: abort signal for in-flight AI calls
       generationConfig: {
         temperature: config.temperature,
       },

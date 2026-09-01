@@ -10,6 +10,7 @@ import {
   downloadAgentArtifact,
   executeAgentJob,
   createAgentJob,
+  cancelAgentJob,
 } from '../../lib/dashboard-data';
 
 const SPRING = { type: 'spring', stiffness: 430, damping: 38, mass: 0.86 };
@@ -130,6 +131,17 @@ export function AgentCenter({ agentSettings }) {
     }
   }, [loadJobs]);
 
+  // Stop/cancel a running job (aborts in-flight AI calls + marks CANCELLED)
+  const handleCancel = useCallback(async (jobId) => {
+    try {
+      await cancelAgentJob(jobId);
+      // Reload jobs to see the cancelled state
+      await loadJobs();
+    } catch {
+      // Ignore — the job may already be in a terminal state
+    }
+  }, [loadJobs]);
+
   if (!enabled) {
     return (
       <div className="view-stack">
@@ -203,6 +215,7 @@ export function AgentCenter({ agentSettings }) {
               onBack={goBack}
               onOpenReview={openReview}
               onExecute={handleExecute}
+              onCancel={handleCancel}
             />
           </motion.div>
         )}
@@ -377,14 +390,16 @@ function AgentJobCard({ job, onClick, reviewAction }) {
 
 // ─── Job Detail ────────────────────────────────────────────────────
 
-function AgentJobDetail({ job, events, onBack, onOpenReview, onExecute }) {
+function AgentJobDetail({ job, events, onBack, onOpenReview, onExecute, onCancel }) {
   const config = getStateConfig(job.state);
   const progress = job.progress?.percent ?? null;
   const message = job.progress?.message || '';
   const hasArtifacts = Array.isArray(job.artifacts) && job.artifacts.length > 0;
   const canReview = job.state === 'USER_ACTION_REQUIRED' || job.state === 'READY';
   const canExecute = job.state === 'DISCOVERED' || job.state === 'PLANNING';
+  const canStop = config.category === 'active'; // any in-progress state can be cancelled
   const [executing, setExecuting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   return (
     <div className="agent-detail">
@@ -502,6 +517,26 @@ function AgentJobDetail({ job, events, onBack, onOpenReview, onExecute }) {
           onClick={() => onOpenReview(job)}
         >
           Review & Submit
+        </button>
+      )}
+
+      {/* Stop a running job */}
+      {canStop && (
+        <button
+          type="button"
+          className="agent-stop-btn"
+          onClick={async () => {
+            if (!window.confirm('Stop this agent job? This will cancel the current run.')) return;
+            setCancelling(true);
+            try {
+              await onCancel(job.id);
+            } finally {
+              setCancelling(false);
+            }
+          }}
+          disabled={cancelling}
+        >
+          {cancelling ? 'Stopping...' : 'Stop Job'}
         </button>
       )}
     </div>
