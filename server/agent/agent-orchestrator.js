@@ -60,6 +60,36 @@ const {
   getStepOutputLimit,
 } = require('./agent-context');
 
+// Phase 28: AI Usage Metering
+const {
+  createAiUsageTracker,
+  classifyTaskComplexity,
+  DEFAULT_BUDGET_LIMITS,
+} = require('../ai/ai-usage-tracker');
+
+// Phase 29: Relevant Context Retrieval
+const {
+  retrieveForStep,
+  formatWithBoundaries,
+  verifyAccess,
+  compactStepResult,
+} = require('./context-retrieval');
+
+// Phase 30: Agent Permissions
+const {
+  checkPermission,
+  getBlockedReason,
+} = require('./agent-permissions');
+
+// Phase 31: AI Provider Reliability
+const {
+  createReliableProvider,
+  classifyAiFailure,
+  isRetryable,
+  AI_ERROR_CATEGORIES,
+} = require('../ai/ai-reliability');
+const { AIError } = require('../ai/ai-errors');
+
 // ─── Default Limits ────────────────────────────────────────────────
 
 const DEFAULT_LIMITS = {
@@ -70,6 +100,10 @@ const DEFAULT_LIMITS = {
   maxStepRetries: 2,          // Max retries per step
   maxHistoryTurns: 10,        // Max conversation turns sent as AI history
   maxHistoryChars: 8000,      // Max chars in conversation history
+  // Phase 28: Token budget
+  maxInputTokensPerJob: 500000,   // Max input tokens per job
+  maxOutputTokensPerJob: 100000,  // Max output tokens per job
+  maxTotalTokensPerJob: 600000,   // Max total tokens per job
 };
 
 // ─── Precomputed Context ──────────────────────────────────────────
@@ -88,11 +122,36 @@ function precomputeContext(manifest, plan, toolDefs) {
   const systemInstruction = buildSystemInstruction(manifest, plan);
   const validationConstraints = buildValidationConstraints(understanding);
 
+  // Phase 27: Token-efficient architecture
+  // Pre-build step-aware system instructions (stable prefix shared across steps)
+  const stepSystemInstructions = {};
+  for (const stepType of ['analyze', 'generate', 'refine', 'validate', 'artifact', 'artifact_validate']) {
+    stepSystemInstructions[stepType] = buildStepSystemInstruction(understanding, plan, stepType);
+  }
+
+  // Pre-filter tool definitions per step type
+  const stepTools = {};
+  for (const stepType of ['analyze', 'generate', 'refine', 'validate', 'artifact', 'artifact_validate']) {
+    stepTools[stepType] = filterToolsForStep(toolDefs, stepType);
+  }
+
+  // Token usage tracker
+  const tokenUsage = {
+    totalPromptTokens: 0,
+    totalCompletionTokens: 0,
+    totalCachedTokens: 0,
+    aiCalls: 0,
+    steps: {},
+  };
+
   return {
     understanding,
     systemInstruction,
     validationConstraints,
     toolDefs,
+    stepSystemInstructions,
+    stepTools,
+    tokenUsage,
   };
 }
 
@@ -213,8 +272,34 @@ function createAgentOrchestrator({
   docxGenerator,
   txtGenerator,
   limits: customLimits,
+  usageTracker: externalTracker,  // Phase 28: optional external usage tracker
 }) {
   const limits = { ...DEFAULT_LIMITS, ...customLimits };
+
+  // Phase 28: AI Usage Metering
+  const usageTracker = externalTracker || createAiUsageTracker({
+    budgetLimits: {
+      maxInputTokensPerJob: limits.maxInputTokensPerJob,
+      maxOutputTokensPerJob: limits.maxOutputTokensPerJob,
+      maxAiCallsPerJob: limits.maxAiCalls,
+      maxTotalTokensPerJob: limits.maxTotalTokensPerJob,
+    },
+  });
+
+  // Phase 31: AI Provider Reliability
+  // Wrap the primary provider with retry, backoff, and structured output repair
+  const reliableAi = createReliableProvider(aiProvider, {
+    retryConfig: {
+      maxRetries: 2,
+      baseDelayMs: 1500,
+      maxDelayMs: 20000,
+    },
+    usageTracker,
+    onRetry: (attempt, delay, error, method) => {
+      // Emit retry event for observability
+      // (actual jobId is not available here — emitted per-call below)
+    },
+  });
 
   /**
    * Run an agent job through the execution plan pipeline.
@@ -329,6 +414,65 @@ function createAgentOrchestrator({
         message: 'Some assignment requirements are not supported.',
         capabilityStatus,
       };
+    }
+
+    // ─── Step 5a: Check permissions for required capabilities ──────
+    const userSettings = agentService.getSettings ? agentService.getSettings(userId) : { enabled: true, permissions: {} };
+    const permissions = userSettings.permissions || {};
+
+    // Check content generation permission if manifest requires it
+    if (permissions.contentGeneration === false) {
+      const hasGenStep = manifest.capabilities?.supported?.some(c =>
+        c.type === 'TEXT_GENERATION' || c.type === 'ESSAY_GENERATION' || c.type === 'WRITTEN_REPORT'
+      );
+      if (hasGenStep) {
+        try {
+          agentJobService.transitionJob(userId, jobId, JOB_STATES.USER_ACTION_REQUIRED, {
+            message: getBlockedReason('contentGeneration'),
+            metadata: { blockedPermission: 'contentGeneration' },
+          });
+        } catch { /* may already be in this state */ }
+        return {
+          success: false,
+          error: 'PERMISSION_DENIED',
+          message: getBlockedReason('contentGeneration'),
+          blockedPermission: 'contentGeneration',
+        };
+      }
+    }
+
+    // Check artifact generation permission if manifest requires DOCX/TXT
+    if (permissions.artifactGeneration === false) {
+      const hasArtifactStep = manifest.capabilities?.supported?.some(c =>
+        c.type === 'DOCX_GENERATION' || c.type === 'TXT_GENERATION'
+      );
+      if (hasArtifactStep) {
+        try {
+          agentJobService.transitionJob(userId, jobId, JOB_STATES.USER_ACTION_REQUIRED, {
+            message: getBlockedReason('artifactGeneration'),
+            metadata: { blockedPermission: 'artifactGeneration' },
+          });
+        } catch { /* may already be in this state */ }
+        return {
+          success: false,
+          error: 'PERMISSION_DENIED',
+          message: getBlockedReason('artifactGeneration'),
+          blockedPermission: 'artifactGeneration',
+        };
+      }
+    }
+
+    // Check Canvas submission permission
+    if (permissions.canvasSubmission === false) {
+      const hasSubmission = manifest.capabilities?.supported?.some(c =>
+        c.type === 'CANVAS_SUBMISSION'
+      );
+      if (hasSubmission) {
+        // Not a hard block — the agent can still generate, just not submit
+        // Record a warning so the review package reflects this
+        plan.warnings = plan.warnings || [];
+        plan.warnings.push('Canvas submission is disabled. Content will be generated but not submitted.');
+      }
     }
 
     // ─── Step 6: Check AI provider ─────────────────────────────────
@@ -467,6 +611,8 @@ function createAgentOrchestrator({
             stepResults,
             generatedContent,
             cachedContext,
+            job,  // Phase 29: pass job for artifact retrieval
+            userInput: options.userInput,  // Phase 29: pass user input for retrieval
           });
 
           // Track counts from step execution
@@ -611,6 +757,9 @@ function createAgentOrchestrator({
         requirementCoverage: coverage,
       });
 
+      // Phase 27: Include token usage in result
+      const tokenUsage = (cachedContext && cachedContext.tokenUsage) || null;
+
       return {
         success: true,
         result: generatedContent ? { content: generatedContent } : null,
@@ -622,6 +771,7 @@ function createAgentOrchestrator({
           toolCalls: toolCallCount,
           durationMs: Date.now() - startTime,
           requirementCoverage: coverage,
+          tokenUsage,
         },
       };
 
@@ -632,11 +782,23 @@ function createAgentOrchestrator({
         category: classifyError(error),
       };
 
-      const targetState = error instanceof AgentLimitError
-        ? JOB_STATES.USER_ACTION_REQUIRED
-        : JOB_STATES.FAILED;
-
-      plan.state = error instanceof AgentLimitError ? PLAN_STATES.PAUSED : PLAN_STATES.FAILED;
+      // Phase 31: Use classifyAiFailure for AI errors to get accurate job states
+      let targetState;
+      if (error instanceof AgentLimitError) {
+        targetState = JOB_STATES.USER_ACTION_REQUIRED;
+        plan.state = PLAN_STATES.PAUSED;
+      } else if (error instanceof AIError) {
+        const aiFailure = classifyAiFailure(error);
+        targetState = aiFailure.jobState === 'USER_ACTION_REQUIRED'
+          ? JOB_STATES.USER_ACTION_REQUIRED
+          : JOB_STATES.FAILED;
+        errorInfo.aiFailure = aiFailure;
+        errorInfo.message = aiFailure.message; // User-friendly message
+        plan.state = aiFailure.retryable ? PLAN_STATES.PAUSED : PLAN_STATES.FAILED;
+      } else {
+        targetState = JOB_STATES.FAILED;
+        plan.state = PLAN_STATES.FAILED;
+      }
 
       try {
         agentJobService.transitionJob(userId, jobId, targetState, {
@@ -662,6 +824,8 @@ function createAgentOrchestrator({
         durationMs: Date.now() - startTime,
       });
 
+      const tokenUsageErr = (cachedContext && cachedContext.tokenUsage) || null;
+
       return {
         success: false,
         error: errorInfo.code,
@@ -672,6 +836,7 @@ function createAgentOrchestrator({
           aiCalls: aiCallCount,
           toolCalls: toolCallCount,
           durationMs: Date.now() - startTime,
+          tokenUsage: tokenUsageErr,
         },
       };
     }
@@ -679,28 +844,46 @@ function createAgentOrchestrator({
 
   /**
    * Execute a single plan step.
+   * Phase 29: Uses context retrieval to provide only relevant, authorized information.
    */
   async function executeStep(step, ctx) {
     const result = { aiCalls: 0, toolCalls: 0, generatedContent: null };
 
+    // Phase 29: Retrieve relevant context for this step
+    const understanding = (ctx.cachedContext && ctx.cachedContext.understanding)
+      || buildAssignmentUnderstanding(ctx.manifest);
+    const retrieved = retrieveForStep({
+      stepType: step.type,
+      userId: ctx.userId,
+      job: ctx.job || { userId: ctx.userId, courseId: ctx.manifest?.identity?.courseId, assignmentId: ctx.manifest?.identity?.assignmentId, artifacts: [] },
+      manifest: ctx.manifest,
+      understanding,
+      stepResults: ctx.stepResults,
+      plan: ctx.plan,
+      userInput: ctx.userInput,
+    });
+
+    // Attach retrieved context to step context for step functions
+    const stepCtx = { ...ctx, retrievedContext: retrieved };
+
     switch (step.type) {
       case STEP_TYPES.ANALYZE:
-        return await executeAnalyzeStep(step, ctx, result);
+        return await executeAnalyzeStep(step, stepCtx, result);
 
       case STEP_TYPES.GENERATE:
-        return await executeGenerateStep(step, ctx, result);
+        return await executeGenerateStep(step, stepCtx, result);
 
       case STEP_TYPES.REFINE:
-        return await executeRefineStep(step, ctx, result);
+        return await executeRefineStep(step, stepCtx, result);
 
       case STEP_TYPES.VALIDATE:
-        return await executeValidateStep(step, ctx, result);
+        return await executeValidateStep(step, stepCtx, result);
 
       case STEP_TYPES.ARTIFACT:
-        return await executeArtifactStep(step, ctx, result);
+        return await executeArtifactStep(step, stepCtx, result);
 
       case STEP_TYPES.ARTIFACT_VALIDATE:
-        return await executeArtifactValidateStep(step, ctx, result);
+        return await executeArtifactValidateStep(step, stepCtx, result);
 
       default:
         throw new AgentLimitError('UNKNOWN_STEP_TYPE', `Unknown step type: ${step.type}`);
@@ -735,16 +918,29 @@ function createAgentOrchestrator({
     ctx.aiCallCount++;
     result.aiCalls = 1;
 
-    const prompt = buildAnalyzePrompt(ctx.manifest);
+    // Phase 27: Use step-aware context instead of full system instruction
+    const stepSysInstr = (ctx.cachedContext && ctx.cachedContext.stepSystemInstructions)
+      ? ctx.cachedContext.stepSystemInstructions.analyze
+      : ctx.systemInstruction;
+    const stepTools = (ctx.cachedContext && ctx.cachedContext.stepTools)
+      ? ctx.cachedContext.stepTools.analyze
+      : toolRuntime.getAvailableTools();
+    const prompt = buildStepPrompt('analyze', understanding, ctx.manifest, null, ctx.plan);
 
-    const aiResponse = await aiProvider.structuredGenerate({
-      systemInstruction: ctx.systemInstruction,
+    const aiResponse = await reliableAi.structuredGenerateWithRepair({
+      systemInstruction: stepSysInstr,
       prompt,
-      schema: buildAgentResponseSchema(toolRuntime.getAvailableTools()),
+      schema: buildAgentResponseSchema(stepTools),
       history: getBoundedHistory(ctx.conversation, limits),
       jobId: ctx.jobId,
-      generationConfig: { temperature: 0.2 },
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: getStepOutputLimit('analyze'),
+      },
     });
+
+    // Track token usage
+    trackTokenUsage(ctx, 'analyze', aiResponse);
 
     // Record in conversation
     ctx.conversation.push({ role: 'user', content: prompt });
@@ -761,7 +957,16 @@ function createAgentOrchestrator({
    * Execute generate step — AI generates content, possibly using tools.
    */
   async function executeGenerateStep(step, ctx, result) {
-    const toolDefs = (ctx.cachedContext && ctx.cachedContext.toolDefs) || toolRuntime.getAvailableTools();
+    // Phase 27: Use step-filtered tools instead of all tools
+    const toolDefs = (ctx.cachedContext && ctx.cachedContext.stepTools)
+      ? ctx.cachedContext.stepTools.generate
+      : ((ctx.cachedContext && ctx.cachedContext.toolDefs) || toolRuntime.getAvailableTools());
+
+    // Phase 27: Use step-aware system instruction (stable prefix for caching)
+    const stepSysInstr = (ctx.cachedContext && ctx.cachedContext.stepSystemInstructions)
+      ? ctx.cachedContext.stepSystemInstructions.generate
+      : ctx.systemInstruction;
+
     let completed = false;
     let generatedContent = null;
     let turnCount = 0;
@@ -779,20 +984,35 @@ function createAgentOrchestrator({
       result.aiCalls++;
       turnCount++;
 
-      // First turn: send focused generate context
-      // Subsequent turns: send only latest tool results for brevity
-      const prompt = turnCount === 1
-        ? buildGeneratePrompt(ctx.manifest)
-        : 'Continue generating content based on the tool results above.';
+      // Phase 27/29: Use step-aware prompt with retrieved context
+      const understanding = (ctx.cachedContext && ctx.cachedContext.understanding)
+        || buildAssignmentUnderstanding(ctx.manifest);
+      let prompt;
+      if (turnCount === 1) {
+        // Phase 29: Use retrieved context with source boundaries if available
+        if (ctx.retrievedContext && ctx.retrievedContext.authorized) {
+          prompt = formatWithBoundaries(ctx.retrievedContext);
+        } else {
+          prompt = buildStepPrompt('generate', understanding, ctx.manifest, ctx.stepResults, ctx.plan);
+        }
+      } else {
+        prompt = 'Continue generating content based on the tool results above.';
+      }
 
-      const aiResponse = await aiProvider.structuredGenerate({
-        systemInstruction: ctx.systemInstruction,
+      const aiResponse = await reliableAi.structuredGenerateWithRepair({
+        systemInstruction: stepSysInstr,
         prompt,
         schema: buildAgentResponseSchema(toolDefs),
         history: getBoundedHistory(ctx.conversation, limits),
         jobId: ctx.jobId,
-        generationConfig: { temperature: 0.3 },
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: getStepOutputLimit('generate'),
+        },
       });
+
+      // Track token usage
+      trackTokenUsage(ctx, 'generate', aiResponse);
 
       ctx.conversation.push({ role: 'user', content: prompt });
 
@@ -1047,6 +1267,67 @@ function createAgentOrchestrator({
   }
 
   /**
+   * Track token usage from an AI response.
+   * Records to both the precomputed context and the usage tracker.
+   * Checks budget after recording.
+   *
+   * @throws {AgentLimitError} if budget exceeded
+   */
+  function trackTokenUsage(ctx, stepType, aiResponse) {
+    // Phase 27: Update precomputed context totals
+    if (ctx.cachedContext && ctx.cachedContext.tokenUsage) {
+      const usage = ctx.cachedContext.tokenUsage;
+      const responseUsage = aiResponse?.usage;
+
+      usage.aiCalls++;
+      if (responseUsage) {
+        usage.totalPromptTokens += responseUsage.promptTokens || 0;
+        usage.totalCompletionTokens += responseUsage.completionTokens || 0;
+        if (responseUsage.cachedTokens) {
+          usage.totalCachedTokens += responseUsage.cachedTokens;
+        }
+      }
+
+      if (!usage.steps[stepType]) {
+        usage.steps[stepType] = { calls: 0, promptTokens: 0, completionTokens: 0 };
+      }
+      usage.steps[stepType].calls++;
+      if (responseUsage) {
+        usage.steps[stepType].promptTokens += responseUsage.promptTokens || 0;
+        usage.steps[stepType].completionTokens += responseUsage.completionTokens || 0;
+      }
+    }
+
+    // Phase 28: Record to usage tracker
+    const responseUsage = aiResponse?.usage;
+    usageTracker.recordRequest({
+      jobId: ctx.jobId,
+      taskType: stepType,
+      model: aiResponse?.model || 'unknown',
+      usage: responseUsage || {},
+      durationMs: aiResponse?.durationMs || 0,
+      requestId: aiResponse?.requestId || null,
+      provider: aiResponse?.provider || 'unknown',
+      success: true,
+    });
+
+    // Phase 28: Check budget after recording
+    const budgetCheck = usageTracker.checkBudget(ctx.jobId, {
+      maxInputTokensPerJob: limits.maxInputTokensPerJob,
+      maxOutputTokensPerJob: limits.maxOutputTokensPerJob,
+      maxAiCallsPerJob: limits.maxAiCalls,
+      maxTotalTokensPerJob: limits.maxTotalTokensPerJob,
+    });
+
+    if (!budgetCheck.withinBudget) {
+      throw new AgentLimitError(
+        'AI_BUDGET_EXCEEDED',
+        `AI budget exceeded: ${budgetCheck.exceeded.join('; ')}`
+      );
+    }
+  }
+
+  /**
    * Emit an event through the orchestrator's event system.
    */
   function emitJobEvent(jobId, type, metadata) {
@@ -1055,7 +1336,15 @@ function createAgentOrchestrator({
     }
   }
 
-  return { runJob, limits };
+  return {
+    runJob,
+    limits,
+    // Phase 28: Usage metering
+    usageTracker,
+    classifyTaskComplexity,
+    // Phase 31: Reliable AI provider
+    reliableAi,
+  };
 }
 
 // ─── Context Builders ─────────────────────────────────────────────
@@ -1166,4 +1455,16 @@ module.exports = {
   buildAssignmentUnderstanding: require('./agent-context').buildAssignmentUnderstanding,
   buildValidationConstraints: require('./agent-context').buildValidationConstraints,
   validateContent: require('./agent-context').validateContent,
+  // Phase 27: Token-efficient architecture
+  buildStepSystemInstruction: require('./agent-context').buildStepSystemInstruction,
+  filterToolsForStep: require('./agent-context').filterToolsForStep,
+  buildStepPrompt: require('./agent-context').buildStepPrompt,
+  getStepOutputLimit: require('./agent-context').getStepOutputLimit,
+  // Phase 28: AI Usage Metering
+  classifyTaskComplexity: require('../ai/ai-usage-tracker').classifyTaskComplexity,
+  DEFAULT_BUDGET_LIMITS: require('../ai/ai-usage-tracker').DEFAULT_BUDGET_LIMITS,
+  // Phase 29: Relevant Context Retrieval
+  retrieveForStep: require('./context-retrieval').retrieveForStep,
+  formatWithBoundaries: require('./context-retrieval').formatWithBoundaries,
+  CONTEXT_SOURCES: require('./context-retrieval').CONTEXT_SOURCES,
 };

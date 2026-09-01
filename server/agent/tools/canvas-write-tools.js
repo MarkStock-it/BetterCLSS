@@ -19,7 +19,14 @@
 
 const { registerTool, TOOL_PERMISSIONS } = require('./tool-registry');
 const { createSuccessResult, createErrorResult } = require('./tool-runtime');
-const { validateApproval, APPROVAL_TYPES } = require('../approval/approval-model');
+const {
+  verifyAssignmentState,
+  verifyArtifactIntegrity,
+  verifyApprovalIntegrity,
+  verifyNoDuplicateSubmission,
+  verifySubmissionResult,
+  detectExternalChanges,
+} = require('../canvas-integrity');
 
 // ─── Tool Registration ─────────────────────────────────────────────
 
@@ -235,55 +242,54 @@ function registerCanvasWriteTools({ canvasService, artifactStorage, getJob, addE
         return createErrorResult('NO_AUTH', 'Canvas authentication not available');
       }
 
-      // ─── Step 2: Validate artifact ───────────────────────────
+      // ─── Step 2: Verify artifact integrity ───────────────────
+      const artifactCheck = verifyArtifactIntegrity(job, artifactId, artifactStorage, userId);
+      if (!artifactCheck.passed) {
+        return createErrorResult(artifactCheck.code, artifactCheck.message);
+      }
       const artifact = findArtifact(job, artifactId);
-      if (!artifact) {
-        return createErrorResult('ARTIFACT_NOT_FOUND', `Artifact ${artifactId} not found in this job`);
-      }
-      if (artifact.status !== 'READY') {
-        return createErrorResult('ARTIFACT_INVALID', `Artifact is in state ${artifact.status}, must be READY`);
-      }
 
-      // ─── Step 3: Validate approval ───────────────────────────
-      if (!job.approval || job.approval.status !== 'APPROVED') {
-        return createErrorResult(
-          'APPROVAL_REQUIRED',
-          'Assignment submission requires human approval. Use the approval endpoint to approve this submission first.'
-        );
-      }
-
-      const approvalCheck = validateApproval(
-        job.approval,
-        artifactId,
-        artifact.artifactVersion || 1
+      // ─── Step 3: Verify approval integrity ───────────────────
+      const approvalCheck = verifyApprovalIntegrity(
+        job, artifactId, artifact?.artifactVersion || 1, userId
       );
-      if (!approvalCheck.valid) {
-        return createErrorResult('APPROVAL_INVALID', approvalCheck.reason);
+      if (!approvalCheck.passed) {
+        return createErrorResult(approvalCheck.code, approvalCheck.message);
       }
 
-      // ─── Step 4: Check idempotency ───────────────────────────
-      if (job.submissionResult && job.submissionResult.submitted) {
-        return createSuccessResult({
-          alreadySubmitted: true,
-          submissionId: job.submissionResult.submissionId,
-          submittedAt: job.submissionResult.submittedAt,
-          message: 'This job has already been submitted.',
-        });
+      // ─── Step 4: Check for duplicate submission ───────────────
+      const duplicateCheck = await verifyNoDuplicateSubmission(
+        job, canvasService, canvasAuth, courseId, assignmentId, userId
+      );
+      if (!duplicateCheck.passed) {
+        return createErrorResult(duplicateCheck.code, duplicateCheck.message);
       }
 
-      // ─── Step 5: Validate submission type against manifest ──
+      // ─── Step 5: Verify assignment state on Canvas ───────────
+      const assignmentCheck = await verifyAssignmentState(
+        canvasService, canvasAuth, courseId, assignmentId, userId
+      );
+      if (!assignmentCheck.passed) {
+        return createErrorResult(assignmentCheck.code, assignmentCheck.message);
+      }
+      // Warn about past-due but don't block
+      const warnings = assignmentCheck.warnings || [];
+
+      // ─── Step 6: Detect external changes ──────────────────────
       const manifest = job.manifest;
-      const allowedTypes = manifest?.metadata?.submissionTypes || manifest?.normalizedAssignment?.submissionTypes;
-      if (Array.isArray(allowedTypes) && allowedTypes.length > 0) {
-        if (!allowedTypes.includes('online_upload') && !allowedTypes.includes('online_url')) {
+      if (manifest) {
+        const externalCheck = await detectExternalChanges(
+          canvasService, canvasAuth, courseId, assignmentId, manifest
+        );
+        if (!externalCheck.passed && externalCheck.changes) {
           return createErrorResult(
-            'SUBMISSION_TYPE_UNSUPPORTED',
-            `This assignment only accepts: ${allowedTypes.join(', ')}. File upload is not supported.`
+            'ASSIGNMENT_CHANGED',
+            `Assignment changed on Canvas since analysis: ${externalCheck.changes.map(c => c.field).join(', ')}`
           );
         }
       }
 
-      // ─── Step 6: Upload file first if needed ─────────────────
+      // ─── Step 7: Upload file first if needed ─────────────────
       let submissionFileId = null;
 
       if (artifact.storagePath) {
@@ -350,9 +356,31 @@ function registerCanvasWriteTools({ canvasService, artifactStorage, getJob, addE
           status: result.workflow_state || 'submitted',
         };
 
+        // ─── Step 8: Post-submission verification ────────────
+        // Verify via Canvas API rather than assuming success
+        const verification = await verifySubmissionResult(
+          canvasService, canvasAuth, courseId, assignmentId, userId
+        );
+
+        submissionResult.verified = verification.passed;
+        submissionResult.verificationCode = verification.code;
+        if (verification.warning) {
+          submissionResult.verificationWarning = verification.warning;
+        }
+        if (verification.submissionId) {
+          submissionResult.verifiedSubmissionId = verification.submissionId;
+        }
+
+        // Add warnings from assignment state check
+        if (warnings.length > 0) {
+          submissionResult.warnings = warnings;
+        }
+
         emitJobEvent(jobId, 'SUBMISSION_CONFIRMED', {
           submissionId: result.id,
           artifactId,
+          verified: verification.passed,
+          verificationCode: verification.code,
         });
 
         return createSuccessResult(submissionResult);

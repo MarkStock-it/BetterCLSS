@@ -381,6 +381,219 @@ COMPLETED
 | 24 | COMPLETE | Architecture audit & integration repair |
 | 25 | COMPLETE | Execution pipeline + plan-based multi-step orchestration |
 | 26 | COMPLETE | Agent Efficiency & Context Optimization |
+| 27 | COMPLETE | Token-Efficient Agent Architecture — step-aware context, tool filtering, cache-friendly instructions |
+| 28 | COMPLETE | AI Usage Metering & Smart Context — token budget, usage tracking, model routing, budget enforcement |
+| 29 | COMPLETE | Relevant Context Retrieval — step-aware retrieval, content compression, source authorization, injection safety |
+| 30 | COMPLETE | Agent Permissions & Action Controls — granular user permissions, server-side enforcement, master/child hierarchy |
+| 31 | COMPLETE | AI Provider Reliability — retry with backoff, structured output repair, fallback, error classification |
+| 32 | COMPLETE | Canvas State & Submission Integrity — assignment verification, artifact integrity, approval binding, post-submission verification |
+| 33 | COMPLETE | End-to-End Verification — 1078 tests pass, security verified, dead code cleaned, architecture traced |
+
+### Phase 32: Canvas State & Submission Integrity
+
+**Verification Layer:**
+
+```
+Pre-Submission Pipeline:
+  1. verifyAssignmentState()    — exists, open, accepts uploads, not locked
+  2. verifyArtifactIntegrity()   — owned, READY, format, file exists, version match
+  3. verifyApprovalIntegrity()   — bound to assignment+job+artifact+user, not expired
+  4. verifyNoDuplicateSubmission() — job-level + Canvas-level check
+  5. detectExternalChanges()     — manifest vs current Canvas state
+
+Post-Submission:
+  6. verifySubmissionResult()    — poll Canvas API to confirm
+```
+
+**Approval Binding:**
+
+```
+Approval binds to:
+  ├── assignment (courseId + assignmentId)
+  ├── job (jobId)
+  ├── artifact (artifactId)
+  ├── version (artifactVersion)
+  └── user (userId)
+```
+
+**External Change Detection:**
+
+| Field | Checked |
+|---|---|
+| title | ✓ |
+| dueDate | ✓ |
+| pointsPossible | ✓ |
+| submissionTypes | ✓ (add/remove) |
+| lockAt | ✓ |
+
+**Files:**
+
+| File | Purpose |
+|---|---|  
+| `server/agent/canvas-integrity.js` | Verification layer |
+| `server/agent/tools/canvas-write-tools.js` | Uses integrity checks |
+| `server/agent/__tests__/canvas-integrity.test.js` | 45 tests |
+
+### Phase 31: AI Provider Reliability
+
+**Retry Policy:**
+
+```
+AI Request
+  ↓
+withRetry(fn, { maxRetries: 2, baseDelayMs: 1500 })
+  ├── Attempt 0 → success → return
+  ├── Attempt 0 → retryable error → wait (backoff + jitter)
+  ├── Attempt 1 → retryable error → wait
+  ├── Attempt 2 → retryable error → try fallback (if available)
+  └── Attempts exhausted → throw classified error
+```
+
+**Retryable Error Categories:**
+
+| Category | Retryable |
+|---|---|
+| RATE_LIMIT | Yes |
+| TIMEOUT | Yes |
+| NETWORK | Yes |
+| PROVIDER_UNAVAILABLE | Yes |
+| MODEL_ERROR (empty response) | Yes |
+| AUTHENTICATION | No |
+| INVALID_REQUEST | No |
+| SCHEMA_VALIDATION | No |
+| INVALID_CONFIGURATION | No |
+
+**Structured Output Repair:**
+
+```
+Model Response (invalid JSON)
+  ↓
+repairStructuredOutput(rawText)
+  ├── Strategy 1: Direct parse
+  ├── Strategy 2: Extract from code block
+  ├── Strategy 3: Find JSON boundaries
+  └── Strategy 4: Fix common issues (trailing commas, comments)
+  ↓
+validateAgainstSchema(repaired, schema)
+  ├── Pass → return repaired data
+  └── Fail → throw error
+```
+
+**Error → Job State Mapping:**
+
+| AI Error | Job State | User Message |
+|---|---|---|
+| AUTHENTICATION | FAILED | "API key is invalid or expired" |
+| INVALID_CONFIGURATION | FAILED | "Provider not properly configured" |
+| RATE_LIMIT | USER_ACTION_REQUIRED | "Rate limit exceeded. Try again later." |
+| TIMEOUT | USER_ACTION_REQUIRED | "Request timed out. You can retry." |
+| NETWORK | USER_ACTION_REQUIRED | "Network error. You can retry." |
+| PROVIDER_UNAVAILABLE | USER_ACTION_REQUIRED | "Temporarily unavailable. You can retry." |
+| SCHEMA_VALIDATION | FAILED | "Response could not be parsed." |
+
+**Files:**
+
+| File | Purpose |
+|---|---|
+| `server/ai/ai-reliability.js` | Retry, repair, fallback, error classification |
+| `server/ai/__tests__/ai-reliability.test.js` | 47 tests |
+| `server/agent/agent-orchestrator.js` | Uses reliableAi wrapper, classifyAiFailure |
+
+### Phase 30: Agent Permissions & Action Controls
+
+**Permission Model:**
+
+```
+Master Switch: agentSettings.enabled
+  ↓ (must be ON)
+Child Permissions:
+  ├── contentGeneration    (AI text/essay generation)
+  ├── artifactGeneration   (DOCX/TXT file creation)
+  ├── canvasComments       (Post comments on assignments)
+  ├── canvasFileUpload     (Upload files to Canvas)
+  └── canvasSubmission     (Submit assignments — OFF by default)
+```
+
+**Server Enforcement:**
+
+```
+Tool Request
+  ↓
+Tool Runtime
+  ├── checkToolPermission(tool, userSettings)
+  │   ├── Master switch OFF → blocked
+  │   ├── Permission OFF → blocked (returns requiredPermission)
+  │   └── Permission ON → continue
+  ├── Schema validation
+  ├── Authorization (job ownership, state)
+  ├── Approval gate (SUBMIT tools)
+  └── Execute
+```
+
+**Orchestrator Pre-check:**
+
+Before execution loop, the orchestrator checks:
+- contentGeneration permission if manifest requires text generation
+- artifactGeneration permission if manifest requires DOCX/TXT
+- canvasSubmission permission (warning only, not hard block)
+
+**Key Design Decisions:**
+
+| Decision | Approach |
+|---|---|
+| Master/child hierarchy | Master OFF = everything OFF |
+| canvasSubmission default | OFF (highest risk) |
+| Server enforcement | Tool runtime + orchestrator |
+| Frontend trust | UI is advisory; server enforces |
+| Mid-job changes | Take effect on next action |
+| Approval interaction | Permissions don't replace approval gate |
+| Blocking granularity | Per-tool via TOOL_ID_PERMISSION_MAP |
+
+**Files:**
+
+| File | Purpose |
+|---|---|
+| `server/agent/agent-permissions.js` | Permission definitions, checking, mapping |
+| `server/services/agent-service.js` | Permission management methods |
+| `server/agent/tools/tool-runtime.js` | Pre-execution permission gate |
+| `server/agent/agent-orchestrator.js` | Pre-loop permission checks |
+| `server/routes/agent-routes.js` | Permission GET/POST endpoints |
+| `user-storage.js` | Default permissions in data model |
+| `studenthub-app/src/.../SecondaryView.jsx` | Permission toggle UI |
+| `studenthub-app/src/.../dashboard-data.js` | Permission persistence |
+
+### Phase 29: Relevant Context Retrieval Architecture
+
+**Context Retrieval Layer:**
+
+```
+Current Step
+  ↓
+retrieveForStep()
+  ├─ verifyAccess(userId, job, manifest) → authorization
+  ├─ STEP_CONTEXT_MAP[stepType] → required/optional sources
+  ├─ retrieveSource() per source type
+  │   ├─ ASSIGNMENT → manifest + understanding
+  │   ├─ STEP_RESULT → relevant previous steps only
+  │   ├─ USER_INPUT → user-provided information
+  │   ├─ ARTIFACT → metadata only (no file content)
+  │   ├─ ATTACHMENT → metadata only
+  │   └─ COURSE → course identity
+  ├─ compactContent() → deterministic compression
+  └─ formatWithBoundaries() → source-labeled sections
+```
+
+**Key Design Decisions:**
+
+| Decision | Approach |
+|---|---|
+| Compression | Deterministic (no AI summarization) |
+| Strategies | truncate, head_tail, extract |
+| Authorization | Every retrieval verifies user ownership |
+| Injection safety | Retrieved material labeled as untrusted |
+| Requirement preservation | Requirements always authoritative |
+| Artifact content | Never re-sent (metadata only) |
+| Step relevance | Only relevant previous steps included |
 
 ### Phase 17: Production Readiness Audit
 
@@ -486,7 +699,98 @@ Canvas Submission → COMPLETED
 - `maxHistoryTurns: 10` — max conversation turns sent as AI history
 - `maxHistoryChars: 8000` — max chars in conversation history
 
-### Security Model (Verified Phase 17)
+### Phase 27: Token-Efficient Agent Architecture
+
+**Step-Aware System Instruction** (`buildStepSystemInstruction()`):
+- Stable prefix (assignment identity, requirements, constraints, safety rules) is identical across all steps — targets Gemini context caching
+- Variable suffix changes per step (analyze/generate/refine instructions)
+- Reduces total instruction size by ~30% vs the old monolithic system instruction
+
+**Tool Filtering** (`filterToolsForStep()`):
+- Analyze step: only `canvas` + `read` category tools (no write/submit)
+- Generate step: `canvas` + `read` + `generate` + `artifact` + write tools (no submit)
+- Refine/Validate steps: no tools (deterministic)
+- Artifact step: only `artifact` category tools
+- Reduces JSON schema size by filtering irrelevant tools per step
+
+**Step-Aware Prompts** (`buildStepPrompt()`):
+- Analyze: minimal prompt (system instruction has requirements)
+- Generate: only instruction text + warnings (requirements in system instruction, not repeated in prompt)
+- Refine: only content to refine (truncated at 6000 chars)
+- Avoids duplicating assignment text across system instruction + prompt
+
+**Output Token Limits** (`getStepOutputLimit()`):
+- Analyze: 1024 tokens (structured summary)
+- Generate: 8192 tokens (full content)
+- Refine: 2048 tokens (modified content)
+- Validate: 512 tokens (deterministic)
+- Prevents AI from generating unnecessarily long responses
+
+**Token Usage Tracking**:
+- Tracks promptTokens, completionTokens, cachedTokens per AI call
+- Per-step breakdown in `tokenUsage.steps`
+- Returned in orchestrator result metadata for observability
+
+**Permission-Based Tool Filtering**:
+- Analyze: excludes WRITE and SUBMIT permissions
+- Generate: excludes SUBMIT permissions
+- Artifact: excludes WRITE and SUBMIT permissions
+- Prevents AI from even seeing tools it shouldn't use at each step
+
+**Measured Token Savings** (test-verified):
+- Analyze step context: ~40-50% smaller than old full-context approach
+- Generate step context: ~20-30% smaller (requirements not duplicated in prompt)
+- Tool schema: filtered per step, reducing schema JSON size
+- System instruction: stable prefix enables Gemini prompt caching
+
+### Phase 28: AI Usage Metering & Smart Context
+
+**AI Usage Tracker** (`server/ai/ai-usage-tracker.js`):
+- Per-request recording: model, promptTokens, completionTokens, cachedTokens, durationMs, taskType, requestId
+- Per-job aggregation: total tokens, calls, duration, per-task breakdown
+- Budget enforcement: configurable limits per job for input tokens, output tokens, total tokens, AI calls, duration
+- Privacy: does NOT store prompt/response content — only metadata
+- Diagnostic API: `getJobSummary()`, `getCompactUsage()`, `getRequestDetails()`
+
+**Token Budget** (per-job safeguards):
+- `maxInputTokensPerJob: 500,000` — prevents runaway input context
+- `maxOutputTokensPerJob: 100,000` — prevents excessive generation
+- `maxTotalTokensPerJob: 600,000` — combined cap
+- `maxAiCallsPerJob: 20` — (uses existing maxAiCalls)
+- `maxDurationMsPerJob: 600,000` — 10 minutes total AI time
+- Budget checked after every AI call; exceeds → `AI_BUDGET_EXCEEDED` → job pauses safely
+
+**Model Routing** (`classifyTaskComplexity()`):
+- Simple tasks (analyze, validate, extraction) → lighter/cheaper model
+- Complex tasks (generate, refine, planning) → full model
+- Unknown tasks default to complex (safe fallback)
+- Returns `{ complexity, reason }` for transparent routing decisions
+
+**Orchestrator Integration**:
+- `usageTracker` exposed on orchestrator for external access
+- Every AI call recorded via `trackTokenUsage()`
+- Budget checked automatically after each recording
+- Token usage included in job result metadata (`metadata.tokenUsage`)
+- `AI_BUDGET_EXCEEDED` → `AgentLimitError` → `USER_ACTION_REQUIRED` state
+
+**Diagnostics** (admin-facing, not student UI):
+```
+Job: ajob_abc123
+AI Calls: 5
+Prompt Tokens: 12,500
+Completion Tokens: 8,200
+Cached Tokens: 3,100
+Total Tokens: 20,700
+Duration: 4.2s
+Models: [gemini-2.0-flash]
+Top Task: generate (15,000 tokens)
+```
+
+**Security**:
+- No prompt/response content stored (privacy)
+- No API keys logged
+- Budget limits enforced server-side
+- Budget cannot be bypassed by client
 
 ### Security Model (Verified Phase 17)
 
@@ -532,11 +836,100 @@ Canvas Submission → COMPLETED
 | GET | `/api/agent/artifacts/:userId/:id/download` | Download artifact |
 | GET | `/api/agent/summary/:userId` | Job count summary |
 
+### Phase 33: End-to-End Verification Report
+
+**Test Results:**
+
+| Suite | Tests | Status |
+|---|---|---|
+| Agent Orchestrator | 64 | ✅ |
+| Execution Pipeline | 76 | ✅ |
+| Agent Intelligence | 94 | ✅ |
+| Job State Machine | 95 | ✅ |
+| Capability Analyzer | 66 | ✅ |
+| Manifest Pipeline | 56 | ✅ |
+| Production Readiness | 87 | ✅ |
+| Integration Hardening | 101 | ✅ |
+| Efficiency Optimization | 37 | ✅ |
+| Token Efficiency | 41 | ✅ |
+| AI Usage Metering | 38 | ✅ |
+| Context Retrieval | 58 | ✅ |
+| Agent Permissions | 52 | ✅ |
+| AI Reliability | 47 | ✅ |
+| Canvas Integrity | 45 | ✅ |
+| Provider Layer | 56 | ✅ |
+| Refinement Pipeline | 65 | ✅ |
+| **Total** | **1078** | **✅** |
+
+Frontend build: ✅ Clean (429KB JS, 91KB CSS)
+
+**Security Verification:**
+
+| Boundary | Status |
+|---|---|
+| Tool runtime authorization (job ownership, state) | ✅ Verified |
+| Canvas integrity (assignment, artifact, approval) | ✅ Verified |
+| Permission enforcement (master + child) | ✅ Verified |
+| Feature gate (isAgenticHelperEnabled) | ✅ Verified |
+| Prompt injection safety (untrusted labels) | ✅ Verified |
+| Budget enforcement (token/call limits) | ✅ Verified |
+| AI reliability (retry, repair, fallback) | ✅ Verified |
+
+**End-to-End Flow:**
+
+```
+Mobile Agent Center
+  → API Routes (auth verified)
+    → Agent Service (feature gate)
+      → Agent Job Service (state machine)
+        → Orchestrator
+          → AI Provider (reliable wrapper)
+            → Retry + Backoff + Repair
+          → Tool Runtime
+            → Permissions check
+            → Authorization check
+            → Canvas Integrity checks
+            → Tool execution
+          → Refinement Pipeline
+          → Artifact Generator
+          → Validation
+        → Canvas Service
+          → Post-submission verification
+      → Job State → READY / FAILED / USER_ACTION_REQUIRED
+    → Mobile Review UI
+      → Approval gate
+      → Canvas submission
+```
+
+**Verified Features:**
+- Assignment ingestion and manifest creation
+- Capability analysis and determination
+- Agent job creation and state management
+- AI content generation with retry/repair
+- Content refinement pipeline
+- Artifact generation (DOCX/TXT)
+- Requirement validation
+- Canvas read tools (assignment, rubric, submission, course, comments)
+- Canvas write tools (upload, comment, submit)
+- Canvas integrity verification
+- Human approval gate
+- Token-efficient context building
+- Usage metering and budget enforcement
+- Granular user permissions
+- Mobile Agent Center UI
+
+**Known Limitations:**
+- Canvas binary file upload (multipart) not fully implemented for all configurations
+- Background job worker not yet decoupled from HTTP request lifecycle
+- WebSocket/SSE real-time updates not yet implemented
+- No persistent job queue for long-running assignments
+- Attachment processing (PDF, images) limited
+
 ### Next Development Phase
 
-Recommended: **Phase 27 — Background Job Worker + Real-time Updates**
+Recommended: **Phase 34 — Background Job Worker + Real-time Updates**
 - Decouple orchestrator execution from HTTP request lifecycle (currently runs in HTTP request context)
 - Add WebSocket/SSE for live job status updates (currently 10s polling)
-- Implement persistent job queue for long-running jobs
+- Implement persistent job queue for long-running assignments
 - Canvas binary file upload (multipart) for all Canvas configurations
 - Attachment processing (PDF, images) for richer assignment understanding

@@ -734,7 +734,8 @@ const STEP_OUTPUT_LIMITS = {
  * @param {object} plan - ExecutionPlan
  * @param {string} currentStepType - Current step type (analyze, generate, etc.)
  * @returns {string} Compact system instruction
- */unction buildStepSystemInstruction(understanding, plan, currentStepType) {
+ */
+function buildStepSystemInstruction(understanding, plan, currentStepType) {
   const parts = [
     // ─── STABLE PREFIX (identical across all steps — Gemini cache target) ─
     'You are BetterCLSS Agentic Helper, an internal planning component.',
@@ -831,15 +832,31 @@ const STEP_OUTPUT_LIMITS = {
  * @param {object[]} allTools - All registered tool definitions
  * @param {string} stepType - Current step type
  * @returns {object[]} Filtered tool definitions
- */unction filterToolsForStep(allTools, stepType) {
+ */
+function filterToolsForStep(allTools, stepType) {
   if (!allTools || allTools.length === 0) return [];
 
   const allowedCategories = STEP_TOOL_CATEGORIES[stepType] || [];
   if (allowedCategories.length === 0) return []; // Step doesn't need tools
 
+  // Permission exclusions per step type
+  const excludePermissions = {
+    analyze: ['WRITE', 'SUBMIT'],   // Analyze never writes or submits
+    generate: ['SUBMIT'],           // Generate never submits
+    artifact: ['WRITE', 'SUBMIT'],  // Artifact only generates locally
+  };
+  const excluded = excludePermissions[stepType] || [];
+
   return allTools.filter(tool => {
     const toolCat = (tool.category || '').toLowerCase();
-    return allowedCategories.some(cat => toolCat.includes(cat));
+    const matchesCategory = allowedCategories.some(cat => toolCat.includes(cat));
+    if (!matchesCategory) return false;
+
+    // Exclude tools with forbidden permissions
+    const toolPerms = tool.permissions || [];
+    if (excluded.some(perm => toolPerms.includes(perm))) return false;
+
+    return true;
   });
 }
 
@@ -853,7 +870,8 @@ const STEP_OUTPUT_LIMITS = {
  * @param {object} stepResults - Results from previous steps
  * @param {object} plan - Current execution plan
  * @returns {string} Minimal prompt for this step
- */unction buildStepPrompt(stepType, understanding, manifest, stepResults, plan) {
+ */
+function buildStepPrompt(stepType, understanding, manifest, stepResults, plan) {
   switch (stepType) {
     case 'analyze':
       // Minimal — system instruction already has requirements
@@ -879,7 +897,8 @@ const STEP_OUTPUT_LIMITS = {
  * @param {object} manifest
  * @param {object} stepResults
  * @returns {string}
- */unction buildCompactGeneratePrompt(understanding, manifest, stepResults) {
+ */
+function buildCompactGeneratePrompt(understanding, manifest, stepResults) {
   const parts = [];
 
   // Only include the actual instruction text (not the requirements — those are in system instruction)
@@ -923,7 +942,8 @@ const STEP_OUTPUT_LIMITS = {
  *
  * @param {object} stepResults
  * @returns {string}
- */unction buildCompactRefinePrompt(stepResults) {
+ */
+function buildCompactRefinePrompt(stepResults) {
   const generateStep = stepResults?.generate;
   const content = generateStep?.generatedContent || '';
 
@@ -943,7 +963,8 @@ const STEP_OUTPUT_LIMITS = {
  *
  * @param {string} stepType
  * @returns {number}
- */unction getStepOutputLimit(stepType) {
+ */
+function getStepOutputLimit(stepType) {
   return STEP_OUTPUT_LIMITS[stepType] || 4096;
 }
 

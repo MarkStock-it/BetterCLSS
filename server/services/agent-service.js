@@ -2,20 +2,23 @@
  * agent-service.js
  * Agentic Helper service boundary.
  *
- * This is the initial foundation for the Agentic Helper feature.
- * It provides:
+ * Provides:
  *   - Feature gate: isAgenticHelperEnabled()
  *   - Settings management: getSettings(), updateSettings()
- *   - Service boundary for future agent operations
- *
- * Future phases will add:
- *   - Capability analysis
- *   - Assignment planning
- *   - Generation / artifact creation
- *   - Validation
- *   - Tool execution (Canvas integration)
- *   - Job management and state machine
+ *   - Permission management: getPermissions(), updatePermissions()
+ *   - Permission checking: checkToolPermission()
  */
+
+const {
+  checkPermission,
+  checkToolPermission: checkToolPerm,
+  getEffectivePermissions,
+  getPermissionsList,
+  validatePermissionsUpdate,
+  mergePermissions,
+  getBlockedReason,
+  getDefaultPermissions,
+} = require('../agent/agent-permissions');
 
 function createAgentService(config, userStorage) {
 
@@ -42,14 +45,16 @@ function createAgentService(config, userStorage) {
   /**
    * Get the Agentic Helper settings for a user.
    * @param {number} canvasUserId - The Canvas user ID
-   * @returns {object} The agent settings object
+   * @returns {object} The agent settings object including permissions
    */
   function getSettings(canvasUserId) {
     const userData = userStorage.loadOrCreateUser(canvasUserId);
+    const agentSettings = userData.agentSettings || {};
     return {
-      enabled: Boolean(userData.agentSettings && userData.agentSettings.enabled),
-      enabledAt: (userData.agentSettings && userData.agentSettings.enabledAt) || null,
-      lastToggledAt: (userData.agentSettings && userData.agentSettings.lastToggledAt) || null,
+      enabled: Boolean(agentSettings.enabled),
+      enabledAt: agentSettings.enabledAt || null,
+      lastToggledAt: agentSettings.lastToggledAt || null,
+      permissions: getEffectivePermissions(agentSettings),
     };
   }
 
@@ -69,6 +74,69 @@ function createAgentService(config, userStorage) {
   }
 
   /**
+   * Get the permissions for a user.
+   * @param {number} canvasUserId - The Canvas user ID
+   * @returns {object[]} List of permissions with current state
+   */
+  function getPermissions(canvasUserId) {
+    const userData = userStorage.loadOrCreateUser(canvasUserId);
+    return getPermissionsList(userData.agentSettings || {});
+  }
+
+  /**
+   * Update specific permissions for a user.
+   * Only updates the keys provided in newPermissions.
+   * @param {number} canvasUserId - The Canvas user ID
+   * @param {object} newPermissions - Permission updates { permissionKey: boolean }
+   * @returns {{ success: boolean, permissions: object[], errors?: string[] }}
+   */
+  function updatePermissions(canvasUserId, newPermissions) {
+    const validation = validatePermissionsUpdate(newPermissions);
+    if (!validation.valid) {
+      return { success: false, permissions: [], errors: validation.errors };
+    }
+
+    const userData = userStorage.loadOrCreateUser(canvasUserId);
+    const currentPerms = (userData.agentSettings && userData.agentSettings.permissions) || getDefaultPermissions();
+    const merged = mergePermissions(currentPerms, validation.sanitized);
+
+    userStorage.updateAgentSettings(canvasUserId, { permissions: merged });
+
+    return { success: true, permissions: getPermissionsList({ ...userData.agentSettings, permissions: merged }) };
+  }
+
+  /**
+   * Check whether a specific permission is enabled for a user.
+   * @param {number} canvasUserId - The Canvas user ID
+   * @param {string} permissionKey - Permission to check
+   * @returns {{ allowed: boolean, reason: string }}
+   */
+  function checkUserPermission(canvasUserId, permissionKey) {
+    const userData = userStorage.loadOrCreateUser(canvasUserId);
+    return checkPermission(userData.agentSettings || {}, permissionKey);
+  }
+
+  /**
+   * Check whether a tool execution is permitted by user settings.
+   * @param {object} tool - Tool definition from registry
+   * @param {number} canvasUserId - The Canvas user ID
+   * @returns {{ allowed: boolean, reason: string, requiredPermission: string|null }}
+   */
+  function checkToolPermissionForUser(tool, canvasUserId) {
+    const userData = userStorage.loadOrCreateUser(canvasUserId);
+    return checkToolPerm(tool, userData.agentSettings || {});
+  }
+
+  /**
+   * Get the user-facing reason a specific action is blocked.
+   * @param {string} permissionKey - The permission that's blocking
+   * @returns {string} User-friendly explanation
+   */
+  function getPermissionBlockedReason(permissionKey) {
+    return getBlockedReason(permissionKey);
+  }
+
+  /**
    * Get the server-side agent configuration (safe subset for client consumption).
    * Does not expose internal paths, keys, or privileged config.
    * @returns {object} Public agent config
@@ -85,6 +153,11 @@ function createAgentService(config, userStorage) {
     isAgenticHelperEnabled,
     getSettings,
     updateSettings,
+    getPermissions,
+    updatePermissions,
+    checkUserPermission,
+    checkToolPermissionForUser,
+    getPermissionBlockedReason,
     getPublicConfig,
   };
 }

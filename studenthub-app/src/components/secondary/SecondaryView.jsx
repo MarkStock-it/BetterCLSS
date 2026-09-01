@@ -191,6 +191,41 @@ export function SecondaryView({ view, announcements, grades, links, connected, o
             {agentEnabled && (
               <p className="agent-status-text">Agentic Helper is enabled</p>
             )}
+            {agentEnabled && agentSettings?.permissions && (
+              <div className="agent-permissions-section">
+                <h3 className="agent-permissions-heading">Permissions</h3>
+                {[
+                  { key: 'contentGeneration', label: 'Content generation', desc: 'AI text and essay generation' },
+                  { key: 'artifactGeneration', label: 'Artifact creation', desc: 'DOCX and TXT file creation' },
+                  { key: 'canvasComments', label: 'Canvas comments', desc: 'Post comments on assignments' },
+                  { key: 'canvasFileUpload', label: 'Canvas file uploads', desc: 'Upload files to Canvas' },
+                  { key: 'canvasSubmission', label: 'Canvas submission', desc: 'Submit assignments' },
+                ].map(({ key, label, desc }) => (
+                  <div className="agent-permission-row" key={key}>
+                    <div className="agent-permission-info">
+                      <span className="agent-permission-label">{label}</span>
+                      <span className="agent-permission-desc">{desc}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className={`agent-toggle-switch agent-permission-toggle ${agentSettings.permissions[key] ? 'active' : ''}`}
+                      onClick={() => {
+                        onAgentSettingsChange({
+                          ...agentSettings,
+                          permissions: {
+                            ...agentSettings.permissions,
+                            [key]: !agentSettings.permissions[key],
+                          },
+                        });
+                      }}
+                      aria-label={`${agentSettings.permissions[key] ? 'Disable' : 'Enable'} ${label}`}
+                    >
+                      <span className="agent-toggle-knob" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             {agentStatusMessage && (
               <p className="agent-status-message" role="status">{agentStatusMessage}</p>
             )}

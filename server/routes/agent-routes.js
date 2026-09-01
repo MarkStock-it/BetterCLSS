@@ -7,6 +7,8 @@
  *   - GET  /api/agent/capabilities               — List registered capabilities
  *   - GET  /api/agent/settings/:userId           — Get agent settings
  *   - POST /api/agent/settings/:userId           — Update agent settings
+ *   - GET  /api/agent/settings/:userId/permissions — Get permissions
+ *   - POST /api/agent/settings/:userId/permissions — Update permissions
  *   - GET  /api/agent/status/:userId             — Get agent enabled status
  *   - POST /api/agent/analyze                    — Analyze assignment (stateless)
  *   - POST /api/agent/ingest/:userId             — Ingest assignment
@@ -91,6 +93,44 @@ function createAgentRoutes({
       } catch (error) {
         if (!canvasService.writeUserAuthError(res, error)) {
           json(res, 500, { error: 'settings_error', message: error.message });
+        }
+      }
+      return true;
+    }
+
+    // ─── Permissions Endpoints ───────────────────────────────────────
+
+    // GET /api/agent/settings/:userId/permissions — get permissions
+    const permissionsGetMatch = pathname.match(/^\/api\/agent\/settings\/(\d+)\/permissions$/);
+    if (permissionsGetMatch && req.method === 'GET') {
+      const userId = parseInt(permissionsGetMatch[1]);
+      try {
+        await canvasService.verifyUserRequest(req, userId);
+        const permissions = agentService.getPermissions(userId);
+        json(res, 200, { success: true, permissions });
+      } catch (error) {
+        if (!canvasService.writeUserAuthError(res, error)) {
+          json(res, 500, { error: 'permissions_error', message: error.message });
+        }
+      }
+      return true;
+    }
+
+    // POST /api/agent/settings/:userId/permissions — update permissions
+    if (permissionsGetMatch && req.method === 'POST') {
+      const userId = parseInt(permissionsGetMatch[1]);
+      try {
+        await canvasService.verifyUserRequest(req, userId);
+        const body = await parseRequestBody(req);
+        const result = agentService.updatePermissions(userId, body.permissions || {});
+        if (!result.success) {
+          json(res, 400, { success: false, errors: result.errors });
+          return true;
+        }
+        json(res, 200, { success: true, permissions: result.permissions });
+      } catch (error) {
+        if (!canvasService.writeUserAuthError(res, error)) {
+          json(res, 500, { error: 'permissions_error', message: error.message });
         }
       }
       return true;

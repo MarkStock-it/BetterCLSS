@@ -78,7 +78,15 @@ function getDefaultUserData() {
     agentSettings: {
       enabled: false,
       enabledAt: null,
-      lastToggledAt: null
+      lastToggledAt: null,
+      // Granular permissions (child controls, only active when master switch is ON)
+      permissions: {
+        contentGeneration: true,    // AI text/essay generation
+        artifactGeneration: true,   // DOCX/TXT file creation
+        canvasComments: true,       // Post comments on assignments
+        canvasFileUpload: true,     // Upload files to Canvas
+        canvasSubmission: false,    // Submit assignments (OFF by default for safety)
+      }
     },
     // Agentic Helper job history
     agentJobs: [],

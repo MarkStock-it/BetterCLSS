@@ -11,6 +11,7 @@
  */
 
 const { getTool, getToolDefinitions } = require('./tool-registry');
+const { checkToolPermission, AGENT_PERMISSIONS } = require('../agent-permissions');
 
 // ─── Tool Request Schema ─────────────────────────────────────────────
 
@@ -172,7 +173,19 @@ function authorizeTool(tool, job, userId, agentService) {
     return { authorized: false, reason: 'Tool not registered' };
   }
 
-  // 5. SUBMIT permission requires approval
+  // 5. Check user permissions (Phase 30: granular controls)
+  // Load user settings for permission check
+  const userSettings = agentService.getSettings ? agentService.getSettings(userId) : { enabled: true, permissions: {} };
+  const permCheck = checkToolPermission(tool, userSettings);
+  if (!permCheck.allowed) {
+    return {
+      authorized: false,
+      reason: permCheck.reason,
+      blockedPermission: permCheck.requiredPermission,
+    };
+  }
+
+  // 6. SUBMIT permission requires approval
   if (tool.permissions && tool.permissions.includes('SUBMIT')) {
     if (!job.approval || job.approval.status !== 'APPROVED') {
       return {
@@ -196,7 +209,7 @@ function authorizeTool(tool, job, userId, agentService) {
     }
   }
 
-  // 6. WRITE permission check
+  // 7. WRITE permission check
   if (tool.permissions && tool.permissions.includes('WRITE')) {
     // WRITE tools require job to be in EXECUTING state
     if (job.state !== 'EXECUTING') {

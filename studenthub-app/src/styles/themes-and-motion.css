@@ -372,6 +372,22 @@
   color: #68748f;
 }
 
+:root[data-theme="light"] .agent-permissions-heading {
+  color: #68748f;
+}
+
+:root[data-theme="light"] .agent-permission-label {
+  color: #28324b;
+}
+
+:root[data-theme="light"] .agent-permission-desc {
+  color: #7a86a1;
+}
+
+:root[data-theme="light"] .agent-permission-row + .agent-permission-row {
+  border-top-color: rgba(71, 86, 137, 0.08);
+}
+
 :root[data-theme="light"] .agent-toggle-switch {
   background: rgba(190, 198, 221, 0.6);
 }

@@ -231,6 +231,72 @@
 }
 
 /* =====================================================
+   Agentic Helper Permissions
+   ===================================================== */
+
+.agent-permissions-section {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(101, 119, 180, 0.12);
+}
+
+.agent-permissions-heading {
+  margin: 0 0 10px;
+  color: #7783a5;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.agent-permission-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.agent-permission-row + .agent-permission-row {
+  border-top: 1px solid rgba(101, 119, 180, 0.08);
+}
+
+.agent-permission-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+  margin-right: 12px;
+}
+
+.agent-permission-label {
+  color: #c2cae5;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.agent-permission-desc {
+  color: #5a6685;
+  font-size: 0.58rem;
+  line-height: 1.4;
+}
+
+.agent-permission-toggle {
+  width: 40px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.agent-permission-toggle .agent-toggle-knob {
+  width: 18px;
+  height: 18px;
+}
+
+.agent-permission-toggle.active .agent-toggle-knob {
+  transform: translateX(16px);
+}
+
+/* =====================================================
    Agentic Helper Confirmation Modal
    ===================================================== */
 

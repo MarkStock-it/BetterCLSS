@@ -155,7 +155,11 @@ section('4. Tool Runtime: Security Boundaries');
     inputSchema: { type: 'object' },
   };
   const jobWithoutApproval = { userId: 100, state: 'EXECUTING', approval: null };
-  const auth1 = authorizeTool(submitTool, jobWithoutApproval, 100, { isAgenticHelperEnabled: () => true });
+  const mockAgentServiceWithPerms = {
+    isAgenticHelperEnabled: () => true,
+    getSettings: () => ({ enabled: true, permissions: { canvasSubmission: true } }),
+  };
+  const auth1 = authorizeTool(submitTool, jobWithoutApproval, 100, mockAgentServiceWithPerms);
   ok(auth1.authorized === false, 'SUBMIT without approval is unauthorized');
   ok(auth1.reason.includes('approval'), 'Reason mentions approval');
 
@@ -164,19 +168,19 @@ section('4. Tool Runtime: Security Boundaries');
     state: 'EXECUTING',
     approval: { status: 'APPROVED', artifactId: 'art_001', expiresAt: new Date(Date.now() + 3600000).toISOString() },
   };
-  const auth2 = authorizeTool(submitTool, jobWithApproval, 100, { isAgenticHelperEnabled: () => true });
+  const auth2 = authorizeTool(submitTool, jobWithApproval, 100, mockAgentServiceWithPerms);
   ok(auth2.authorized === true, 'SUBMIT with valid approval is authorized');
 
-  const auth3 = authorizeTool(submitTool, jobWithApproval, 200, { isAgenticHelperEnabled: () => true });
+  const auth3 = authorizeTool(submitTool, jobWithApproval, 200, mockAgentServiceWithPerms);
   ok(auth3.authorized === false, 'Wrong user is rejected');
   ok(auth3.reason.includes('does not belong'), 'Reason mentions ownership');
 
-  const auth4 = authorizeTool(submitTool, jobWithApproval, 100, { isAgenticHelperEnabled: () => false });
+  const auth4 = authorizeTool(submitTool, jobWithApproval, 100, { isAgenticHelperEnabled: () => false, getSettings: () => ({ enabled: false, permissions: {} }) });
   ok(auth4.authorized === false, 'Agentic Helper disabled → rejected');
 
   const readTool = { id: 'canvas.read_assignment', permissions: ['READ'] };
   const jobInDiscovered = { userId: 100, state: 'DISCOVERED' };
-  const auth5 = authorizeTool(readTool, jobInDiscovered, 100, { isAgenticHelperEnabled: () => true });
+  const auth5 = authorizeTool(readTool, jobInDiscovered, 100, mockAgentServiceWithPerms);
   ok(auth5.authorized === false, 'Job in DISCOVERED state cannot execute tools');
 }
 
@@ -459,7 +463,7 @@ section('15. Canvas Write Tools: Submit Without Approval Blocked');
   clearTools();
   registerCanvasWriteTools({
     canvasService: {},
-    artifactStorage: {},
+    artifactStorage: { readArtifact: () => Buffer.alloc(1000) },
     getJob: (userId, jobId) => ({
       id: jobId,
       userId,
@@ -483,7 +487,7 @@ section('15. Canvas Write Tools: Submit Without Approval Blocked');
   );
 
   ok(result.success === false, 'Submit without approval fails');
-  ok(result.error.code === 'APPROVAL_REQUIRED', 'Error is APPROVAL_REQUIRED');
+  ok(result.error.code === 'APPROVAL_MISSING', 'Error is APPROVAL_MISSING');
   ok(result.error.message.includes('approval'), 'Error mentions approval');
 }
 

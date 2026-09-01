@@ -22,12 +22,25 @@ export function readAgentSettings() {
         enabled: Boolean(parsed.enabled),
         enabledAt: parsed.enabledAt || null,
         lastToggledAt: parsed.lastToggledAt || null,
+        permissions: {
+          contentGeneration: parsed.permissions?.contentGeneration !== undefined ? Boolean(parsed.permissions.contentGeneration) : true,
+          artifactGeneration: parsed.permissions?.artifactGeneration !== undefined ? Boolean(parsed.permissions.artifactGeneration) : true,
+          canvasComments: parsed.permissions?.canvasComments !== undefined ? Boolean(parsed.permissions.canvasComments) : true,
+          canvasFileUpload: parsed.permissions?.canvasFileUpload !== undefined ? Boolean(parsed.permissions.canvasFileUpload) : true,
+          canvasSubmission: parsed.permissions?.canvasSubmission !== undefined ? Boolean(parsed.permissions.canvasSubmission) : false,
+        },
       };
     }
   } catch {
     // Ignore invalid storage
   }
-  return { enabled: false, enabledAt: null, lastToggledAt: null };
+  return {
+    enabled: false, enabledAt: null, lastToggledAt: null,
+    permissions: {
+      contentGeneration: true, artifactGeneration: true,
+      canvasComments: true, canvasFileUpload: true, canvasSubmission: false,
+    },
+  };
 }
 
 export function writeAgentSettings(settings) {
@@ -36,6 +49,10 @@ export function writeAgentSettings(settings) {
       enabled: Boolean(settings.enabled),
       enabledAt: settings.enabledAt || null,
       lastToggledAt: settings.lastToggledAt || null,
+      permissions: settings.permissions || {
+        contentGeneration: true, artifactGeneration: true,
+        canvasComments: true, canvasFileUpload: true, canvasSubmission: false,
+      },
     }));
   } catch {
     // Keep in-memory state usable when storage is unavailable
