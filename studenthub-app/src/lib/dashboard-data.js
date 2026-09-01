@@ -606,6 +606,38 @@ export async function updateAgentSettings(enabled) {
   }
 }
 
+/**
+ * Fetch the Agentic Helper settings from the server for the current user.
+ *
+ * The server is the authoritative, cross-device store for the enabled state
+ * (it lives in a per-user file on the server, not in this browser). The UI
+ * must read from here on load so the toggle reflects the same state on every
+ * device — e.g. a phone whose localStorage has never been populated.
+ *
+ * The returned settings include both `enabled` and `permissions`.
+ * @returns {Promise<{enabled: boolean, enabledAt: string|null, lastToggledAt: string|null, permissions: object}|null>}
+ */
+export async function fetchAgentSettings() {
+  const userId = getUserId();
+  if (!userId) return null;
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  try {
+    const res = await fetch(`${base}/api/agent/settings/${userId}`, {
+      headers: {
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.settings || null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Agent Job Creation Helpers ─────────────────────────────────
 
 /**

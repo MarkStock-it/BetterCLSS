@@ -22,6 +22,7 @@ import {
   readDashboardData,
   updateStoredLocalData,
   updateAgentSettings,
+  fetchAgentSettings,
   writeAgentSettings
 } from './lib/dashboard-data';
 
@@ -55,6 +56,31 @@ export default function StudentHubMobileDashboard() {
   const drawerX = useMotionValue(-DRAWER_TRAVEL);
   const backdropOpacity = useTransform(drawerX, [-DRAWER_TRAVEL, 0], [0, 0.74]);
   const edgeGesture = useRef(null);
+
+  // The server is the authoritative, cross-device store for the Agentic Helper
+  // enabled state (it lives in a per-user file on the server). localStorage is
+  // only a per-device cache — on a phone that has never written it, it would
+  // show OFF even when the server has the helper enabled. Reconcile the UI to
+  // the server's value on mount so the toggle is the same on every device.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const server = await fetchAgentSettings();
+      if (cancelled || !server) return;
+      setAgentSettings((current) => {
+        const reconciled = {
+          ...current,
+          enabled: Boolean(server.enabled),
+          enabledAt: server.enabledAt || current.enabledAt,
+          lastToggledAt: server.lastToggledAt || current.lastToggledAt,
+          permissions: server.permissions || current.permissions,
+        };
+        writeAgentSettings(reconciled);
+        return reconciled;
+      });
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     animate(drawerX, drawerOpen ? 0 : -DRAWER_TRAVEL, SPRING);
@@ -135,17 +161,45 @@ export default function StudentHubMobileDashboard() {
     });
   };
 
+  // Apply a settings change to both React state and the localStorage cache.
+  const applyAgentSettings = (updater) => {
+    setAgentSettings((current) => {
+      const next = updater(current);
+      writeAgentSettings(next);
+      return next;
+    });
+  };
+
   const handleAgentSettingsChange = (newSettings) => {
-    const updated = {
-      ...agentSettings,
+    const isEnabledChange = typeof newSettings.enabled === 'boolean';
+    const previousEnabled = agentSettings.enabled;
+
+    // Optimistic update so the toggle feels responsive.
+    applyAgentSettings((current) => ({
+      ...current,
       ...newSettings,
       lastToggledAt: new Date().toISOString(),
-    };
-    setAgentSettings(updated);
-    writeAgentSettings(updated);
-    if (typeof newSettings.enabled === 'boolean') {
-      void updateAgentSettings(newSettings.enabled);
-    }
+    }));
+
+    // The enable switch is authoritative on the server; only permission
+    // toggles stay local. Persist it through, then reconcile the UI to the
+    // server's confirmed value — never let the UI claim a state the server
+    // doesn't have (that was the "reverts" / silent 403 bug).
+    if (!isEnabledChange) return;
+
+    updateAgentSettings(newSettings.enabled).then((serverSettings) => {
+      if (!serverSettings) {
+        // Server did not persist it — roll back the enabled bit.
+        applyAgentSettings((current) => ({ ...current, enabled: previousEnabled }));
+        return;
+      }
+      applyAgentSettings((current) => ({
+        ...current,
+        enabled: Boolean(serverSettings.enabled),
+        enabledAt: serverSettings.enabledAt || current.enabledAt,
+        lastToggledAt: serverSettings.lastToggledAt || current.lastToggledAt,
+      }));
+    });
   };
 
   const handleCreateAgentJob = (job) => {
