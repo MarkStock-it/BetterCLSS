@@ -53,6 +53,11 @@ const {
   buildSystemInstruction: buildContextSystemInstruction,
   buildValidationConstraints,
   validateContent,
+  // Phase 27: Token-efficient architecture
+  buildStepSystemInstruction,
+  filterToolsForStep,
+  buildStepPrompt,
+  getStepOutputLimit,
 } = require('./agent-context');
 
 // ─── Default Limits ────────────────────────────────────────────────

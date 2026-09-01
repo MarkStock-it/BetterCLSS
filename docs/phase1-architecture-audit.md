@@ -372,6 +372,15 @@ COMPLETED
 | 15 | COMPLETE | Architecture audit + integration repair |
 | 16 | COMPLETE | Execution pipeline + plan-based multi-step orchestration |
 | 17 | COMPLETE | Production readiness audit + critical bug fixes |
+| 18 | COMPLETE | Assignment Agent Intelligence — context builder, deterministic analysis, tool metadata, personal-info detection |
+| 19 | COMPLETE | Artifact Generation — DOCX (built-in ZIP), TXT generators |
+| 20 | COMPLETE | Content Refinement Pipeline — AI refinement + deterministic validation |
+| 21 | COMPLETE | Canvas Write Tools — upload, comment, submission with approval gate |
+| 22 | COMPLETE | Mobile Agent Center — job list, detail, review, approval UI |
+| 23 | COMPLETE | Integration & Hardening — 101 integration tests, security hardening |
+| 24 | COMPLETE | Architecture audit & integration repair |
+| 25 | COMPLETE | Execution pipeline + plan-based multi-step orchestration |
+| 26 | COMPLETE | Agent Efficiency & Context Optimization |
 
 ### Phase 17: Production Readiness Audit
 
@@ -450,9 +459,34 @@ Canvas Submission → COMPLETED
 - No persistent AI conversation memory across jobs
 - DOCX artifact generation requires AI to explicitly call `artifact.generate_docx` tool
 - Refinement pipeline runs after AI loop, not integrated into AI conversation
-- `USER_ACTION_REQUIRED → EXECUTING` transition not yet allowed (paused jobs can only be cancelled)
 - Canvas file upload uses JSON submission endpoint (no binary multipart upload)
 - No attachment processing (PDFs, images attached to Canvas assignments not read)
+
+### Phase 26: Efficiency Optimizations Implemented
+
+**PrecomputedContext** (`precomputeContext()`):
+- Caches `buildAssignmentUnderstanding()`, `buildSystemInstruction()`, `buildValidationConstraints()`, and `toolDefs` once per job run
+- Eliminates 3+ redundant `buildAssignmentUnderstanding()` calls per job (was called in systemInstruction, analyzePrompt, generatePrompt)
+
+**Deterministic Analysis** (`analysisFromManifest()` + `manifestHasSufficientDetail()`):
+- For detailed manifests (>50 chars description or 2+ requirement details), skips the ANALYZE AI call entirely
+- Saves 1 AI request per supported assignment — the deterministic analysis produces equivalent information
+- Sparse manifests still get the full AI analysis path
+
+**Bounded Conversation History** (`getBoundedHistory()`):
+- Caps AI history at `maxHistoryTurns` (default: 10) and `maxHistoryChars` (default: 8000)
+- Prevents unbounded context growth across multi-step jobs with many tool calls
+- Preserves the most recent exchanges, drops oldest first
+
+**Focused Generate Context**:
+- First turn: sends full generate prompt with requirements, constraints, deliverables
+- Subsequent turns: sends only "Continue generating based on tool results above" (shorter prompt)
+
+**New DEFAULT_LIMITS**:
+- `maxHistoryTurns: 10` — max conversation turns sent as AI history
+- `maxHistoryChars: 8000` — max chars in conversation history
+
+### Security Model (Verified Phase 17)
 
 ### Security Model (Verified Phase 17)
 
@@ -500,10 +534,9 @@ Canvas Submission → COMPLETED
 
 ### Next Development Phase
 
-Recommended: **Phase 18 — Background Job Worker + Real-time Updates**
-- Decouple orchestrator execution from HTTP request lifecycle
+Recommended: **Phase 27 — Background Job Worker + Real-time Updates**
+- Decouple orchestrator execution from HTTP request lifecycle (currently runs in HTTP request context)
 - Add WebSocket/SSE for live job status updates (currently 10s polling)
 - Implement persistent job queue for long-running jobs
-- Enable `USER_ACTION_REQUIRED → EXECUTING` transition for job resumption
 - Canvas binary file upload (multipart) for all Canvas configurations
 - Attachment processing (PDF, images) for richer assignment understanding

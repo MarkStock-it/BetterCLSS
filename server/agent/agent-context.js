@@ -697,6 +697,256 @@ function buildSystemInstruction(understanding, plan) {
   return parts.join('\n');
 }
 
+// ─── Step-Aware Context (Phase 27) ──────────────────────────────
+
+/**
+ * Categories of tools by step type.
+ * Only tools in the relevant category are exposed to each step.
+ */
+const STEP_TOOL_CATEGORIES = {
+  analyze: ['canvas', 'read'],           // READ tools + Canvas read
+  generate: ['canvas', 'read', 'generate', 'artifact'], // READ + GENERATE + artifact
+  refine: [],                            // No tools needed (deterministic)
+  validate: [],                          // No tools needed (deterministic)
+  artifact: ['artifact'],                // Only artifact generators
+  artifact_validate: [],                 // No tools needed (deterministic)
+};
+
+/**
+ * Maximum output tokens per step type.
+ * Keeps AI responses focused and avoids unnecessary token spend.
+ */
+const STEP_OUTPUT_LIMITS = {
+  analyze: 1024,            // Analysis is short — just structured summary
+  generate: 8192,           // Content generation needs full output
+  refine: 2048,             // Refinement returns modified content
+  validate: 512,            // Validation is mostly deterministic
+  artifact: 1024,           // Artifact tool call is a JSON action
+  artifact_validate: 512,   // Validation result is small JSON
+};
+
+/**
+ * Build a compact, step-aware system instruction.
+ * Keeps the stable prefix identical across all steps (for Gemini cache reuse)
+ * and appends only the variable context relevant to the current step.
+ *
+ * @param {object} understanding - AssignmentUnderstanding
+ * @param {object} plan - ExecutionPlan
+ * @param {string} currentStepType - Current step type (analyze, generate, etc.)
+ * @returns {string} Compact system instruction
+ */unction buildStepSystemInstruction(understanding, plan, currentStepType) {
+  const parts = [
+    // ─── STABLE PREFIX (identical across all steps — Gemini cache target) ─
+    'You are BetterCLSS Agentic Helper, an internal planning component.',
+    'You operate within a controlled runtime. You can ONLY request registered tools.',
+    'You CANNOT perform external actions directly.',
+    'You must NEVER claim an action was completed unless the tool result confirms it.',
+    '',
+    // ─── STABLE: Assignment identity (never changes during a job) ───────
+    `Assignment: ${understanding.title}`,
+    `Course: ${understanding.course}`,
+    `Objective: ${understanding.objective}`,
+    `Capability: ${understanding.capabilityStatus}`,
+  ];
+
+  // ─── STABLE: Requirements (never change during a job) ───────────────
+  if (understanding.requirements.length > 0) {
+    parts.push('');
+    parts.push('Requirements:');
+    for (const r of understanding.requirements) {
+      parts.push(`- [${r.priority}] ${r.description}`);
+    }
+  }
+
+  // ─── STABLE: Constraints ───────────────────────────────────────────
+  if (understanding.constraints.length > 0) {
+    parts.push('');
+    parts.push('Constraints:');
+    for (const c of understanding.constraints) {
+      parts.push(`- ${c.description}`);
+    }
+  }
+
+  // ─── STABLE: Deliverables ──────────────────────────────────────────
+  if (understanding.deliverables.length > 0) {
+    parts.push('');
+    parts.push('Deliverables:');
+    for (const d of understanding.deliverables) {
+      parts.push(`- ${d.description} (${d.format})`);
+    }
+  }
+
+  // ─── STABLE: Safety policies ───────────────────────────────────────
+  parts.push('');
+  parts.push('## Safety Rules');
+  parts.push('1. Never hallucinate tool results.');
+  parts.push('2. If a tool fails, report honestly.');
+  parts.push('3. Never claim file uploads or Canvas mutations occurred.');
+  parts.push('4. The application controls what happens — not you.');
+  if (understanding.referencesRequired) {
+    parts.push('5. Do not fabricate citations, URLs, or sources.');
+  }
+  if (understanding.personalInfoRequired) {
+    parts.push('6. Do not fabricate personal experiences — use needs_input.');
+  }
+
+  // ─── VARIABLE: Step-specific context (changes per step) ────────────
+  parts.push('');
+  parts.push(`## Current Step: ${currentStepType.toUpperCase()}`);
+
+  switch (currentStepType) {
+    case 'analyze':
+      parts.push('Analyze this assignment. Provide a concise structured summary.');
+      parts.push('Return a final_response with: title, objective, requirements, constraints, deliverables.');
+      break;
+    case 'generate':
+      parts.push('Generate complete, well-structured content that fulfills all requirements.');
+      parts.push('Use available tools to read assignment details or create artifacts.');
+      parts.push('When complete, return a final_response with the full content.');
+      break;
+    case 'refine':
+      parts.push('Refine the content for clarity, naturalness, and requirement alignment.');
+      parts.push('Do NOT invent facts, citations, or personal experiences.');
+      parts.push('Return the improved version as a final_response.');
+      break;
+    default:
+      parts.push('Complete this step using the available tools and context.');
+  }
+
+  // ─── VARIABLE: Response format ─────────────────────────────────────
+  parts.push('');
+  parts.push('Response format: JSON with "action" (tool_call|final_response|needs_input).');
+  if (currentStepType === 'generate') {
+    parts.push('For tool_call: include "tool_calls" array with { tool, arguments, callId }.');
+    parts.push('For final_response: include "content" with your response.');
+  }
+
+  return parts.join('\n');
+}
+
+/**
+ * Filter tool definitions to only those relevant for a given step type.
+ * Reduces schema size and focuses the AI on applicable tools.
+ *
+ * @param {object[]} allTools - All registered tool definitions
+ * @param {string} stepType - Current step type
+ * @returns {object[]} Filtered tool definitions
+ */unction filterToolsForStep(allTools, stepType) {
+  if (!allTools || allTools.length === 0) return [];
+
+  const allowedCategories = STEP_TOOL_CATEGORIES[stepType] || [];
+  if (allowedCategories.length === 0) return []; // Step doesn't need tools
+
+  return allTools.filter(tool => {
+    const toolCat = (tool.category || '').toLowerCase();
+    return allowedCategories.some(cat => toolCat.includes(cat));
+  });
+}
+
+/**
+ * Build compact step context (what the AI needs for this specific step).
+ * Avoids sending the full assignment text when the system instruction already has it.
+ *
+ * @param {string} stepType - Current step type
+ * @param {object} understanding - AssignmentUnderstanding
+ * @param {object} manifest - Original manifest
+ * @param {object} stepResults - Results from previous steps
+ * @param {object} plan - Current execution plan
+ * @returns {string} Minimal prompt for this step
+ */unction buildStepPrompt(stepType, understanding, manifest, stepResults, plan) {
+  switch (stepType) {
+    case 'analyze':
+      // Minimal — system instruction already has requirements
+      return 'Analyze this assignment. Return a final_response with structured analysis.';
+
+    case 'generate':
+      return buildCompactGeneratePrompt(understanding, manifest, stepResults);
+
+    case 'refine':
+      return buildCompactRefinePrompt(stepResults);
+
+    default:
+      return 'Complete this step.';
+  }
+}
+
+/**
+ * Build a compact generate prompt that avoids repeating assignment text.
+ * The system instruction already contains requirements and constraints.
+ * This prompt only provides the instruction text (the actual Canvas description).
+ *
+ * @param {object} understanding
+ * @param {object} manifest
+ * @param {object} stepResults
+ * @returns {string}
+ */unction buildCompactGeneratePrompt(understanding, manifest, stepResults) {
+  const parts = [];
+
+  // Only include the actual instruction text (not the requirements — those are in system instruction)
+  const description = manifest?.metadata?.plainDescription || manifest?.metadata?.description || '';
+  if (description) {
+    parts.push('## Assignment Instructions');
+    parts.push(description);
+  }
+
+  // Only include personal info warnings if applicable
+  if (understanding.personalInfoRequired) {
+    parts.push('');
+    parts.push('⚠ This assignment requires personal experiences. Use needs_input to ask the user.');
+  }
+
+  if (understanding.referencesRequired) {
+    parts.push('');
+    parts.push('⚠ Do not fabricate citations. Mark unverifiable sources for user review.');
+  }
+
+  // Include previous analysis summary (not full analysis)
+  const analyzeResult = stepResults?.analyze;
+  if (analyzeResult?.analysis) {
+    const summary = analyzeResult.analysis.length > 300
+      ? analyzeResult.analysis.slice(0, 300) + '...'
+      : analyzeResult.analysis;
+    parts.push('');
+    parts.push('## Previous Analysis Summary');
+    parts.push(summary);
+  }
+
+  parts.push('');
+  parts.push('Generate complete, well-structured content fulfilling all requirements.');
+
+  return parts.join('\n');
+}
+
+/**
+ * Build a compact refine prompt.
+ * Only sends the content to refine — requirements are in system instruction.
+ *
+ * @param {object} stepResults
+ * @returns {string}
+ */unction buildCompactRefinePrompt(stepResults) {
+  const generateStep = stepResults?.generate;
+  const content = generateStep?.generatedContent || '';
+
+  if (!content) return 'No content to refine.';
+
+  // Truncate very long content to save tokens (refinement doesn't need full text for short checks)
+  const maxContentLength = 6000;
+  const truncated = content.length > maxContentLength
+    ? content.slice(0, maxContentLength) + '\n\n[Content truncated for refinement analysis]'
+    : content;
+
+  return `## Content to Refine\n\n${truncated}\n\nRefine for clarity, naturalness, and structure. Return the improved version.`;
+}
+
+/**
+ * Get the output token limit for a given step type.
+ *
+ * @param {string} stepType
+ * @returns {number}
+ */unction getStepOutputLimit(stepType) {
+  return STEP_OUTPUT_LIMITS[stepType] || 4096;
+}
+
 module.exports = {
   buildAssignmentUnderstanding,
   buildAnalyzeContext,
@@ -706,4 +956,11 @@ module.exports = {
   buildSystemInstruction,
   validateContent,
   extractDetailedRequirements,
+  // Phase 27: Token-efficient architecture
+  buildStepSystemInstruction,
+  filterToolsForStep,
+  buildStepPrompt,
+  getStepOutputLimit,
+  STEP_TOOL_CATEGORIES,
+  STEP_OUTPUT_LIMITS,
 };
