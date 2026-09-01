@@ -641,12 +641,8 @@ a:focus-visible {
 }
 .action-tray-trigger:active { cursor: grabbing; transform: scale(0.92); }
 
-/* Tray container — appears below the trigger */
+/* Tray container — fixed positioned, escapes all ancestor overflow */
 .action-tray {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 50;
   display: flex;
   gap: 8px;
   padding: 8px;
@@ -658,8 +654,8 @@ a:focus-visible {
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(12px);
   animation: tray-pop 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  pointer-events: auto;
   touch-action: none;
+  will-change: transform;
 }
 
 @keyframes tray-pop {
@@ -871,7 +867,6 @@ a:focus-visible {
   align-items: center;
   gap: 12px;
   min-height: 67px;
-  overflow: hidden;
   padding: 12px 12px 12px 16px;
   border: 1px solid var(--task-row-border);
   border-radius: 16px;

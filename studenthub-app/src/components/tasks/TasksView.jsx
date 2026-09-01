@@ -94,7 +94,7 @@ export function TasksView({ assignments, filter, onFilterChange, connected, onCo
                             <Glyph name="reset" className="h-4 w-4" />
                           </button>
                         ) : (
-                          <DeadlineSlider item={item} connected={connected} onToggleDone={onToggleDone} onCreateAgentJob={onCreateAgentJob} creatingJobId={creatingJobId} setCreatingJobId={setCreatingJobId} onClose={() => {}} />
+                          <DeadlineSlider item={item} connected={connected} onToggleDone={onToggleDone} onCreateAgentJob={onCreateAgentJob} creatingJobId={creatingJobId} setCreatingJobId={setCreatingJobId} />
                         )}
                       </div>
                     </div>

@@ -198,32 +198,63 @@ export function EmptyDeadlines({ connected, onConnect }) {
 }
 
 /* eslint-disable-next-line react/no-multi-comp */
-export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob, creatingJobId, setCreatingJobId, onClose }) {
-  const [active, setActive] = useState(null); // 'done' | 'agent' | null
+export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob, creatingJobId, setCreatingJobId }) {
+  const [trayState, setTrayState] = useState({ open: false, x: 0, y: 0, anchorSide: 'right' });
+  const [active, setActive] = useState(null);
   const trayRef = useRef(null);
-  const holdRef = useRef({ timer: null, startX: 0, startY: 0, active: false });
+  const triggerRef = useRef(null);
+  const holdRef = useRef({ timer: null, startX: 0, startY: 0, active: false, released: false });
 
   const HOLD_MS = 350;
-  const TRAY_SIZE = 72; // radius from trigger to targets
-  const CANCEL_DIST = 14; // px moved before hold cancels
+  const CANCEL_DIST = 12;
+  const TRAY_W = 136;
+  const TRAY_H = 76;
+  const GAP = 8;
 
   const cleanup = () => {
     clearTimeout(holdRef.current.timer);
     holdRef.current.active = false;
+    holdRef.current.released = false;
+    setTrayState({ open: false, x: 0, y: 0, anchorSide: 'right' });
     setActive(null);
-    onClose?.();
   };
 
-  const getTargetAt = (clientX, clientY) => {
+  const getTargetAt = (cx, cy) => {
     if (!trayRef.current) return null;
-    const els = trayRef.current.querySelectorAll('[data-action]');
-    for (const el of els) {
+    for (const el of trayRef.current.querySelectorAll('[data-action]')) {
       const r = el.getBoundingClientRect();
-      if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
+      if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) {
         return el.dataset.action;
       }
     }
     return null;
+  };
+
+  const computeTrayPosition = () => {
+    if (!triggerRef.current) return { x: 0, y: 0, anchorSide: 'right' };
+    const r = triggerRef.current.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    // Try positioning to the left of the trigger first (tray right-aligned to trigger left)
+    let x = r.left - TRAY_W - GAP;
+    let anchorSide = 'right';
+    // If it would go off the left edge, position to the right of the trigger
+    if (x < 8) {
+      x = r.right + GAP;
+      anchorSide = 'left';
+    }
+    // If it would go off the right edge, center under the trigger
+    if (x + TRAY_W > vw - 8) {
+      x = Math.max(8, Math.min(vw - TRAY_W - 8, r.left + r.width / 2 - TRAY_W / 2));
+      anchorSide = 'center';
+    }
+    // Vertical: align top of tray with top of trigger
+    let y = r.top;
+    // If tray would go below viewport, position above
+    if (y + TRAY_H > vh - 8) {
+      y = Math.max(8, r.bottom - TRAY_H);
+    }
+    return { x, y, anchorSide };
   };
 
   const executeAction = async (action) => {
@@ -245,73 +276,89 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
     }
   };
 
-  // --- Pointer handlers on the trigger icon ---
+  // --- Pointer handlers owned by the trigger ---
   const onPointerDown = (e) => {
     if (e.button && e.button !== 0) return;
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
-    holdRef.current = { timer: null, startX: e.clientX, startY: e.clientY, active: false };
+    holdRef.current = { timer: null, startX: e.clientX, startY: e.clientY, active: false, released: false };
     holdRef.current.timer = setTimeout(() => {
+      if (holdRef.current.released) return;
       holdRef.current.active = true;
+      const pos = computeTrayPosition();
+      setTrayState({ open: true, ...pos });
     }, HOLD_MS);
   };
 
   const onPointerMove = (e) => {
-    // Cancel hold if user scrolls/moves too much before threshold
-    if (!holdRef.current.active) {
-      const dx = Math.abs(e.clientX - holdRef.current.startX);
-      const dy = Math.abs(e.clientY - holdRef.current.startY);
+    const h = holdRef.current;
+    if (!h.active) {
+      // Before threshold: cancel hold if finger moves too far
+      const dx = Math.abs(e.clientX - h.startX);
+      const dy = Math.abs(e.clientY - h.startY);
       if (dx > CANCEL_DIST || dy > CANCEL_DIST) {
-        clearTimeout(holdRef.current.timer);
+        clearTimeout(h.timer);
         return;
       }
+      return;
     }
-    // If tray is open, track which target finger is over
-    if (holdRef.current.active) {
-      const hit = getTargetAt(e.clientX, e.clientY);
-      setActive(hit);
-    }
+    // After threshold: track which target finger is over
+    const hit = getTargetAt(e.clientX, e.clientY);
+    setActive(hit);
   };
 
   const onPointerUp = (e) => {
-    if (holdRef.current.active) {
+    const h = holdRef.current;
+    if (h.active) {
       const hit = getTargetAt(e.clientX, e.clientY);
-      if (hit) {
-        executeAction(hit);
-      }
-      // Always collapse after release
-      cleanup();
-    } else {
-      cleanup();
+      if (hit) executeAction(hit);
     }
+    cleanup();
   };
+
+  const onPointerCancel = () => cleanup();
 
   const isCreating = creatingJobId === item.id;
 
   return (
     <div className="action-tray-wrap">
-      {/* Trigger icon — user holds this */}
+      {/* Trigger icon — the ONLY hold target */}
       <div
+        ref={triggerRef}
         className="action-tray-trigger"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={cleanup}
-        onPointerLeave={cleanup}
+        onPointerCancel={onPointerCancel}
+        role="button"
+        tabIndex={0}
+        aria-label="Assignment actions"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggleDone(item);
+          }
+        }}
       >
         <Glyph name="spark" className="h-4 w-4" />
       </div>
 
-      {/* Action tray — positioned below the trigger */}
-      {holdRef.current.active && (
-        <div className="action-tray" ref={trayRef}>
+      {/* Action tray — fixed positioned, escapes all ancestor overflow */}
+      {trayState.open && (
+        <div
+          className="action-tray"
+          ref={trayRef}
+          style={{
+            position: 'fixed',
+            left: trayState.x,
+            top: trayState.y,
+            zIndex: 9999,
+          }}
+        >
           <button
             type="button"
             data-action="done"
             className={`action-tray-target action-done ${active === 'done' ? 'is-hovered' : ''}`}
-            onPointerDown={(e) => e.stopPropagation()}
-            onPointerMove={(e) => { e.stopPropagation(); setActive(getTargetAt(e.clientX, e.clientY)); }}
-            onPointerUp={(e) => { e.stopPropagation(); }}
           >
             <Glyph name="tasks" className="h-4 w-4" />
             <span className="action-tray-label">Done</span>
@@ -321,9 +368,6 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
             data-action="agent"
             className={`action-tray-target action-agent ${active === 'agent' ? 'is-hovered' : ''} ${isCreating ? 'is-creating' : ''}`}
             disabled={isCreating || !connected}
-            onPointerDown={(e) => e.stopPropagation()}
-            onPointerMove={(e) => { e.stopPropagation(); setActive(getTargetAt(e.clientX, e.clientY)); }}
-            onPointerUp={(e) => { e.stopPropagation(); }}
           >
             {isCreating ? <span className="agent-spinner-tiny" /> : <Glyph name="spark" className="h-4 w-4" />}
             <span className="action-tray-label">Agent</span>
@@ -368,7 +412,7 @@ export function DeadlineList({ assignments, connected, onConnect, onToggleDone, 
                     <h3 className="truncate text-sm font-semibold text-slate-100">{item.title || 'Untitled assignment'}</h3>
                     <p className="mt-1 truncate text-xs text-slate-500">{item.subject || 'Course'} · {dueText}</p>
                   </div>
-                  <DeadlineSlider item={item} connected={connected} onToggleDone={onToggleDone} onCreateAgentJob={onCreateAgentJob} creatingJobId={creatingJobId} setCreatingJobId={setCreatingJobId} onClose={() => {}} />
+                  <DeadlineSlider item={item} connected={connected} onToggleDone={onToggleDone} onCreateAgentJob={onCreateAgentJob} creatingJobId={creatingJobId} setCreatingJobId={setCreatingJobId} />
                 </div>
               </motion.div>
             );
