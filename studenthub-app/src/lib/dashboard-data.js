@@ -13,6 +13,35 @@ export function daysUntil(date) {
   return Math.round((due - today) / 86400000);
 }
 
+export function readAgentSettings() {
+  try {
+    const raw = localStorage.getItem('bclss_agent_settings');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        enabled: Boolean(parsed.enabled),
+        enabledAt: parsed.enabledAt || null,
+        lastToggledAt: parsed.lastToggledAt || null,
+      };
+    }
+  } catch {
+    // Ignore invalid storage
+  }
+  return { enabled: false, enabledAt: null, lastToggledAt: null };
+}
+
+export function writeAgentSettings(settings) {
+  try {
+    localStorage.setItem('bclss_agent_settings', JSON.stringify({
+      enabled: Boolean(settings.enabled),
+      enabledAt: settings.enabledAt || null,
+      lastToggledAt: settings.lastToggledAt || null,
+    }));
+  } catch {
+    // Keep in-memory state usable when storage is unavailable
+  }
+}
+
 export function readDashboardData() {
   const fallback = {
     assignments: [],
@@ -96,6 +125,7 @@ export function readDashboardData() {
         : '',
       connected: Boolean(localStorage.getItem('bclss_canvas_token')),
       name: localStorage.getItem('bclss_student_name') || '',
+      agentSettings: readAgentSettings(),
     };
   } catch {
     return fallback;
@@ -216,4 +246,311 @@ export function buildCourseDecks(assignments, savedDecks = []) {
     generated: true,
   }));
   return [...generatedDecks, ...courseDecks];
+}
+
+// ─── Agentic Helper API ─────────────────────────────────────────
+
+/**
+ * Get the API base URL for agent requests.
+ * Uses the same base as the existing Canvas proxy.
+ */
+function getAgentApiBase() {
+  try {
+    return window.BCLSS_API_BASE_URL || '';
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Get the current user's Canvas user ID from localStorage.
+ */
+function getUserId() {
+  try {
+    return Number(localStorage.getItem('bclss_student_id') || '0') || 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Fetch agent jobs for the current user.
+ * @returns {Promise<Array>} List of agent jobs
+ */
+export async function fetchAgentJobs() {
+  const userId = getUserId();
+  if (!userId) return [];
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  try {
+    const res = await fetch(`${base}/api/agent/jobs/${userId}`, {
+      headers: {
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.jobs || [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetch a specific agent job.
+ * @param {string} jobId
+ * @returns {Promise<object|null>}
+ */
+export async function fetchAgentJob(jobId) {
+  const userId = getUserId();
+  if (!userId || !jobId) return null;
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  try {
+    const res = await fetch(`${base}/api/agent/jobs/${userId}/${jobId}`, {
+      headers: {
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.job || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch job events for the current user.
+ * @param {string} jobId
+ * @returns {Promise<Array>}
+ */
+export async function fetchAgentJobEvents(jobId) {
+  const userId = getUserId();
+  if (!userId || !jobId) return [];
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  try {
+    const res = await fetch(`${base}/api/agent/jobs/${userId}/${jobId}/events`, {
+      headers: {
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.events || [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Create an approval request for a job.
+ * @param {string} jobId
+ * @param {string} artifactId
+ * @param {number} [artifactVersion]
+ * @returns {Promise<object|null>}
+ */
+export async function createAgentApproval(jobId, artifactId, artifactVersion = 1) {
+  const userId = getUserId();
+  if (!userId) return null;
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  try {
+    const res = await fetch(`${base}/api/agent/approvals/${userId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+      body: JSON.stringify({
+        jobId,
+        type: 'SUBMISSION',
+        artifactId,
+        artifactVersion,
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.approval || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Approve an approval request.
+ * @param {string} approvalId
+ * @returns {Promise<object|null>}
+ */
+export async function approveAgentRequest(approvalId) {
+  const userId = getUserId();
+  if (!userId || !approvalId) return null;
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  try {
+    const res = await fetch(`${base}/api/agent/approvals/${userId}/${approvalId}/approve`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.approval || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Deny an approval request.
+ * @param {string} approvalId
+ * @param {string} [reason]
+ * @returns {Promise<object|null>}
+ */
+export async function denyAgentRequest(approvalId, reason) {
+  const userId = getUserId();
+  if (!userId || !approvalId) return null;
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  try {
+    const res = await fetch(`${base}/api/agent/approvals/${userId}/${approvalId}/deny`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+      body: JSON.stringify({ reason: reason || 'Denied by user' }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.approval || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Download an artifact file.
+ * @param {string} artifactId
+ * @returns {Promise<Blob|null>}
+ */
+export async function downloadAgentArtifact(artifactId) {
+  const userId = getUserId();
+  if (!userId || !artifactId) return null;
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  try {
+    const res = await fetch(`${base}/api/agent/artifacts/${userId}/${artifactId}/download`, {
+      headers: {
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+    });
+    if (!res.ok) return null;
+    return res.blob();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Create a new agent job for an assignment.
+ * @param {number} courseId
+ * @param {number} assignmentId
+ * @param {object} [manifest] - Pre-fetched manifest (optional)
+ * @returns {Promise<object|null>}
+ */
+export async function createAgentJob(courseId, assignmentId, manifest) {
+  const userId = getUserId();
+  if (!userId) return null;
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  try {
+    const res = await fetch(`${base}/api/agent/jobs/${userId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+      body: JSON.stringify({ courseId, assignmentId, manifest }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.job || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Execute an agent job through the orchestrator.
+ * @param {string} jobId
+ * @returns {Promise<object|null>}
+ */
+export async function executeAgentJob(jobId) {
+  const userId = getUserId();
+  if (!userId || !jobId) return null;
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  try {
+    const res = await fetch(`${base}/api/agent/execute/${userId}/${jobId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get agent job summary (counts by state).
+ * @returns {Promise<object|null>}
+ */
+export async function fetchAgentSummary() {
+  const userId = getUserId();
+  if (!userId) return null;
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  try {
+    const res = await fetch(`${base}/api/agent/summary/${userId}`, {
+      headers: {
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.summary || null;
+  } catch {
+    return null;
+  }
 }

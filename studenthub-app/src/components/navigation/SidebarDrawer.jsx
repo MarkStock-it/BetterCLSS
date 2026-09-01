@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { id: 'calendar', label: 'Calendar', icon: 'calendar', section: 'Main' },
   { id: 'study', label: 'Study', icon: 'study', section: 'Main' },
   { id: 'cards', label: 'Cards', icon: 'cards', section: 'Main' },
+  { id: 'agent', label: 'Agent Center', icon: 'spark', section: 'Agentic' },
   { id: 'grades', label: 'Grades', icon: 'grades', section: 'Courses' },
   { id: 'announcements', label: 'Announcements', icon: 'bell', section: 'Courses' },
   { id: 'resources', label: 'Resources', icon: 'link', section: 'Workspace' },

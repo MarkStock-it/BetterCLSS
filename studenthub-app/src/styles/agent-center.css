@@ -1,0 +1,605 @@
+/* ─── Agent Center Styles ───────────────────────────────────────── */
+
+/* Empty state */
+.agent-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.agent-empty-state h3 {
+  margin: 0;
+  color: #e9edff;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.agent-empty-state p {
+  margin: 0;
+  color: #7783a5;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  max-width: 280px;
+}
+
+/* Loading */
+.agent-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 20px;
+  color: #7783a5;
+  font-size: 0.75rem;
+}
+
+.agent-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(141, 163, 255, 0.2);
+  border-top-color: #8da3ff;
+  border-radius: 50%;
+  animation: agent-spin 0.8s linear infinite;
+}
+
+@keyframes agent-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Summary bar */
+.agent-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.agent-summary-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.agent-summary-active {
+  background: rgba(141, 163, 255, 0.15);
+  color: #8da3ff;
+}
+
+.agent-summary-review {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+.agent-summary-completed {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+
+.agent-summary-failed {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+
+/* Sections */
+.agent-section {
+  margin-bottom: 20px;
+}
+
+.agent-section-title {
+  margin: 0 0 10px;
+  color: #7783a5;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.agent-section-review {
+  color: #fbbf24;
+}
+
+.agent-section-failed {
+  color: #f87171;
+}
+
+/* Job Card */
+.agent-job-card {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(101, 119, 180, 0.16);
+  border-radius: 14px;
+  background: rgba(9, 12, 25, 0.5);
+  text-align: left;
+  transition: border-color 0.2s;
+}
+
+.agent-job-card:hover {
+  border-color: rgba(141, 163, 255, 0.3);
+}
+
+.agent-job-card:active {
+  transform: scale(0.985);
+}
+
+.agent-job-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.agent-job-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.agent-job-card-title {
+  color: #e9edff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-job-card-course {
+  color: #7783a5;
+  font-size: 0.68rem;
+}
+
+.agent-job-card-status {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.agent-job-card-message {
+  color: #8da3ff;
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.agent-job-card-error {
+  color: #f87171;
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.agent-job-card-time {
+  color: #535e7a;
+  font-size: 0.62rem;
+}
+
+.agent-job-card-action {
+  color: #8da3ff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+/* Progress bar */
+.agent-progress-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(101, 119, 180, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.agent-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.agent-detail-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.agent-detail-progress .agent-progress-bar {
+  flex: 1;
+}
+
+.agent-progress-label {
+  color: #7783a5;
+  font-size: 0.68rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Detail view */
+.agent-detail {
+  padding: 0 4px;
+}
+
+.agent-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+  color: #8da3ff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.agent-detail-header {
+  margin-bottom: 16px;
+}
+
+.agent-detail-header h1 {
+  margin: 4px 0 0;
+  color: #e9edff;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.agent-detail-course {
+  color: #7783a5;
+  font-size: 0.72rem;
+}
+
+.agent-detail-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border: 1px solid;
+  border-radius: 12px;
+  background: rgba(9, 12, 25, 0.5);
+  color: #e9edff;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.agent-detail-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.agent-detail-status-msg {
+  margin-left: auto;
+  color: #7783a5;
+  font-size: 0.68rem;
+  font-weight: 400;
+}
+
+.agent-detail-error {
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 12px;
+  background: rgba(248, 113, 113, 0.08);
+  color: #f87171;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.agent-error-category {
+  margin-left: 6px;
+  opacity: 0.7;
+}
+
+.agent-detail-unsupported {
+  padding: 16px 14px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 12px;
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.agent-detail-unsupported h3 {
+  margin: 0 0 8px;
+  color: #f87171;
+  font-size: 0.82rem;
+}
+
+.agent-detail-unsupported p {
+  margin: 0;
+  color: #7783a5;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.agent-unsupported-summary {
+  margin-top: 8px !important;
+  font-style: italic;
+}
+
+.agent-detail-warning {
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 10px;
+  background: rgba(251, 191, 36, 0.08);
+  color: #fbbf24;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+/* Sections in detail */
+.agent-detail-section {
+  margin-bottom: 16px;
+}
+
+.agent-detail-section h3 {
+  margin: 0 0 10px;
+  color: #7783a5;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Artifact card */
+.agent-artifact-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(101, 119, 180, 0.16);
+  border-radius: 12px;
+  background: rgba(9, 12, 25, 0.5);
+}
+
+.agent-artifact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.agent-artifact-name {
+  color: #e9edff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-artifact-meta {
+  color: #7783a5;
+  font-size: 0.65rem;
+}
+
+.agent-artifact-status {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.agent-artifact-download,
+.agent-download-btn {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border: 1px solid rgba(141, 163, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(141, 163, 255, 0.1);
+  color: #8da3ff;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.agent-artifact-download:active,
+.agent-download-btn:active {
+  transform: scale(0.96);
+}
+
+/* Timeline */
+.agent-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agent-timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.agent-timeline-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #535e7a;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.agent-timeline-item > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.agent-timeline-type {
+  color: #e9edff;
+  font-size: 0.7rem;
+}
+
+.agent-timeline-time {
+  color: #535e7a;
+  font-size: 0.6rem;
+}
+
+/* Review screen */
+.agent-review-status {
+  margin-bottom: 16px;
+}
+
+.agent-review-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.agent-review-ok {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+
+.agent-review-warn {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+.agent-review-artifact {
+  margin-bottom: 16px;
+}
+
+.agent-review-artifact h3 {
+  margin: 0 0 10px;
+  color: #7783a5;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.agent-review-no-artifact {
+  padding: 20px;
+  text-align: center;
+  color: #7783a5;
+  font-size: 0.75rem;
+}
+
+.agent-review-target {
+  padding: 14px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(101, 119, 180, 0.16);
+  border-radius: 12px;
+  background: rgba(9, 12, 25, 0.5);
+}
+
+.agent-review-target h3 {
+  margin: 0 0 6px;
+  color: #7783a5;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.agent-review-target p {
+  margin: 0;
+  color: #e9edff;
+  font-size: 0.78rem;
+}
+
+.agent-review-note {
+  margin-top: 8px !important;
+  color: #7783a5 !important;
+  font-size: 0.68rem !important;
+  font-style: italic;
+}
+
+.agent-review-result {
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.agent-review-success {
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  background: rgba(52, 211, 153, 0.1);
+  color: #34d399;
+}
+
+.agent-review-error {
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  background: rgba(248, 113, 113, 0.1);
+  color: #f87171;
+}
+
+/* Action buttons */
+.agent-review-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.agent-approve-btn,
+.agent-request-approval-btn,
+.agent-retry-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+}
+
+.agent-approve-btn {
+  background: linear-gradient(135deg, #34d399, #059669);
+  color: #fff;
+}
+
+.agent-approve-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.agent-request-approval-btn {
+  background: linear-gradient(135deg, #8da3ff, #6366f1);
+  color: #fff;
+}
+
+.agent-request-approval-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.agent-retry-btn {
+  background: rgba(141, 163, 255, 0.15);
+  color: #8da3ff;
+  border: 1px solid rgba(141, 163, 255, 0.3);
+}
+
+/* Review button in detail */
+.agent-review-btn {
+  width: 100%;
+  padding: 14px;
+  margin-top: 16px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #1a1a2e;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}

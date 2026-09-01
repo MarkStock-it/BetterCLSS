@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Glyph } from '../ui/Icons';
 import { ViewHeading } from '../ui/ViewControls';
 
@@ -11,7 +11,7 @@ const VIEW_COPY = {
   settings: ['Settings', 'Manage Canvas, notifications, appearance, and installation preferences.']
 };
 
-export function SecondaryView({ view, announcements, grades, links, connected, onConnect }) {
+export function SecondaryView({ view, announcements, grades, links, connected, onConnect, agentSettings, onAgentSettingsChange }) {
   const [aiApiKey, setAiApiKey] = useState(() => {
     try {
       return localStorage.getItem('bclss_ai_key') || '';
@@ -20,6 +20,10 @@ export function SecondaryView({ view, announcements, grades, links, connected, o
     }
   });
   const [aiKeyStatus, setAiKeyStatus] = useState('');
+  const [agentWarningOpen, setAgentWarningOpen] = useState(false);
+  const [agentWarningAccepted, setAgentWarningAccepted] = useState(false);
+  const [agentStatusMessage, setAgentStatusMessage] = useState('');
+  const agentEnabled = agentSettings?.enabled || false;
   const [title, detail] = VIEW_COPY[view] || ['StudentHub', 'Choose a destination from the navigation drawer.'];
   const gradePanels = grades.slice(0, 6).map((grade) => {
     const course = grade.courseName || grade.courseCode || grade.course || grade.subject || 'Course';
@@ -83,6 +87,31 @@ export function SecondaryView({ view, announcements, grades, links, connected, o
     }
   };
 
+  const handleAgentToggleClick = () => {
+    if (agentEnabled) {
+      // Disabling is straightforward — no warning needed
+      onAgentSettingsChange({ enabled: false });
+      setAgentStatusMessage('Agentic Helper disabled.');
+    } else {
+      // Show warning before enabling
+      setAgentWarningOpen(true);
+      setAgentWarningAccepted(false);
+    }
+  };
+
+  const confirmAgentEnable = () => {
+    if (!agentWarningAccepted) return;
+    onAgentSettingsChange({ enabled: true });
+    setAgentWarningOpen(false);
+    setAgentWarningAccepted(false);
+    setAgentStatusMessage('Agentic Helper is enabled.');
+  };
+
+  const cancelAgentEnable = () => {
+    setAgentWarningOpen(false);
+    setAgentWarningAccepted(false);
+  };
+
   return (
     <motion.section className="view-stack" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
       <ViewHeading eyebrow="StudentHub" title={title} detail={detail} />
@@ -111,7 +140,7 @@ export function SecondaryView({ view, announcements, grades, links, connected, o
               <span className="secondary-icon"><Glyph name="spark" className="h-5 w-5" /></span>
               <div>
                 <h2>Gemini API key</h2>
-                <p>Stored only in this browser’s local cache. BetterCLSS sends it through the backend to Google Gemini.</p>
+                <p>Stored only in this browser's local cache. BetterCLSS sends it through the backend to Google Gemini.</p>
               </div>
             </div>
             <label htmlFor="studenthub-ai-api-key">Gemini API key</label>
@@ -135,6 +164,100 @@ export function SecondaryView({ view, announcements, grades, links, connected, o
             {aiKeyStatus && <p className="ai-key-status" role="status">{aiKeyStatus}</p>}
           </form>
         )}
+        {view === 'settings' && (
+          <div className="agent-settings-card">
+            <div className="agent-settings-head">
+              <span className="secondary-icon agent-settings-icon">
+                <Glyph name="spark" className="h-5 w-5" />
+              </span>
+              <div>
+                <h2>Agentic Helper</h2>
+                <p>Experimental assignment automation</p>
+              </div>
+            </div>
+            <div className="agent-toggle-row">
+              <span className="agent-toggle-label">
+                {agentEnabled ? 'ON' : 'OFF'}
+              </span>
+              <button
+                type="button"
+                className={`agent-toggle-switch ${agentEnabled ? 'active' : ''}`}
+                onClick={handleAgentToggleClick}
+                aria-label={agentEnabled ? 'Disable Agentic Helper' : 'Enable Agentic Helper'}
+              >
+                <span className="agent-toggle-knob" />
+              </button>
+            </div>
+            {agentEnabled && (
+              <p className="agent-status-text">Agentic Helper is enabled</p>
+            )}
+            {agentStatusMessage && (
+              <p className="agent-status-message" role="status">{agentStatusMessage}</p>
+            )}
+          </div>
+        )}
+        <AnimatePresence>
+          {agentWarningOpen && (
+            <motion.div
+              className="agent-modal-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              onClick={cancelAgentEnable}
+            >
+              <motion.div
+                className="agent-modal"
+                initial={{ opacity: 0, scale: 0.95, y: 16 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 16 }}
+                transition={SPRING}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="agent-modal-head">
+                  <span className="agent-modal-icon">
+                    <Glyph name="spark" className="h-5 w-5" />
+                  </span>
+                  <h2>Enable Agentic Helper?</h2>
+                </div>
+                <div className="agent-modal-body">
+                  <p>Agentic Helper is an <strong>experimental</strong> automation feature.</p>
+                  <p>When enabled, it may:</p>
+                  <ul>
+                    <li>Analyze your Canvas assignments</li>
+                    <li>Generate supported content and files</li>
+                    <li>Interact with supported Canvas features</li>
+                    <li>Perform automated actions when authorized</li>
+                  </ul>
+                  <p>However, Agentic Helper <strong>cannot complete every type of assignment</strong>.</p>
+                  <p>Assignments requiring specialized software, physical work, or unsupported formats may be impossible for the agent to complete. In those cases, the agent will <strong>notify you</strong> instead of pretending it can help.</p>
+                  <p className="agent-modal-responsibility">You remain responsible for reviewing all generated work and automated actions.</p>
+                </div>
+                <label className="agent-modal-check">
+                  <input
+                    type="checkbox"
+                    checked={agentWarningAccepted}
+                    onChange={(e) => setAgentWarningAccepted(e.target.checked)}
+                  />
+                  <span>I understand this is experimental and accept the risks</span>
+                </label>
+                <div className="agent-modal-actions">
+                  <button type="button" className="agent-modal-cancel" onClick={cancelAgentEnable}>
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="agent-modal-confirm"
+                    disabled={!agentWarningAccepted}
+                    onClick={confirmAgentEnable}
+                  >
+                    Enable Agentic Helper
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         {(view === 'settings' || (view === 'grades' && !connected)) && (
           <button type="button" className="secondary-action" onClick={onConnect}>
             <Glyph name="sync" className="h-4 w-4" />

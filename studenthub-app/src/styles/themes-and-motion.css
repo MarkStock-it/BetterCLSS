@@ -355,6 +355,89 @@
   background: rgba(232, 235, 246, 0.8);
 }
 
+:root[data-theme="light"] .agent-settings-card {
+  border-color: rgba(71, 86, 137, 0.13);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+:root[data-theme="light"] .agent-settings-head h2 {
+  color: #28324b;
+}
+
+:root[data-theme="light"] .agent-settings-head p {
+  color: #68748f;
+}
+
+:root[data-theme="light"] .agent-toggle-label {
+  color: #68748f;
+}
+
+:root[data-theme="light"] .agent-toggle-switch {
+  background: rgba(190, 198, 221, 0.6);
+}
+
+:root[data-theme="light"] .agent-toggle-knob {
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(60, 74, 119, 0.2);
+}
+
+:root[data-theme="light"] .agent-toggle-switch.active .agent-toggle-knob {
+  background: #fff;
+}
+
+:root[data-theme="light"] .agent-status-text {
+  color: #267b5b;
+}
+
+:root[data-theme="light"] .agent-status-message {
+  color: #5269bd;
+}
+
+:root[data-theme="light"] .agent-modal-overlay {
+  background: rgba(200, 208, 228, 0.7);
+}
+
+:root[data-theme="light"] .agent-modal {
+  border-color: rgba(71, 86, 137, 0.18);
+  background: #f7f8fd;
+  box-shadow: 0 24px 64px rgba(50, 61, 101, 0.2);
+}
+
+:root[data-theme="light"] .agent-modal-head h2 {
+  color: #20283e;
+}
+
+:root[data-theme="light"] .agent-modal-body p {
+  color: #4c587c;
+}
+
+:root[data-theme="light"] .agent-modal-body p strong {
+  color: #28324b;
+}
+
+:root[data-theme="light"] .agent-modal-body li {
+  color: #4c587c;
+}
+
+:root[data-theme="light"] .agent-modal-responsibility {
+  border-top-color: rgba(71, 86, 137, 0.12);
+}
+
+:root[data-theme="light"] .agent-modal-check {
+  border-color: rgba(71, 86, 137, 0.14);
+  background: rgba(239, 242, 250, 0.92);
+}
+
+:root[data-theme="light"] .agent-modal-check span {
+  color: #4c587c;
+}
+
+:root[data-theme="light"] .agent-modal-cancel {
+  color: #52607d;
+  border-color: rgba(71, 86, 137, 0.16);
+  background: rgba(232, 235, 246, 0.8);
+}
+
 :root[data-theme="light"] .focus-metrics strong,
 :root[data-theme="light"] .timer-readout strong {
   color: #28324b;

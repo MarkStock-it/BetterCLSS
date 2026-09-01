@@ -74,6 +74,16 @@ function getDefaultUserData() {
       pomoSessions: 0,
       nextId: 100
     },
+    // Agentic Helper settings (experimental feature, OFF by default)
+    agentSettings: {
+      enabled: false,
+      enabledAt: null,
+      lastToggledAt: null
+    },
+    // Agentic Helper job history
+    agentJobs: [],
+    // Agentic Helper assignment manifests (cached capability analyses)
+    agentManifests: [],
     // Canvas data (refreshed on sync)
     canvas: {
       assignments: [],
@@ -191,6 +201,30 @@ function updateUserCanvasData(canvasUserId, canvasData) {
 }
 
 /**
+ * Update Agentic Helper settings for a user
+ * @param {number} canvasUserId - Canvas user ID
+ * @param {object} agentSettings - Agent settings to merge
+ * @returns {object} Updated user data
+ */
+function updateAgentSettings(canvasUserId, agentSettings) {
+  const userData = loadOrCreateUser(canvasUserId);
+  userData.agentSettings = { ...userData.agentSettings, ...agentSettings };
+  userData.agentSettings.lastToggledAt = new Date().toISOString();
+  saveUserData(canvasUserId, userData);
+  return userData;
+}
+
+/**
+ * Get Agentic Helper enabled state for a user
+ * @param {number} canvasUserId - Canvas user ID
+ * @returns {boolean} Whether Agentic Helper is enabled
+ */
+function isAgentEnabled(canvasUserId) {
+  const userData = loadOrCreateUser(canvasUserId);
+  return Boolean(userData.agentSettings && userData.agentSettings.enabled);
+}
+
+/**
  * Delete all user data (for logout)
  * @param {number} canvasUserId - Canvas user ID
  * @returns {boolean} Success status
@@ -234,6 +268,8 @@ module.exports = {
   saveUserData,
   updateUserLocalData,
   updateUserCanvasData,
+  updateAgentSettings,
+  isAgentEnabled,
   deleteUserData,
   getUserLocalData
 };

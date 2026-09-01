@@ -134,3 +134,256 @@
   font-size: 0.63rem;
 }
 
+/* =====================================================
+   Agentic Helper Settings Card
+   ===================================================== */
+
+.agent-settings-card {
+  padding: 17px;
+  border: 1px solid rgba(101, 119, 180, 0.16);
+  border-radius: 18px;
+  background: rgba(9, 12, 25, 0.5);
+}
+
+.agent-settings-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.agent-settings-icon {
+  color: #a78bfa;
+}
+
+.agent-settings-head h2 {
+  margin: 1px 0 0;
+  color: #e9edff;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.agent-settings-head p {
+  margin: 6px 0 0;
+  color: #7783a5;
+  font-size: 0.67rem;
+  line-height: 1.5;
+}
+
+.agent-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding: 0 2px;
+}
+
+.agent-toggle-label {
+  color: #8490b3;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.agent-toggle-switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(40, 48, 74, 0.8);
+  cursor: pointer;
+  transition: background 0.25s ease;
+}
+
+.agent-toggle-switch.active {
+  background: linear-gradient(135deg, #6483ff, #865ed5);
+}
+
+.agent-toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #c2cae5;
+  transition: transform 0.25s ease, background 0.25s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.agent-toggle-switch.active .agent-toggle-knob {
+  transform: translateX(20px);
+  background: #fff;
+}
+
+.agent-status-text {
+  margin-top: 10px;
+  color: #62d7b0;
+  font-size: 0.63rem;
+  font-weight: 600;
+}
+
+.agent-status-message {
+  margin-top: 8px;
+  color: #8da3ff;
+  font-size: 0.63rem;
+}
+
+/* =====================================================
+   Agentic Helper Confirmation Modal
+   ===================================================== */
+
+.agent-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(2, 3, 10, 0.78);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.agent-modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  padding: 24px;
+  border: 1px solid rgba(101, 119, 180, 0.2);
+  border-radius: 22px;
+  background: linear-gradient(165deg, #12162a, #0a0d1b);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+
+.agent-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.agent-modal-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  color: #a78bfa;
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  border-radius: 13px;
+  background: linear-gradient(145deg, rgba(139, 92, 246, 0.18), rgba(99, 102, 241, 0.12));
+  flex-shrink: 0;
+}
+
+.agent-modal-head h2 {
+  margin: 0;
+  color: #f0f2ff;
+  font-size: 1rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.agent-modal-body {
+  margin-top: 16px;
+}
+
+.agent-modal-body p {
+  margin: 0 0 10px;
+  color: #9aa3c2;
+  font-size: 0.76rem;
+  line-height: 1.6;
+}
+
+.agent-modal-body p strong {
+  color: #dce2ff;
+}
+
+.agent-modal-body ul {
+  margin: 0 0 10px;
+  padding-left: 18px;
+}
+
+.agent-modal-body li {
+  margin: 0 0 4px;
+  color: #9aa3c2;
+  font-size: 0.74rem;
+  line-height: 1.55;
+}
+
+.agent-modal-responsibility {
+  margin-top: 12px !important;
+  padding-top: 12px;
+  border-top: 1px solid rgba(101, 119, 180, 0.12);
+  color: #8da3ff !important;
+  font-weight: 600;
+}
+
+.agent-modal-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(101, 119, 180, 0.14);
+  border-radius: 14px;
+  background: rgba(7, 10, 21, 0.5);
+  cursor: pointer;
+}
+
+.agent-modal-check input[type="checkbox"] {
+  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: #6483ff;
+  cursor: pointer;
+}
+
+.agent-modal-check span {
+  color: #b0b8d6;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.agent-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.agent-modal-cancel,
+.agent-modal-confirm {
+  flex: 1;
+  min-height: 48px;
+  border: none;
+  border-radius: 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.agent-modal-cancel {
+  color: #b0b8d6;
+  border: 1px solid rgba(107, 128, 201, 0.2);
+  background: rgba(17, 22, 40, 0.72);
+}
+
+.agent-modal-cancel:active {
+  transform: scale(0.97);
+}
+
+.agent-modal-confirm {
+  color: #fff;
+  background: linear-gradient(135deg, #6483ff, #865ed5);
+}
+
+.agent-modal-confirm:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.agent-modal-confirm:not(:disabled):active {
+  transform: scale(0.97);
+}

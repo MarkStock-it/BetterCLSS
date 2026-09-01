@@ -43,12 +43,26 @@ function createConfig(rootDir) {
     openClaudeBaseUrl: (process.env.OPENCLAUDE_BASE_URL || 'http://127.0.0.1:1337/v1').replace(/\/+$/, ''),
     openClaudeModel: process.env.OPENCLAUDE_MODEL || 'qwen2.5-coder:7b',
     openClaudeApiKey: process.env.OPENCLAUDE_API_KEY || '',
-    geminiModel: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+    geminiApiKey: process.env.GEMINI_API_KEY || '',
+    geminiModel: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+    geminiTimeoutMs: Number(process.env.GEMINI_TIMEOUT_MS || 60000),
+    geminiMaxOutputTokens: Number(process.env.GEMINI_MAX_OUTPUT_TOKENS || 8192),
+    geminiTemperature: Number(process.env.GEMINI_TEMPERATURE || 0.4),
+    aiDefaultProvider: process.env.AI_DEFAULT_PROVIDER || 'gemini',
+    aiMaxRetries: Number(process.env.AI_MAX_RETRIES || 2),
+    aiRetryBaseDelayMs: Number(process.env.AI_RETRY_BASE_DELAY_MS || 1000),
+    aiLogRequests: process.env.AI_LOG_REQUESTS === '1',
     aiAutostartOllama: process.env.AI_AUTOSTART_OLLAMA !== '0',
     aiModelKeepAlive: process.env.AI_MODEL_KEEP_ALIVE || '0m',
     corsAllowOrigin: process.env.CORS_ALLOW_ORIGIN || 'https://betterclss.onrender.com',
     notificationAdminKey: process.env.NOTIFICATION_ADMIN_KEY || '',
     firebaseServiceAccountJson: process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '',
+    // Agentic Helper configuration
+    agentEnabled: process.env.AGENT_ENABLED !== '0',
+    agentMaxFileSizeMb: Number(process.env.AGENT_MAX_FILE_SIZE_MB || 10),
+    agentMaxConcurrentJobs: Number(process.env.AGENT_MAX_CONCURRENT_JOBS || 3),
+    agentMaxRetries: Number(process.env.AGENT_MAX_RETRY_COUNT || 2),
+    agentFileRetentionDays: Number(process.env.AGENT_FILE_RETENTION_DAYS || 30),
   };
 }
 

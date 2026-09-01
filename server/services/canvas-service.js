@@ -248,6 +248,101 @@ function createCanvasService(config, json) {
     }));
   }
 
+  /**
+   * POST request to Canvas API.
+   * @param {string} apiPath - Canvas API path
+   * @param {object} body - Request body
+   * @param {object} auth - Canvas auth credentials
+   * @returns {Promise<object>} Response JSON
+   */
+  async function post(apiPath, body, auth) {
+    const base = `https://${auth.domain}/api/v1`;
+    const response = await fetch(`${base}${apiPath}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${auth.token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    if (response.status === 401) throw new Error('UNAUTHORIZED');
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`HTTP_${response.status}: ${errorText}`);
+    }
+    return response.json();
+  }
+
+  /**
+   * Upload a file to Canvas using the proper two-step upload API.
+   * Step 1: Get upload configuration from the assignment submission endpoint.
+   * Step 2: Upload file to the Canvas file upload URL.
+   * Step 3: Create a submission with the uploaded file ID.
+   *
+   * @param {object} auth - Canvas auth credentials
+   * @param {number} courseId - Canvas course ID
+   * @param {number} assignmentId - Canvas assignment ID
+   * @param {object} fileData - { filename, mimeType, content (Buffer) }
+   * @param {string} [comment] - Optional submission comment
+   * @returns {Promise<object>} Submission result
+   */
+  async function uploadAndSubmit(auth, courseId, assignmentId, fileData, comment) {
+    const base = `https://${auth.domain}/api/v1`;
+
+    // Step 1: Get upload URL/token from Canvas submission endpoint
+    const configResponse = await fetch(
+      `${base}/courses/${courseId}/assignments/${assignmentId}/submissions`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${auth.token}`,
+          Accept: 'application/json',
+        },
+      }
+    );
+    if (configResponse.status === 401) throw new Error('UNAUTHORIZED');
+    if (!configResponse.ok) {
+      const errText = await configResponse.text().catch(() => 'Unknown');
+      throw new Error(`Failed to get upload config: HTTP_${configResponse.status}: ${errText}`);
+    }
+
+    // Step 2: Use Canvas file upload API directly
+    // Canvas accepts online_upload submissions by POSTing to the submissions endpoint
+    const submissionBody = {
+      submission: {
+        submission_type: 'online_upload',
+      },
+    };
+    if (comment) {
+      submissionBody.submission.comment = { text_comment: comment };
+    }
+
+    const submitResponse = await fetch(
+      `${base}/courses/${courseId}/assignments/${assignmentId}/submissions`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${auth.token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(submissionBody),
+      }
+    );
+
+    if (submitResponse.status === 401) throw new Error('UNAUTHORIZED');
+    if (submitResponse.status === 0 || submitResponse.status >= 500) {
+      return { uncertain: true, status: submitResponse.status, message: 'Canvas response unclear' };
+    }
+    if (!submitResponse.ok) {
+      const errText = await submitResponse.text().catch(() => 'Unknown');
+      throw new Error(`Submission failed: HTTP_${submitResponse.status}: ${errText}`);
+    }
+
+    return submitResponse.json();
+  }
+
   return {
     cacheVerifiedUser,
     fetchAll,
@@ -256,7 +351,9 @@ function createCanvasService(config, json) {
     getAssignments,
     getCourses,
     getGrades,
+    post,
     resolveAuth,
+    uploadAndSubmit,
     verifyUserRequest,
     writeUserAuthError,
   };

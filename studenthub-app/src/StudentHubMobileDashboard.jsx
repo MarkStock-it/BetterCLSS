@@ -11,14 +11,17 @@ import { CardsStudySection } from './components/cards/CardsStudySection';
 import { CalendarView } from './components/calendar/CalendarView';
 import { DeadlineList, WorkloadProgress } from './components/home/HomeOverview';
 import { SidebarDrawer } from './components/navigation/SidebarDrawer';
+import { AgentCenter } from './components/agent/AgentCenter';
 import { SecondaryView } from './components/secondary/SecondaryView';
 import { StudyView } from './components/study/StudyView';
 import { TasksView } from './components/tasks/TasksView';
 import { BrandLogo, Glyph } from './components/ui/Icons';
 import {
   daysUntil,
+  readAgentSettings,
   readDashboardData,
-  updateStoredLocalData
+  updateStoredLocalData,
+  writeAgentSettings
 } from './lib/dashboard-data';
 
 const DRAWER_TRAVEL = 360;
@@ -46,6 +49,7 @@ export default function StudentHubMobileDashboard() {
   const [studySpace, setStudySpace] = useState('timer');
   const [studyRunning, setStudyRunning] = useState(false);
   const [studyDecks, setStudyDecks] = useState(data.studyDecks);
+  const [agentSettings, setAgentSettings] = useState(data.agentSettings || readAgentSettings());
   const drawerX = useMotionValue(-DRAWER_TRAVEL);
   const backdropOpacity = useTransform(drawerX, [-DRAWER_TRAVEL, 0], [0, 0.74]);
   const edgeGesture = useRef(null);
@@ -127,6 +131,16 @@ export default function StudentHubMobileDashboard() {
         String(item.id) === String(assignment.id) ? { ...item, done: nextDone } : item
       ));
     });
+  };
+
+  const handleAgentSettingsChange = (newSettings) => {
+    const updated = {
+      ...agentSettings,
+      ...newSettings,
+      lastToggledAt: new Date().toISOString(),
+    };
+    setAgentSettings(updated);
+    writeAgentSettings(updated);
   };
 
   const createAssistantDeck = (action) => {
@@ -279,7 +293,13 @@ export default function StudentHubMobileDashboard() {
                 initialNote={data.studyNote}
               />
             )}
-            {!PRIMARY_VIEWS.includes(activeView) && (
+            {activeView === 'agent' && (
+              <AgentCenter
+                key="agent"
+                agentSettings={agentSettings}
+              />
+            )}
+            {!PRIMARY_VIEWS.includes(activeView) && activeView !== 'agent' && (
               <SecondaryView
                 key={activeView}
                 view={activeView}
@@ -288,6 +308,8 @@ export default function StudentHubMobileDashboard() {
                 links={data.links}
                 connected={data.connected}
                 onConnect={connectCanvas}
+                agentSettings={agentSettings}
+                onAgentSettingsChange={handleAgentSettingsChange}
               />
             )}
           </AnimatePresence>
