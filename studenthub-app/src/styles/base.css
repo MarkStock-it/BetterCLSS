@@ -609,40 +609,27 @@ a:focus-visible {
   background: rgba(75, 184, 132, 0.09);
 }
 
-/* ─── Deadline Slider (drag-to-reveal) ─────────────────────── */
+/* ─── Action Tray (hold-to-reveal) ──────────────────────────── */
 
 .deadline-row-animated { position: relative; }
 
-.deadline-slider {
+/* Wrapper that positions the trigger and tray */
+.action-tray-wrap {
   position: relative;
   flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
+  z-index: 10;
   margin-left: 8px;
   -webkit-user-select: none;
   user-select: none;
 }
 
-/* Actions: two buttons stacked to the LEFT of the thumb rest position */
-.deadline-slider-actions {
-  position: absolute;
-  top: 1px;
-  left: 0;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  z-index: 1;
-}
-
-/* The draggable thumb */
-.deadline-slider-thumb {
-  position: relative;
-  z-index: 2;
-  width: 34px;
-  height: 34px;
+/* The trigger icon — hold this to open the tray */
+.action-tray-trigger {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 34px;
+  height: 34px;
   color: #7186cf;
   border: 1px solid rgba(115, 137, 221, 0.22);
   border-radius: 999px;
@@ -650,47 +637,92 @@ a:focus-visible {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   cursor: grab;
   touch-action: none;
-  transition: transform 200ms cubic-bezier(0.2, 0, 0, 1), color 140ms ease;
-  will-change: transform;
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1), color 120ms ease;
 }
-.deadline-slider-thumb:active { cursor: grabbing; }
+.action-tray-trigger:active { cursor: grabbing; transform: scale(0.92); }
 
-/* Action button base */
-.slider-action-btn {
+/* Tray container — appears below the trigger */
+.action-tray {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
   display: flex;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(115, 137, 221, 0.25);
+  border-radius: 16px;
+  background: rgba(14, 17, 32, 0.96);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  animation: tray-pop 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+@keyframes tray-pop {
+  from { opacity: 0; transform: scale(0.85) translateY(-4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Individual action target inside the tray */
+.action-tray-target {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 auto;
+  gap: 4px;
+  width: 52px;
+  height: 52px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: transform 100ms ease, background 120ms ease;
+  touch-action: none;
+  transition: transform 120ms ease, background 100ms ease, border-color 100ms ease;
 }
-.slider-action-btn:active:not(:disabled) { transform: scale(0.88); }
-.slider-action-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.action-tray-target:active:not(:disabled) { transform: scale(0.9); }
+.action-tray-target:disabled { opacity: 0.3; cursor: not-allowed; }
+.action-tray-target.is-hovered {
+  transform: scale(1.12);
+}
 
-/* Done — green */
-.slider-action-btn.done-btn {
+.action-tray-label {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  transition: opacity 100ms ease;
+}
+.action-tray-target.is-hovered .action-tray-label { opacity: 1; }
+
+/* Done target — green */
+.action-tray-target.action-done {
   color: #34d399;
-  background: rgba(16, 185, 129, 0.14);
-  border: 1.5px solid rgba(52, 211, 153, 0.3);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1.5px solid rgba(52, 211, 153, 0.25);
 }
-.slider-action-btn.done-btn:hover:not(:disabled) {
-  background: rgba(16, 185, 129, 0.26);
-  border-color: rgba(52, 211, 153, 0.55);
+.action-tray-target.action-done.is-hovered {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: rgba(52, 211, 153, 0.6);
+  box-shadow: 0 0 16px rgba(52, 211, 153, 0.3);
 }
 
-/* Agent — purple */
-.slider-action-btn.agent-btn {
+/* Agent target — purple */
+.action-tray-target.action-agent {
   color: #a78bfa;
-  background: rgba(139, 92, 246, 0.14);
-  border: 1.5px solid rgba(167, 139, 250, 0.3);
+  background: rgba(139, 92, 246, 0.12);
+  border: 1.5px solid rgba(167, 139, 250, 0.25);
 }
-.slider-action-btn.agent-btn:hover:not(:disabled) {
-  background: rgba(139, 92, 246, 0.26);
-  border-color: rgba(167, 139, 250, 0.55);
+.action-tray-target.action-agent.is-hovered {
+  background: rgba(139, 92, 246, 0.3);
+  border-color: rgba(167, 139, 250, 0.6);
+  box-shadow: 0 0 16px rgba(167, 139, 250, 0.3);
+}
+.action-tray-target.action-agent.is-creating {
+  opacity: 0.5;
 }
 
 .agent-spinner-tiny {

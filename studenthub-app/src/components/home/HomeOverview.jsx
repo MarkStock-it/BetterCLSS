@@ -197,90 +197,149 @@ export function EmptyDeadlines({ connected, onConnect }) {
   );
 }
 
+/* eslint-disable-next-line react/no-multi-comp */
 export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob, creatingJobId, setCreatingJobId, onClose }) {
-  const [open, setOpen] = useState(false);
-  const [dragX, setDragX] = useState(0);
-  const dragRef = useRef({ startX: 0, dragging: false });
-  const REVEAL = 84;
-  const THRESHOLD = REVEAL * 0.55;
+  const [active, setActive] = useState(null); // 'done' | 'agent' | null
+  const trayRef = useRef(null);
+  const holdRef = useRef({ timer: null, startX: 0, startY: 0, active: false });
 
-  const collapse = () => { setOpen(false); setDragX(0); onClose?.(); };
+  const HOLD_MS = 350;
+  const TRAY_SIZE = 72; // radius from trigger to targets
+  const CANCEL_DIST = 14; // px moved before hold cancels
 
+  const cleanup = () => {
+    clearTimeout(holdRef.current.timer);
+    holdRef.current.active = false;
+    setActive(null);
+    onClose?.();
+  };
+
+  const getTargetAt = (clientX, clientY) => {
+    if (!trayRef.current) return null;
+    const els = trayRef.current.querySelectorAll('[data-action]');
+    for (const el of els) {
+      const r = el.getBoundingClientRect();
+      if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
+        return el.dataset.action;
+      }
+    }
+    return null;
+  };
+
+  const executeAction = async (action) => {
+    if (action === 'done') {
+      onToggleDone(item);
+    } else if (action === 'agent') {
+      if (creatingJobId) return;
+      if (!canCreateAgentJob(item)) {
+        alert('This assignment type may not be supported by Agentic Helper yet.');
+        return;
+      }
+      setCreatingJobId(item.id);
+      try {
+        const job = await createAgentJobSafe(item, (err) => alert(`Could not create agent job:\n\n${err}`));
+        if (job) onCreateAgentJob?.(job);
+      } finally {
+        setCreatingJobId(null);
+      }
+    }
+  };
+
+  // --- Pointer handlers on the trigger icon ---
   const onPointerDown = (e) => {
     if (e.button && e.button !== 0) return;
-    dragRef.current = { startX: e.clientX, dragging: true };
+    e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
-  };
-  const onPointerMove = (e) => {
-    if (!dragRef.current.dragging) return;
-    const delta = dragRef.current.startX - e.clientX;
-    setDragX(Math.max(0, Math.min(delta, REVEAL)));
-  };
-  const onPointerUp = () => {
-    dragRef.current.dragging = false;
-    setDragX((prev) => {
-      if (prev >= THRESHOLD) { setOpen(true); return REVEAL; }
-      return 0;
-    });
+    holdRef.current = { timer: null, startX: e.clientX, startY: e.clientY, active: false };
+    holdRef.current.timer = setTimeout(() => {
+      holdRef.current.active = true;
+    }, HOLD_MS);
   };
 
-  const handleDone = (e) => {
-    e.stopPropagation(); collapse(); onToggleDone(item);
+  const onPointerMove = (e) => {
+    // Cancel hold if user scrolls/moves too much before threshold
+    if (!holdRef.current.active) {
+      const dx = Math.abs(e.clientX - holdRef.current.startX);
+      const dy = Math.abs(e.clientY - holdRef.current.startY);
+      if (dx > CANCEL_DIST || dy > CANCEL_DIST) {
+        clearTimeout(holdRef.current.timer);
+        return;
+      }
+    }
+    // If tray is open, track which target finger is over
+    if (holdRef.current.active) {
+      const hit = getTargetAt(e.clientX, e.clientY);
+      setActive(hit);
+    }
   };
-  const handleAgent = async (e) => {
-    e.stopPropagation();
-    if (creatingJobId) return;
-    if (!canCreateAgentJob(item)) { alert('This assignment type may not be supported by Agentic Helper yet.'); collapse(); return; }
-    setCreatingJobId(item.id);
-    try {
-      const job = await createAgentJobSafe(item, (err) => alert(`Could not create agent job:\n\n${err}`));
-      if (job) onCreateAgentJob?.(job);
-    } finally { setCreatingJobId(null); collapse(); }
+
+  const onPointerUp = (e) => {
+    if (holdRef.current.active) {
+      const hit = getTargetAt(e.clientX, e.clientY);
+      if (hit) {
+        executeAction(hit);
+      }
+      // Always collapse after release
+      cleanup();
+    } else {
+      cleanup();
+    }
   };
 
   const isCreating = creatingJobId === item.id;
-  const offset = open ? REVEAL : dragX;
 
   return (
-    <div className="deadline-slider">
-      <div className="deadline-slider-actions">
-        <button type="button" className="slider-action-btn done-btn" onClick={handleDone} aria-label="Mark complete">
-          <Glyph name="tasks" className="h-4 w-4" />
-        </button>
-        <button type="button" className="slider-action-btn agent-btn" onClick={handleAgent} disabled={isCreating || !connected} aria-label="Create agent job">
-          {isCreating ? <span className="agent-spinner-tiny" /> : <Glyph name="spark" className="h-4 w-4" />}
-        </button>
-      </div>
+    <div className="action-tray-wrap">
+      {/* Trigger icon — user holds this */}
       <div
-        className="deadline-slider-thumb"
-        style={{ transform: `translateX(-${offset}px)` }}
+        className="action-tray-trigger"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerLeave={() => { dragRef.current.dragging = false; setDragX(0); }}
+        onPointerCancel={cleanup}
+        onPointerLeave={cleanup}
       >
         <Glyph name="spark" className="h-4 w-4" />
       </div>
+
+      {/* Action tray — positioned below the trigger */}
+      {holdRef.current.active && (
+        <div className="action-tray" ref={trayRef}>
+          <button
+            type="button"
+            data-action="done"
+            className={`action-tray-target action-done ${active === 'done' ? 'is-hovered' : ''}`}
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerMove={(e) => { e.stopPropagation(); setActive(getTargetAt(e.clientX, e.clientY)); }}
+            onPointerUp={(e) => { e.stopPropagation(); }}
+          >
+            <Glyph name="tasks" className="h-4 w-4" />
+            <span className="action-tray-label">Done</span>
+          </button>
+          <button
+            type="button"
+            data-action="agent"
+            className={`action-tray-target action-agent ${active === 'agent' ? 'is-hovered' : ''} ${isCreating ? 'is-creating' : ''}`}
+            disabled={isCreating || !connected}
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerMove={(e) => { e.stopPropagation(); setActive(getTargetAt(e.clientX, e.clientY)); }}
+            onPointerUp={(e) => { e.stopPropagation(); }}
+          >
+            {isCreating ? <span className="agent-spinner-tiny" /> : <Glyph name="spark" className="h-4 w-4" />}
+            <span className="action-tray-label">Agent</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
 export function DeadlineList({ assignments, connected, onConnect, onToggleDone, onCreateAgentJob }) {
   const [creatingJobId, setCreatingJobId] = useState(null);
-  const [activeId, setActiveId] = useState(null);
-  const holdTimerRef = useRef(null);
   const upcoming = smartSort(assignments).filter((item) => !item.done).slice(0, 5);
 
-  const startHold = (id) => {
-    holdTimerRef.current = setTimeout(() => setActiveId(id), 350);
-  };
-  const cancelHold = () => {
-    clearTimeout(holdTimerRef.current);
-  };
-  const clearActive = () => setActiveId(null);
-
   return (
-    <section className="section-card" onClick={clearActive}>
+    <section className="section-card">
       <div className="section-card-head">
         <div>
           <span className="eyebrow-mobile">Next up</span>
@@ -295,17 +354,13 @@ export function DeadlineList({ assignments, connected, onConnect, onToggleDone, 
           {upcoming.map((item, index) => {
             const days = daysUntil(item.due);
             const dueText = days === null ? 'No due date' : days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'Due today' : `${days}d left`;
-            const isActive = activeId === (item.id || item.title);
             return (
               <motion.div
                 key={item.id || `${item.title}-${index}`}
-                className={`deadline-row-animated ${isActive ? 'is-active' : ''}`}
+                className="deadline-row-animated"
                 initial={{ opacity: 0, x: 12 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ ...SPRING, delay: index * 0.05 }}
-                onPointerDown={(e) => { e.stopPropagation(); startHold(item.id || item.title); }}
-                onPointerUp={cancelHold}
-                onPointerLeave={cancelHold}
               >
                 <div className="home-deadline-row">
                   <span className={`priority-rail ${item.priority || 'medium'}`} />
@@ -313,11 +368,7 @@ export function DeadlineList({ assignments, connected, onConnect, onToggleDone, 
                     <h3 className="truncate text-sm font-semibold text-slate-100">{item.title || 'Untitled assignment'}</h3>
                     <p className="mt-1 truncate text-xs text-slate-500">{item.subject || 'Course'} · {dueText}</p>
                   </div>
-                  {isActive ? (
-                    <DeadlineSlider item={item} connected={connected} onToggleDone={onToggleDone} onCreateAgentJob={onCreateAgentJob} creatingJobId={creatingJobId} setCreatingJobId={setCreatingJobId} onClose={clearActive} />
-                  ) : (
-                    <span className="home-deadline-check" aria-hidden="true"><Glyph name="spark" className="h-4 w-4" /></span>
-                  )}
+                  <DeadlineSlider item={item} connected={connected} onToggleDone={onToggleDone} onCreateAgentJob={onCreateAgentJob} creatingJobId={creatingJobId} setCreatingJobId={setCreatingJobId} onClose={() => {}} />
                 </div>
               </motion.div>
             );

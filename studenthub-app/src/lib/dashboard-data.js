@@ -93,11 +93,13 @@ export function readDashboardData() {
         const override = canvasOverrides[item.id] || {};
         const done = typeof override.done === 'boolean' ? override.done : canvasDone;
         const due = item.dueAt ? String(item.dueAt).split('T')[0] : null;
-        const remaining = daysUntil(due);
-        return {
+        const remaining = daysUntil(due);          return {
           id: item.id,
+          canvasId: item.canvasId || null,
+          courseId: item.courseId || null,
           title: item.title,
           subject: item.courseName || item.courseCode || 'Canvas',
+          courseName: item.courseName || null,
           due,
           done,
           source: 'canvas',
@@ -603,7 +605,9 @@ export function canCreateAgentJob(assignment) {
  * @returns {Promise<Object|null>} - Created job or null
  */
 export async function createAgentJobSafe(assignment, onError) {
-  if (!assignment?.courseId || !assignment?.id) {
+  const courseId = assignment?.courseId;
+  const assignmentId = assignment?.canvasId || assignment?.id;
+  if (!courseId || !assignmentId) {
     const err = 'Missing assignment data (courseId or id)';
     onError?.(err);
     return null;
@@ -613,8 +617,8 @@ export async function createAgentJobSafe(assignment, onError) {
       capabilityResult: { status: 'PENDING', warnings: [], reason: null }
     };
     const job = await createAgentJob(
-      assignment.courseId,
-      assignment.id,
+      courseId,
+      assignmentId,
       manifest
     );
     if (!job) {
