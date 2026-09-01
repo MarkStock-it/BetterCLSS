@@ -636,9 +636,10 @@ a:focus-visible {
   background: linear-gradient(145deg, #1c2240, #151b33);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   cursor: grab;
-  /* Keep ordinary swipes available. JS only prevents the drag after the hold
-     has opened the tray, so a scroll does not become an assignment action. */
-  touch-action: manipulation;
+  /* Prevent browser scroll while gesture is active. Pointer capture + setPointerCapture()
+     in JS ensures the gesture owns all pointer events on this trigger, and this CSS
+     tells the browser not to initiate any default scroll behavior on this element. */
+  touch-action: none;
   -webkit-touch-callout: none;
   transition: transform 180ms cubic-bezier(0.2, 0, 0, 1), color 120ms ease;
 }

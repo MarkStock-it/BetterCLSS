@@ -229,6 +229,14 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
     if (gesture) {
       clearTimeout(gesture.timer);
       removeGestureListeners(gesture);
+      // Release pointer capture to return control to the browser
+      if (triggerRef.current && document.pointerLockElement !== triggerRef.current) {
+        try {
+          triggerRef.current.releasePointerCapture(gesture.pointerId);
+        } catch {
+          // Ignore errors if pointer was already released
+        }
+      }
       holdRef.current = null;
     }
     setTrayState({ open: false, x: 0, y: 0 });
@@ -316,6 +324,13 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
   const onPointerDown = (e) => {
     if (e.button && e.button !== 0) return;
     e.stopPropagation();
+    e.preventDefault();
+    // Capture this pointer so all pointer events stay with this element,
+    // even if the finger moves away from the trigger. This prevents the browser
+    // from interpreting the movement as a page scroll.
+    if (triggerRef.current) {
+      triggerRef.current.setPointerCapture(e.pointerId);
+    }
     cleanup();
 
     const gesture = {
