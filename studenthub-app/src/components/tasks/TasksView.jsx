@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { EmptyDeadlines } from '../home/HomeOverview';
+import { EmptyDeadlines, DeadlineSlider } from '../home/HomeOverview';
 import { Glyph } from '../ui/Icons';
 import { ViewHeading, ViewModeTabs } from '../ui/ViewControls';
 import { daysUntil, smartSort, canCreateAgentJob, createAgentJobSafe } from '../../lib/dashboard-data';
@@ -40,25 +40,6 @@ export function TasksView({ assignments, filter, onFilterChange, connected, onCo
     });
   };
 
-  const handleCreateAgentJob = async (assignment, e) => {
-    e.stopPropagation?.();
-    if (creatingJobId) return;
-    const canCreate = canCreateAgentJob(assignment);
-    if (!canCreate) {
-      alert('This assignment type may not be supported by Agentic Helper yet.');
-      return;
-    }
-    setCreatingJobId(assignment.id);
-    try {
-      const job = await createAgentJobSafe(assignment, (error) => {
-        alert(`Could not create agent job:\n\n${error}`);
-      });
-      if (job) onCreateAgentJob?.(job);
-    } finally {
-      setCreatingJobId(null);
-    }
-  };
-
   return (
     <motion.section key={`tasks-${filter}`} className="view-stack tasks-view" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
       <ViewHeading eyebrow="Coursework" title="Tasks" detail={`${filter[0].toUpperCase()}${filter.slice(1)} assignments`} />
@@ -86,44 +67,18 @@ export function TasksView({ assignments, filter, onFilterChange, connected, onCo
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -8 }}
                 transition={{ duration: 0.18 }}
-              >
-                {pageItems.map((item, index) => {
-                  const isCreating = creatingJobId === item.id;
-                  return (
-                    <div key={`${item.id || item.title}-${startIndex + index}`} className="task-row-wrapper">
-                      <button
-                        type="button"
-                        className="deadline-row task-toggle-row mb-3 last:mb-0"
-                        onClick={() => onToggleDone(item)}
-                        aria-pressed={Boolean(item.done)}
-                        aria-label={`${item.done ? 'Mark pending' : 'Mark submitted'}: ${item.title}`}
-                      >
+              >                {pageItems.map((item, index) => (
+                    <div key={`${item.id || item.title}-${startIndex + index}`} className="deadline-row-animated task-row-item mb-3 last:mb-0">
+                      <div className="deadline-row task-toggle-row">
                         <span className={`priority-rail ${item.priority || 'medium'}`} />
                         <div className="min-w-0 flex-1">
                           <h3 className="task-title truncate text-sm font-semibold">{item.title}</h3>
                           <p className="task-meta mt-1 text-xs">{item.subject || 'Course'} · {item.due || 'No due date'}</p>
                         </div>
-                        <button
-                          type="button"
-                          className={`deadline-agent-button task-agent-button ${isCreating ? 'is-creating' : ''}`}
-                          onClick={(e) => handleCreateAgentJob(item, e)}
-                          disabled={isCreating || !connected}
-                          title={!connected ? 'Connect Canvas' : 'Create agent job'}
-                          aria-label={`Create agent job for ${item.title}`}
-                        >
-                          {isCreating ? (
-                            <span className="agent-spinner-tiny" aria-hidden="true" />
-                          ) : (
-                            <Glyph name="spark" className="h-4 w-4" />
-                          )}
-                        </button>
-                        <span className={`task-done-control ${item.done ? 'done' : ''}`} aria-hidden="true">
-                          <Glyph name={item.done ? 'spark' : 'tasks'} className="h-4 w-4" />
-                        </span>
-                      </button>
+                        <DeadlineSlider item={item} connected={connected} onToggleDone={onToggleDone} onCreateAgentJob={onCreateAgentJob} creatingJobId={creatingJobId} setCreatingJobId={setCreatingJobId} />
+                      </div>
                     </div>
-                  );
-                })}
+                ))}
               </motion.div>
             </AnimatePresence>
             {pageCount > 1 && (

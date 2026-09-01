@@ -609,47 +609,100 @@ a:focus-visible {
   background: rgba(75, 184, 132, 0.09);
 }
 
-/* ─── Agent Job Creation Button ──────────────────────────────── */
+/* ─── Deadline Slider (hold-to-reveal) ─────────────────────── */
 
-.deadline-agent-button {
+.deadline-row-animated { position: relative; }
+
+.deadline-slider {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  position: relative;
+  height: 36px;
+  margin-left: 8px;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: pan-y;
+}
+
+.deadline-slider-handle {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 auto;
-  padding: 0;
-  margin: 0 4px;
+  width: 36px;
+  height: 36px;
   color: #7186cf;
   border: 1px solid rgba(115, 137, 221, 0.2);
   border-radius: 999px;
   background: rgba(89, 111, 202, 0.08);
   cursor: pointer;
-  transition: all 160ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 2;
 }
-.deadline-agent-button:disabled {
-  opacity: 0.45;
+
+.deadline-slider.held .deadline-slider-handle {
+  color: #8da3ff;
+  border-color: rgba(141, 163, 255, 0.4);
+  background: rgba(109, 133, 255, 0.15);
+  transform: scale(1.08);
+}
+
+.deadline-slider-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: absolute;
+  right: 44px;
+  opacity: 0;
+  transform: translateX(12px);
+  animation: slider-reveal 220ms cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+@keyframes slider-reveal {
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.slider-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid rgba(115, 137, 221, 0.2);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.slider-action-btn.done-btn {
+  color: #6ee7a8;
+  background: rgba(75, 184, 132, 0.1);
+  border-color: rgba(91, 209, 154, 0.25);
+}
+.slider-action-btn.done-btn:hover {
+  background: rgba(75, 184, 132, 0.2);
+  border-color: rgba(91, 209, 154, 0.45);
+}
+
+.slider-action-btn.agent-btn {
+  color: #8da3ff;
+  background: rgba(109, 133, 255, 0.1);
+  border-color: rgba(141, 163, 255, 0.25);
+}
+.slider-action-btn.agent-btn:hover {
+  background: rgba(109, 133, 255, 0.2);
+  border-color: rgba(141, 163, 255, 0.45);
+}
+.slider-action-btn:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
 }
-@media (hover: hover) {
-  .deadline-agent-button { opacity: 0; transform: scale(0.8); }
-  .home-deadline-row:hover .deadline-agent-button,
-  .deadline-row:hover .deadline-agent-button { opacity: 1; transform: scale(1); }
+.slider-action-btn:active:not(:disabled) {
+  transform: scale(0.9);
 }
-@media (hover: none) {
-  .deadline-agent-button { opacity: 1; }
-}
-.deadline-agent-button:hover:not(:disabled) {
-  color: #8da3ff;
-  border-color: rgba(141, 163, 255, 0.4);
-  background: rgba(109, 133, 255, 0.12);
-}
-.deadline-agent-button:active:not(:disabled) { transform: scale(0.92); }
-.deadline-agent-button.is-creating {
-  color: #8da3ff;
-  border-color: rgba(141, 163, 255, 0.4);
-  background: rgba(109, 133, 255, 0.12);
-}
+
 .agent-spinner-tiny {
   display: inline-block;
   width: 14px;
@@ -660,13 +713,9 @@ a:focus-visible {
   animation: agent-spin 0.8s linear infinite;
 }
 @keyframes agent-spin { to { transform: rotate(360deg); } }
-.home-deadline-row-wrapper,
-.task-row-wrapper { display: contents; }
-@media (max-width: 640px) {
-  .deadline-agent-button { width: 28px; height: 28px; margin: 0 2px; }
-  .deadline-agent-button svg { width: 14px; height: 14px; }
-  .agent-spinner-tiny { width: 12px; height: 12px; border-width: 1.5px; }
-}
+
+.task-row-item { margin-bottom: 12px; }
+.task-row-item:last-child { margin-bottom: 0; }
 
 .section-card {
   padding: 22px;

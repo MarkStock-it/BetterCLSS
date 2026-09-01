@@ -197,28 +197,68 @@ export function EmptyDeadlines({ connected, onConnect }) {
   );
 }
 
-export function DeadlineList({ assignments, connected, onConnect, onToggleDone, onCreateAgentJob }) {
-  const [creatingJobId, setCreatingJobId] = useState(null);
-  const upcoming = smartSort(assignments).filter((item) => !item.done).slice(0, 5);
+export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob, creatingJobId, setCreatingJobId }) {
+  const [held, setHeld] = useState(false);
+  const timerRef = useRef(null);
 
-  const handleCreateAgentJob = async (assignment, e) => {
-    e.stopPropagation?.();
+  const startHold = () => {
+    timerRef.current = setTimeout(() => setHeld(true), 400);
+  };
+  const cancelHold = () => {
+    clearTimeout(timerRef.current);
+    if (!held) setHeld(false);
+  };
+  const collapse = () => setHeld(false);
+
+  const handleDone = (e) => {
+    e.stopPropagation();
+    collapse();
+    onToggleDone(item);
+  };
+
+  const handleAgent = async (e) => {
+    e.stopPropagation();
     if (creatingJobId) return;
-    const canCreate = canCreateAgentJob(assignment);
+    const canCreate = canCreateAgentJob(item);
     if (!canCreate) {
-      alert('This assignment type may not be supported by Agentic Helper yet.\n\nSupported: essays, reports, code projects\nNot supported: exams, presentations, discussions');
+      alert('This assignment type may not be supported by Agentic Helper yet.');
+      collapse();
       return;
     }
-    setCreatingJobId(assignment.id);
+    setCreatingJobId(item.id);
     try {
-      const job = await createAgentJobSafe(assignment, (error) => {
-        alert(`Could not create agent job:\n\n${error}`);
-      });
+      const job = await createAgentJobSafe(item, (err) => alert(`Could not create agent job:\n\n${err}`));
       if (job) onCreateAgentJob?.(job);
     } finally {
       setCreatingJobId(null);
+      collapse();
     }
   };
+
+  const isCreating = creatingJobId === item.id;
+
+  return (
+    <div className={`deadline-slider ${held ? 'held' : ''}`} onMouseDown={startHold} onMouseUp={cancelHold} onMouseLeave={cancelHold} onTouchStart={startHold} onTouchEnd={cancelHold}>
+      {held && (
+        <div className="deadline-slider-actions">
+          <button type="button" className="slider-action-btn done-btn" onClick={handleDone} aria-label="Mark complete">
+            <Glyph name="spark" className="h-4 w-4" />
+          </button>
+          <button type="button" className="slider-action-btn agent-btn" onClick={handleAgent} disabled={isCreating || !connected} aria-label="Create agent job">
+            {isCreating ? <span className="agent-spinner-tiny" /> : <Glyph name="spark" className="h-4 w-4" />}
+          </button>
+        </div>
+      )}
+      <div className="deadline-slider-handle">
+        <Glyph name="spark" className="h-4 w-4" />
+      </div>
+    </div>
+  );
+}
+
+export function DeadlineList({ assignments, connected, onConnect, onToggleDone, onCreateAgentJob }) {
+  const [creatingJobId, setCreatingJobId] = useState(null);
+  const upcoming = smartSort(assignments).filter((item) => !item.done).slice(0, 5);
 
   return (
     <section className="section-card">
@@ -236,44 +276,22 @@ export function DeadlineList({ assignments, connected, onConnect, onToggleDone, 
           {upcoming.map((item, index) => {
             const days = daysUntil(item.due);
             const dueText = days === null ? 'No due date' : days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'Due today' : `${days}d left`;
-            const isCreating = creatingJobId === item.id;
             return (
               <motion.div
                 key={item.id || `${item.title}-${index}`}
-                className="home-deadline-row-wrapper"
+                className="deadline-row-animated"
                 initial={{ opacity: 0, x: 12 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ ...SPRING, delay: index * 0.05 }}
               >
-                <button
-                  type="button"
-                  className="home-deadline-row"
-                  onClick={() => onToggleDone(item)}
-                  aria-label={`Mark complete: ${item.title}`}
-                >
+                <div className="home-deadline-row">
                   <span className={`priority-rail ${item.priority || 'medium'}`} />
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-sm font-semibold text-slate-100">{item.title || 'Untitled assignment'}</h3>
                     <p className="mt-1 truncate text-xs text-slate-500">{item.subject || 'Course'} · {dueText}</p>
                   </div>
-                  <button
-                    type="button"
-                    className={`deadline-agent-button ${isCreating ? 'is-creating' : ''}`}
-                    onClick={(e) => handleCreateAgentJob(item, e)}
-                    disabled={isCreating || !connected}
-                    title={!connected ? 'Connect Canvas to use Agentic Helper' : 'Create agent job for this assignment'}
-                    aria-label={`Create agent job for ${item.title}`}
-                  >
-                    {isCreating ? (
-                      <span className="agent-spinner-tiny" aria-hidden="true" />
-                    ) : (
-                      <Glyph name="spark" className="h-4 w-4" />
-                    )}
-                  </button>
-                  <span className="home-deadline-check" aria-hidden="true">
-                    <Glyph name="spark" className="h-4 w-4" />
-                  </span>
-                </button>
+                  <DeadlineSlider item={item} connected={connected} onToggleDone={onToggleDone} onCreateAgentJob={onCreateAgentJob} creatingJobId={creatingJobId} setCreatingJobId={setCreatingJobId} />
+                </div>
               </motion.div>
             );
           })}
