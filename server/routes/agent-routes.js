@@ -40,6 +40,15 @@ function createAgentRoutes({
   toolRuntime,
 }) {
   return async function handleAgentRoute(req, res, pathname) {
+    // Bring-your-own-key: read the per-user AI keys sent by the client
+    // (mirrors the assistant `x-ai-key` flow). Keys are optional — when
+    // absent, the server falls back to its own configured provider.
+    const aiKeys = (() => {
+      const gemini = String(req.headers['x-ai-key'] || '').trim();
+      const groq = String(req.headers['x-groq-key'] || '').trim();
+      return { gemini: gemini || undefined, groq: groq || undefined };
+    })();
+
     // GET /api/agent/config — public config, no auth required
     if (pathname === '/api/agent/config' && req.method === 'GET') {
       try {
@@ -463,7 +472,7 @@ function createAgentRoutes({
         try {
           canvasAuth = canvasService.resolveAuth(req);
         } catch { /* auth may not be available */ }
-        agentOrchestrator.runJob(foundJob.id, userId, { canvasAuth }).catch((err) => {
+        agentOrchestrator.runJob(foundJob.id, userId, { canvasAuth, aiKeys }).catch((err) => {
           agentJobService.addEvent(foundJob.id, 'APPROVAL_EXECUTION_FAILED', {
             error: err.message || 'Execution failed after approval',
           });
@@ -614,6 +623,7 @@ function createAgentRoutes({
         const result = await agentOrchestrator.runJob(jobId, userId, {
           systemInstruction: body?.systemInstruction,
           canvasAuth,
+          aiKeys,
         });
 
         const statusCode = result.success ? 200 : 400;

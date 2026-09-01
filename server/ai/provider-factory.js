@@ -13,10 +13,12 @@
 
 const { createGeminiProvider } = require('./providers/gemini-provider');
 const { createMockProvider } = require('./providers/mock-provider');
+const { createGroqProvider } = require('./providers/groq-provider');
 
 const PROVIDER_REGISTRY = {
   gemini: createGeminiProvider,
   mock: createMockProvider,
+  groq: createGroqProvider,
 };
 
 /**

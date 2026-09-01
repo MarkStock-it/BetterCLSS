@@ -16,7 +16,8 @@ const { registerArtifactTools, registerGenerators } = require('./agent/artifacts
 const { createAgentOrchestrator } = require('./agent/agent-orchestrator');
 const { createRefinementPipeline } = require('./agent/refinement/refinement-pipeline');
 const { createAIConfig } = require('./ai/ai-config');
-const { createDefaultProvider } = require('./ai/provider-factory');
+const { createDefaultProvider, createProvider } = require('./ai/provider-factory');
+const { createProviderRouter } = require('./ai/provider-router');
 const { createAgentService } = require('./services/agent-service');
 const { createAssistantService } = require('./services/assistant-service');
 const { createCanvasService } = require('./services/canvas-service');
@@ -75,9 +76,18 @@ function createApp(rootDir) {
       }
     },
   });
-  // Create AI provider from configuration
+  // Create AI provider from configuration.
+  // Hybrid routing: route the agentic tool-call turns to Groq (fast/free tool
+  // utilization) and keep chat/tokenization on the default provider (Gemini).
+  // Keys are bring-your-own (per-request from the client), so the router is
+  // always used; the router transparently falls back to the chat provider if
+  // Groq is unavailable, so the app never breaks.
   const aiConfig = createAIConfig(config);
-  const aiProvider = createDefaultProvider(aiConfig);
+  const chatProvider = createDefaultProvider(aiConfig);
+  const aiProvider = createProviderRouter({
+    toolsProvider: createProvider('groq', aiConfig.groq),
+    chatProvider,
+  });
 
   // Create the refinement pipeline factory (manifest is set per-job)
   function createRefinementPipelineForManifest(manifest) {

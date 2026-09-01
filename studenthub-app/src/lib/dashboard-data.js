@@ -496,6 +496,23 @@ export async function downloadAgentArtifact(artifactId) {
  * @param {object} [manifest] - Pre-fetched manifest (optional)
  * @returns {Promise<object|null>}
  */
+/**
+ * Build per-user AI key headers (bring-your-own-key).
+ * The user's Gemini key goes as `x-ai-key` (matching the assistant flow),
+ * and their Groq key as `x-groq-key`. Empty keys are omitted so the server
+ * falls back to its own configuration.
+ */
+function getAiKeyHeaders() {
+  const headers = {};
+  try {
+    const gemini = (localStorage.getItem('bclss_ai_key') || '').trim();
+    const groq = (localStorage.getItem('bclss_groq_key') || '').trim();
+    if (gemini) headers['x-ai-key'] = gemini;
+    if (groq) headers['x-groq-key'] = groq;
+  } catch { /* ignore storage errors */ }
+  return headers;
+}
+
 export async function createAgentJob(courseId, assignmentId, manifest) {
   const userId = getUserId();
   if (!userId) return null;
@@ -509,6 +526,7 @@ export async function createAgentJob(courseId, assignmentId, manifest) {
         'Content-Type': 'application/json',
         'x-canvas-token': token,
         'x-canvas-domain': domain,
+        ...getAiKeyHeaders(),
       },
       body: JSON.stringify({ courseId, assignmentId, manifest }),
     });
@@ -538,6 +556,7 @@ export async function executeAgentJob(jobId) {
         'Content-Type': 'application/json',
         'x-canvas-token': token,
         'x-canvas-domain': domain,
+        ...getAiKeyHeaders(),
       },
       body: JSON.stringify({}),
     });

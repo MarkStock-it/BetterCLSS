@@ -14,13 +14,22 @@
  */
 function createAIConfig(appConfig) {
   return {
-    // Gemini configuration
+    // Gemini configuration (used for chat / tokenization)
     gemini: {
       apiKey: appConfig.geminiApiKey || '',
       model: appConfig.geminiModel || 'gemini-2.0-flash',
       timeoutMs: appConfig.geminiTimeoutMs || 60000,
       maxOutputTokens: appConfig.geminiMaxOutputTokens || 8192,
       temperature: appConfig.geminiTemperature || 0.4,
+    },
+
+    // Groq configuration (used for tool / agentic turns)
+    groq: {
+      apiKey: appConfig.groqApiKey || '',
+      model: appConfig.groqModel || 'llama-3.3-70b-versatile',
+      timeoutMs: appConfig.groqTimeoutMs || 60000,
+      maxOutputTokens: appConfig.groqMaxOutputTokens || 8192,
+      temperature: appConfig.groqTemperature || 0.3,
     },
 
     // Provider selection
@@ -48,6 +57,13 @@ function createAIConfigFromEnv() {
       timeoutMs: Number(process.env.GEMINI_TIMEOUT_MS || 60000),
       maxOutputTokens: Number(process.env.GEMINI_MAX_OUTPUT_TOKENS || 8192),
       temperature: Number(process.env.GEMINI_TEMPERATURE || 0.4),
+    },
+    groq: {
+      apiKey: process.env.GROQ_API_KEY || '',
+      model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+      timeoutMs: Number(process.env.GROQ_TIMEOUT_MS || 60000),
+      maxOutputTokens: Number(process.env.GROQ_MAX_OUTPUT_TOKENS || 8192),
+      temperature: Number(process.env.GROQ_TEMPERATURE || 0.3),
     },
     defaultProvider: process.env.AI_DEFAULT_PROVIDER || 'gemini',
     maxRetries: Number(process.env.AI_MAX_RETRIES || 2),

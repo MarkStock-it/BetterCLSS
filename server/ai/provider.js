@@ -81,16 +81,18 @@ function createBaseProvider(providerName, config) {
 
     /**
      * Check if provider is properly configured.
+     * A provider that supports bring-your-own-key (per-request keys, config.perRequestKey)
+     * is always considered ready here — the actual key is validated per request.
      * @returns {{ ready: boolean, reason: string }}
      */
     isReady() {
-      if (!config.apiKey) {
-        return {
-          ready: false,
-          reason: `${providerName} API key is not configured.`,
-        };
+      if (config.apiKey || config.perRequestKey) {
+        return { ready: true, reason: '' };
       }
-      return { ready: true, reason: '' };
+      return {
+        ready: false,
+        reason: `${providerName} API key is not configured.`,
+      };
     },
 
     /**

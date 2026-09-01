@@ -17,3 +17,6 @@ pservices:
         value: 0
       - key: AI_MODEL_KEEP_ALIVE
         value: 0m
+      # AI providers are bring-your-own-key (BYOK): users enter their own
+      # Groq/Gemini API keys in the app Settings. No provider keys live in the
+      # environment, so one user's quota can never be consumed by others.

@@ -20,6 +20,14 @@ export function SecondaryView({ view, announcements, grades, links, connected, o
     }
   });
   const [aiKeyStatus, setAiKeyStatus] = useState('');
+  const [groqApiKey, setGroqApiKey] = useState(() => {
+    try {
+      return localStorage.getItem('bclss_groq_key') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [groqKeyStatus, setGroqKeyStatus] = useState('');
   const [agentWarningOpen, setAgentWarningOpen] = useState(false);
   const [agentWarningAccepted, setAgentWarningAccepted] = useState(false);
   const [agentStatusMessage, setAgentStatusMessage] = useState('');
@@ -86,6 +94,27 @@ export function SecondaryView({ view, announcements, grades, links, connected, o
       setAiKeyStatus('This browser could not remove the key.');
     }
   };
+  const saveGroqApiKey = (event) => {
+    event.preventDefault();
+    const cleanKey = groqApiKey.trim();
+    try {
+      if (cleanKey) localStorage.setItem('bclss_groq_key', cleanKey);
+      else localStorage.removeItem('bclss_groq_key');
+      setGroqApiKey(cleanKey);
+      setGroqKeyStatus(cleanKey ? 'Saved on this device.' : 'Custom key removed.');
+    } catch {
+      setGroqKeyStatus('This browser could not save the key.');
+    }
+  };
+  const removeGroqApiKey = () => {
+    setGroqApiKey('');
+    try {
+      localStorage.removeItem('bclss_groq_key');
+      setGroqKeyStatus('Custom key removed.');
+    } catch {
+      setGroqKeyStatus('This browser could not remove the key.');
+    }
+  };
 
   const handleAgentToggleClick = () => {
     if (agentEnabled) {
@@ -135,6 +164,7 @@ export function SecondaryView({ view, announcements, grades, links, connected, o
           <p className="study-empty-copy">{emptyMessages[view] || 'Nothing to show yet.'}</p>
         )}
         {view === 'settings' && (
+          <>
           <form className="ai-key-settings" onSubmit={saveAiApiKey}>
             <div className="ai-key-settings-head">
               <span className="secondary-icon"><Glyph name="spark" className="h-5 w-5" /></span>
@@ -163,6 +193,35 @@ export function SecondaryView({ view, announcements, grades, links, connected, o
             </div>
             {aiKeyStatus && <p className="ai-key-status" role="status">{aiKeyStatus}</p>}
           </form>
+          <form className="ai-key-settings" onSubmit={saveGroqApiKey}>
+            <div className="ai-key-settings-head">
+              <span className="secondary-icon"><Glyph name="spark" className="h-5 w-5" /></span>
+              <div>
+                <h2>Groq API key</h2>
+                <p>Used for fast, free agentic tool calling. Stored only in this browser's local cache and sent through the backend to Groq.</p>
+              </div>
+            </div>
+            <label htmlFor="studenthub-groq-api-key">Groq API key</label>
+            <input
+              id="studenthub-groq-api-key"
+              type="password"
+              value={groqApiKey}
+              onChange={(event) => {
+                setGroqApiKey(event.target.value);
+                setGroqKeyStatus('');
+              }}
+              placeholder="Paste your Groq API key"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck="false"
+            />
+            <div className="ai-key-settings-actions">
+              <button type="submit">Save key</button>
+              {groqApiKey && <button type="button" className="remove" onClick={removeGroqApiKey}>Remove</button>}
+            </div>
+            {groqKeyStatus && <p className="ai-key-status" role="status">{groqKeyStatus}</p>}
+          </form>
+          </>
         )}
         {view === 'settings' && (
           <div className="agent-settings-card">

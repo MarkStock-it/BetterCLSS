@@ -65,7 +65,7 @@ function createRefinementPipeline({ aiProvider, manifest, config: pipelineConfig
    * @returns {Promise<object>} Refinement result
    */
   async function refine(content, options = {}) {
-    const { jobId, styleContext } = options;
+    const { jobId, styleContext, aiKeys } = options;
     const startTime = Date.now();
 
     // Normalize content
@@ -111,7 +111,7 @@ function createRefinementPipeline({ aiProvider, manifest, config: pipelineConfig
       // ─── AI Refinement ─────────────────────────────────────
       let aiResult;
       try {
-        aiResult = await callRefinementAI(currentContent, styleContext, jobId);
+        aiResult = await callRefinementAI(currentContent, styleContext, jobId, aiKeys);
       } catch (error) {
         allWarnings.push({
           type: 'ai_error',
@@ -213,7 +213,7 @@ function createRefinementPipeline({ aiProvider, manifest, config: pipelineConfig
    * @param {string} [jobId]
    * @returns {Promise<object>} AI refinement response
    */
-  async function callRefinementAI(content, styleContext, jobId) {
+  async function callRefinementAI(content, styleContext, jobId, aiKeys) {
     const systemInstruction = buildRefinementSystemInstruction(manifest, styleContext);
     const prompt = buildRefinementPrompt(content, manifest);
 
@@ -222,6 +222,7 @@ function createRefinementPipeline({ aiProvider, manifest, config: pipelineConfig
       prompt,
       schema: REFINEMENT_RESPONSE_SCHEMA,
       jobId,
+      aiKeys,  // BYOK: per-user AI keys from request headers
       generationConfig: {
         temperature: config.temperature,
       },

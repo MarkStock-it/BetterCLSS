@@ -613,6 +613,7 @@ function createAgentOrchestrator({
             cachedContext,
             job,  // Phase 29: pass job for artifact retrieval
             userInput: options.userInput,  // Phase 29: pass user input for retrieval
+            aiKeys: options.aiKeys,  // BYOK: per-user AI keys from request headers
           });
 
           // Track counts from step execution
@@ -933,6 +934,7 @@ function createAgentOrchestrator({
       schema: buildAgentResponseSchema(stepTools),
       history: getBoundedHistory(ctx.conversation, limits),
       jobId: ctx.jobId,
+      aiKeys: ctx.aiKeys,  // BYOK: per-user AI keys from request headers
       generationConfig: {
         temperature: 0.2,
         maxOutputTokens: getStepOutputLimit('analyze'),
@@ -1005,6 +1007,10 @@ function createAgentOrchestrator({
         schema: buildAgentResponseSchema(toolDefs),
         history: getBoundedHistory(ctx.conversation, limits),
         jobId: ctx.jobId,
+        aiKeys: ctx.aiKeys,  // BYOK: per-user AI keys from request headers
+        // Hybrid routing: this is the tool-utilization loop, so send it to the
+        // tools provider (Groq). Analysis/refinement/chat stay on Gemini.
+        routing: 'tools',
         generationConfig: {
           temperature: 0.3,
           maxOutputTokens: getStepOutputLimit('generate'),
@@ -1106,7 +1112,7 @@ function createAgentOrchestrator({
     const pipeline = createRefinementPipeline(ctx.manifest);
     const refinementResult = await pipeline.refine(
       { text: contentToRefine },
-      { jobId: ctx.jobId }
+      { jobId: ctx.jobId, aiKeys: ctx.aiKeys }
     );
 
     return {

@@ -26,7 +26,8 @@ const { AIError, AI_ERROR_CATEGORIES, fromGeminiResponse, fromNetworkError } = r
  * @returns {object} Gemini provider implementing AI Provider interface
  */
 function createGeminiProvider(config) {
-  const base = createBaseProvider('gemini', config);
+  // BYOK: this provider accepts a per-request API key, so it is always "ready".
+  const base = createBaseProvider('gemini', { ...config, perRequestKey: true });
 
   const API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
   const model = config.model || 'gemini-2.0-flash';
@@ -36,19 +37,32 @@ function createGeminiProvider(config) {
   const temperature = config.temperature || 0.4;
 
   /**
+   * Resolve the effective API key for a request: prefer the per-user key sent
+   * with the request (BYOK), falling back to the configured key.
+   * @param {object} request - AIRequest (may carry `aiKeys.gemini` or `apiKey`)
+   * @returns {string}
+   */
+  function resolveKey(request) {
+    return (request && request.aiKeys && request.aiKeys.gemini)
+      || (request && request.apiKey)
+      || apiKey;
+  }
+
+  /**
    * Make a raw request to the Gemini API.
    * @param {string} endpoint - API endpoint path
    * @param {object} body - Request body
    * @param {AbortSignal} signal - Timeout signal
+   * @param {string} key - Effective API key (per-request or configured)
    * @returns {Promise<object>} Parsed response
    */
-  async function rawRequest(endpoint, body, signal) {
+  async function rawRequest(endpoint, body, signal, key) {
     const url = `${API_BASE}/models/${encodeURIComponent(model)}:${endpoint}`;
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
+        'x-goog-api-key': key,
       },
       body: JSON.stringify(body),
       signal,
@@ -164,8 +178,18 @@ function createGeminiProvider(config) {
       };
     }
 
+    const effectiveKey = resolveKey(request);
+    if (!effectiveKey) {
+      throw new AIError({
+        category: AI_ERROR_CATEGORIES.INVALID_CONFIGURATION,
+        message: 'No Gemini API key provided. Add your Gemini key in Settings (bring-your-own-key).',
+        provider: 'gemini',
+        retryable: false,
+      });
+    }
+
     try {
-      const data = await rawRequest('generateContent', body, signal);
+      const data = await rawRequest('generateContent', body, signal, effectiveKey);
       const text = extractText(data);
       const durationMs = Date.now() - startTime;
 
@@ -274,8 +298,18 @@ function createGeminiProvider(config) {
       };
     }
 
+    const effectiveKey = resolveKey(request);
+    if (!effectiveKey) {
+      throw new AIError({
+        category: AI_ERROR_CATEGORIES.INVALID_CONFIGURATION,
+        message: 'No Gemini API key provided. Add your Gemini key in Settings (bring-your-own-key).',
+        provider: 'gemini',
+        retryable: false,
+      });
+    }
+
     try {
-      const data = await rawRequest('generateContent', body, signal);
+      const data = await rawRequest('generateContent', body, signal, effectiveKey);
       const rawText = extractText(data);
       const durationMs = Date.now() - startTime;
 
