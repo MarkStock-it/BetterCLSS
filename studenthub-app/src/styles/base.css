@@ -609,6 +609,65 @@ a:focus-visible {
   background: rgba(75, 184, 132, 0.09);
 }
 
+/* ─── Agent Job Creation Button ──────────────────────────────── */
+
+.deadline-agent-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  padding: 0;
+  margin: 0 4px;
+  color: #7186cf;
+  border: 1px solid rgba(115, 137, 221, 0.2);
+  border-radius: 999px;
+  background: rgba(89, 111, 202, 0.08);
+  cursor: pointer;
+  transition: all 160ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.deadline-agent-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+@media (hover: hover) {
+  .deadline-agent-button { opacity: 0; transform: scale(0.8); }
+  .home-deadline-row:hover .deadline-agent-button,
+  .deadline-row:hover .deadline-agent-button { opacity: 1; transform: scale(1); }
+}
+@media (hover: none) {
+  .deadline-agent-button { opacity: 1; }
+}
+.deadline-agent-button:hover:not(:disabled) {
+  color: #8da3ff;
+  border-color: rgba(141, 163, 255, 0.4);
+  background: rgba(109, 133, 255, 0.12);
+}
+.deadline-agent-button:active:not(:disabled) { transform: scale(0.92); }
+.deadline-agent-button.is-creating {
+  color: #8da3ff;
+  border-color: rgba(141, 163, 255, 0.4);
+  background: rgba(109, 133, 255, 0.12);
+}
+.agent-spinner-tiny {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(141, 163, 255, 0.3);
+  border-top-color: #8da3ff;
+  border-radius: 50%;
+  animation: agent-spin 0.8s linear infinite;
+}
+@keyframes agent-spin { to { transform: rotate(360deg); } }
+.home-deadline-row-wrapper,
+.task-row-wrapper { display: contents; }
+@media (max-width: 640px) {
+  .deadline-agent-button { width: 28px; height: 28px; margin: 0 2px; }
+  .deadline-agent-button svg { width: 14px; height: 14px; }
+  .agent-spinner-tiny { width: 12px; height: 12px; border-width: 1.5px; }
+}
+
 .section-card {
   padding: 22px;
   border: 1px solid rgba(101, 118, 176, 0.12);

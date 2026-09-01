@@ -4,6 +4,7 @@ import { Glyph } from '../ui/Icons';
 import { daysUntil } from '../../lib/dashboard-data';
 
 const SPRING = { type: 'spring', stiffness: 430, damping: 38, mass: 0.86 };
+const DRAWER_TRAVEL = 360;
 
 export function AssistantText({ text }) {
   return String(text || '').split('\n').filter((line, index, lines) => line.trim() || (

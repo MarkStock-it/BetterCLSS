@@ -571,3 +571,61 @@ export async function fetchAgentSummary() {
     return null;
   }
 }
+
+// ─── Agent Job Creation Helpers ─────────────────────────────────
+
+/**
+ * Quick client-side capability check for an assignment.
+ * @param {Object} assignment - Assignment object with title, subject, etc.
+ * @returns {boolean}
+ */
+export function canCreateAgentJob(assignment) {
+  if (!assignment) return false;
+  const hasTitle = Boolean(assignment.title?.trim());
+  const hasContext = Boolean(assignment.subject || assignment.courseId);
+  if (!hasTitle || !hasContext) return false;
+  const titleLower = (assignment.title || '').toLowerCase();
+  const unsupportedPatterns = [
+    /exam|quiz|test/i,
+    /presentation|pptx|slides/i,
+    /discussion|forum/i,
+    /attendance/i,
+    /participation/i,
+    /office hours/i
+  ];
+  return !unsupportedPatterns.some(pattern => pattern.test(titleLower));
+}
+
+/**
+ * Create an agent job with proper error handling.
+ * @param {Object} assignment - Assignment with id, courseId, title, etc.
+ * @param {Function} [onError] - Callback for error handling
+ * @returns {Promise<Object|null>} - Created job or null
+ */
+export async function createAgentJobSafe(assignment, onError) {
+  if (!assignment?.courseId || !assignment?.id) {
+    const err = 'Missing assignment data (courseId or id)';
+    onError?.(err);
+    return null;
+  }
+  try {
+    const manifest = {
+      capabilityResult: { status: 'PENDING', warnings: [], reason: null }
+    };
+    const job = await createAgentJob(
+      assignment.courseId,
+      assignment.id,
+      manifest
+    );
+    if (!job) {
+      const err = 'Server returned empty job';
+      onError?.(err);
+      return null;
+    }
+    return job;
+  } catch (error) {
+    const errorMsg = error?.message || 'Unknown error creating job';
+    onError?.(errorMsg);
+    return null;
+  }
+}

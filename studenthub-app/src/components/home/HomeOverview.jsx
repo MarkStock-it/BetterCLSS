@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { Glyph } from '../ui/Icons';
-import { daysUntil, smartSort } from '../../lib/dashboard-data';
+import { daysUntil, smartSort, canCreateAgentJob, createAgentJobSafe } from '../../lib/dashboard-data';
 
 const SPRING = { type: 'spring', stiffness: 430, damping: 38, mass: 0.86 };
 const WORKLOAD_STEPS = [
@@ -197,8 +197,28 @@ export function EmptyDeadlines({ connected, onConnect }) {
   );
 }
 
-export function DeadlineList({ assignments, connected, onConnect, onToggleDone }) {
+export function DeadlineList({ assignments, connected, onConnect, onToggleDone, onCreateAgentJob }) {
+  const [creatingJobId, setCreatingJobId] = useState(null);
   const upcoming = smartSort(assignments).filter((item) => !item.done).slice(0, 5);
+
+  const handleCreateAgentJob = async (assignment, e) => {
+    e.stopPropagation?.();
+    if (creatingJobId) return;
+    const canCreate = canCreateAgentJob(assignment);
+    if (!canCreate) {
+      alert('This assignment type may not be supported by Agentic Helper yet.\n\nSupported: essays, reports, code projects\nNot supported: exams, presentations, discussions');
+      return;
+    }
+    setCreatingJobId(assignment.id);
+    try {
+      const job = await createAgentJobSafe(assignment, (error) => {
+        alert(`Could not create agent job:\n\n${error}`);
+      });
+      if (job) onCreateAgentJob?.(job);
+    } finally {
+      setCreatingJobId(null);
+    }
+  };
 
   return (
     <section className="section-card">
@@ -216,26 +236,45 @@ export function DeadlineList({ assignments, connected, onConnect, onToggleDone }
           {upcoming.map((item, index) => {
             const days = daysUntil(item.due);
             const dueText = days === null ? 'No due date' : days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'Due today' : `${days}d left`;
+            const isCreating = creatingJobId === item.id;
             return (
-              <motion.button
-                type="button"
+              <motion.div
                 key={item.id || `${item.title}-${index}`}
-                className="home-deadline-row"
+                className="home-deadline-row-wrapper"
                 initial={{ opacity: 0, x: 12 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ ...SPRING, delay: index * 0.05 }}
-                onClick={() => onToggleDone(item)}
-                aria-label={`Mark complete: ${item.title}`}
               >
-                <span className={`priority-rail ${item.priority || 'medium'}`} />
-                <div className="min-w-0 flex-1">
-                  <h3 className="truncate text-sm font-semibold text-slate-100">{item.title || 'Untitled assignment'}</h3>
-                  <p className="mt-1 truncate text-xs text-slate-500">{item.subject || 'Course'} · {dueText}</p>
-                </div>
-                <span className="home-deadline-check" aria-hidden="true">
-                  <Glyph name="spark" className="h-4 w-4" />
-                </span>
-              </motion.button>
+                <button
+                  type="button"
+                  className="home-deadline-row"
+                  onClick={() => onToggleDone(item)}
+                  aria-label={`Mark complete: ${item.title}`}
+                >
+                  <span className={`priority-rail ${item.priority || 'medium'}`} />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-sm font-semibold text-slate-100">{item.title || 'Untitled assignment'}</h3>
+                    <p className="mt-1 truncate text-xs text-slate-500">{item.subject || 'Course'} · {dueText}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className={`deadline-agent-button ${isCreating ? 'is-creating' : ''}`}
+                    onClick={(e) => handleCreateAgentJob(item, e)}
+                    disabled={isCreating || !connected}
+                    title={!connected ? 'Connect Canvas to use Agentic Helper' : 'Create agent job for this assignment'}
+                    aria-label={`Create agent job for ${item.title}`}
+                  >
+                    {isCreating ? (
+                      <span className="agent-spinner-tiny" aria-hidden="true" />
+                    ) : (
+                      <Glyph name="spark" className="h-4 w-4" />
+                    )}
+                  </button>
+                  <span className="home-deadline-check" aria-hidden="true">
+                    <Glyph name="spark" className="h-4 w-4" />
+                  </span>
+                </button>
+              </motion.div>
             );
           })}
         </div>

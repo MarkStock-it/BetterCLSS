@@ -50,6 +50,7 @@ export default function StudentHubMobileDashboard() {
   const [studyRunning, setStudyRunning] = useState(false);
   const [studyDecks, setStudyDecks] = useState(data.studyDecks);
   const [agentSettings, setAgentSettings] = useState(data.agentSettings || readAgentSettings());
+  const [agentJobCreated, setAgentJobCreated] = useState(null);
   const drawerX = useMotionValue(-DRAWER_TRAVEL);
   const backdropOpacity = useTransform(drawerX, [-DRAWER_TRAVEL, 0], [0, 0.74]);
   const edgeGesture = useRef(null);
@@ -141,6 +142,12 @@ export default function StudentHubMobileDashboard() {
     };
     setAgentSettings(updated);
     writeAgentSettings(updated);
+  };
+
+  const handleCreateAgentJob = (job) => {
+    navigate('agent');
+    setAgentJobCreated(job);
+    setTimeout(() => setAgentJobCreated(null), 1000);
   };
 
   const createAssistantDeck = (action) => {
@@ -255,6 +262,7 @@ export default function StudentHubMobileDashboard() {
                   connected={data.connected}
                   onConnect={connectCanvas}
                   onToggleDone={toggleAssignmentDone}
+                  onCreateAgentJob={handleCreateAgentJob}
                 />
               </motion.div>
             )}
@@ -267,6 +275,7 @@ export default function StudentHubMobileDashboard() {
                 connected={data.connected}
                 onConnect={connectCanvas}
                 onToggleDone={toggleAssignmentDone}
+                onCreateAgentJob={handleCreateAgentJob}
               />
             )}
             {activeView === 'calendar' && (
