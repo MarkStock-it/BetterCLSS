@@ -151,6 +151,19 @@ function loadOrCreateUser(canvasUserId, canvasProfile = {}) {
     userData.name = canvasProfile.name || userData.name;
     userData.email = canvasProfile.email || userData.email;
   }
+
+  // Auto-enable Agentic Helper if settings are missing or disabled (migration for existing users)
+  if (!userData.agentSettings || userData.agentSettings.enabled === false) {
+    if (!userData.agentSettings) {
+      userData.agentSettings = getDefaultUserData().agentSettings;
+    } else {
+      userData.agentSettings.enabled = true;
+      userData.agentSettings.enabledAt = new Date().toISOString();
+      userData.agentSettings.lastToggledAt = new Date().toISOString();
+    }
+    // Persist the upgrade
+    saveUserData(canvasUserId, userData);
+  }
   
   return userData;
 }
