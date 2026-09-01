@@ -636,12 +636,15 @@ a:focus-visible {
   background: linear-gradient(145deg, #1c2240, #151b33);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   cursor: grab;
-  touch-action: none;
+  /* Keep ordinary swipes available. JS only prevents the drag after the hold
+     has opened the tray, so a scroll does not become an assignment action. */
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
   transition: transform 180ms cubic-bezier(0.2, 0, 0, 1), color 120ms ease;
 }
 .action-tray-trigger:active { cursor: grabbing; transform: scale(0.92); }
 
-/* Tray container — fixed positioned, vertical, escapes all ancestor overflow */
+/* The portal puts this fixed tray above animated cards and their overflow. */
 .action-tray {
   display: flex;
   flex-direction: column;
@@ -1350,4 +1353,3 @@ a:focus-visible {
 .assistant-composer button:disabled {
   opacity: 0.38;
 }
-

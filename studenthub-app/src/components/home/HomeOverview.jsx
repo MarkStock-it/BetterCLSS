@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { Glyph } from '../ui/Icons';
 import { daysUntil, smartSort, canCreateAgentJob, createAgentJobSafe } from '../../lib/dashboard-data';
@@ -203,32 +204,58 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
   const [active, setActive] = useState(null);
   const trayRef = useRef(null);
   const triggerRef = useRef(null);
-  const holdRef = useRef({ timer: null, startX: 0, startY: 0, active: false });
+  const holdRef = useRef(null);
+  const ignoreTrayClickRef = useRef(false);
+  const executingRef = useRef(false);
 
   const HOLD_MS = 350;
-  const SCROLL_CANCEL_VY = 0.5; // px/ms — if vertical velocity exceeds this, it's a scroll
-  const TRAY_W = 140;
+  const MOVE_CANCEL_DISTANCE = 12;
+  const TRAY_W = 142;
   const TARGET_H = 56;
   const TARGET_GAP = 6;
   const TRAY_PAD = 10;
-  const TRAY_H = TARGET_H * 2 + TARGET_GAP + TRAY_PAD * 2;
+  const TRAY_H = TARGET_H * 2 + TARGET_GAP + TRAY_PAD * 2 + 2;
   const FINGER_OFFSET = 16;
 
-  const cleanup = () => {
-    clearTimeout(holdRef.current.timer);
-    holdRef.current.active = false;
+  const removeGestureListeners = (gesture) => {
+    if (!gesture) return;
+    document.removeEventListener('pointermove', gesture.onMove, true);
+    document.removeEventListener('pointerup', gesture.onEnd, true);
+    document.removeEventListener('pointercancel', gesture.onCancel, true);
+  };
+
+  const cleanup = (gesture = holdRef.current) => {
+    if (gesture && holdRef.current !== gesture) return;
+    if (gesture) {
+      clearTimeout(gesture.timer);
+      removeGestureListeners(gesture);
+      holdRef.current = null;
+    }
     setTrayState({ open: false, x: 0, y: 0 });
     setActive(null);
   };
 
-  const getTargetAt = (cx, cy) => {
-    if (!trayRef.current) return null;
-    for (const el of trayRef.current.querySelectorAll('[data-action]')) {
-      const r = el.getBoundingClientRect();
-      if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) {
-        return el.dataset.action;
+  const getTargetAt = (cx, cy, position) => {
+    // Prefer the measured DOM target once React has rendered the portal. The
+    // geometry fallback makes the first drag/release reliable even when it
+    // happens in the same frame that the hold timer opens the tray.
+    if (trayRef.current) {
+      for (const el of trayRef.current.querySelectorAll('[data-action]')) {
+        const r = el.getBoundingClientRect();
+        if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) {
+          return el.dataset.action;
+        }
       }
     }
+
+    if (!position) return null;
+    const left = position.x + TRAY_PAD + 1;
+    const right = left + 120;
+    const agentTop = position.y + TRAY_PAD + 1;
+    const submitTop = agentTop + TARGET_H + TARGET_GAP;
+    if (cx < left || cx > right) return null;
+    if (cy >= agentTop && cy <= agentTop + TARGET_H) return 'agent';
+    if (cy >= submitTop && cy <= submitTop + TARGET_H) return 'submit';
     return null;
   };
 
@@ -250,65 +277,113 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
   };
 
   const executeAction = async (action) => {
+    if (executingRef.current) return;
+    if (action === 'agent' && creatingJobId) return;
+    if (action === 'agent' && !canCreateAgentJob(item)) {
+      alert('This assignment type may not be supported by Agentic Helper yet.');
+      return;
+    }
+    executingRef.current = true;
     if (action === 'agent') {
-      if (creatingJobId) return;
-      if (!canCreateAgentJob(item)) {
-        alert('This assignment type may not be supported by Agentic Helper yet.');
-        return;
-      }
-      setCreatingJobId(item.id);
       try {
+        setCreatingJobId(item.id);
         const job = await createAgentJobSafe(item, (err) => alert(`Could not create agent job:\n\n${err}`));
         if (job) onCreateAgentJob?.(job);
       } finally {
         setCreatingJobId(null);
+        executingRef.current = false;
       }
     } else if (action === 'submit') {
-      onToggleDone(item);
+      try {
+        onToggleDone(item);
+      } finally {
+        executingRef.current = false;
+      }
+    } else {
+      executingRef.current = false;
     }
   };
 
-  // --- Pointer handlers owned by the trigger ---
+  const actionIsAvailable = (action) => (
+    action === 'submit' || (action === 'agent' && connected && !creatingJobId)
+  );
+
+  // The gesture is deliberately tracked on document, rather than the trigger.
+  // On touch devices this keeps receiving movement after the finger leaves the
+  // 34px trigger. Before the hold resolves, no event is cancelled, so a normal
+  // vertical swipe stays a normal page scroll. Once the tray is open, the
+  // non-passive listener prevents that drag from turning into a scroll.
   const onPointerDown = (e) => {
     if (e.button && e.button !== 0) return;
     e.stopPropagation();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    holdRef.current = { timer: null, startX: e.clientX, startY: e.clientY, active: false, moveStart: Date.now() };
-    holdRef.current.timer = setTimeout(() => {
-      if (holdRef.current.active) return; // already active
-      holdRef.current.active = true;
-      const pos = computeTrayPosition(e.clientX, e.clientY);
+    cleanup();
+
+    const gesture = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      timer: null,
+      opened: false,
+      position: null,
+      onMove: null,
+      onEnd: null,
+      onCancel: null,
+    };
+
+    gesture.onMove = (event) => {
+      if (event.pointerId !== gesture.pointerId || holdRef.current !== gesture) return;
+
+      if (!gesture.opened) {
+        const moved = Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY);
+        if (moved > MOVE_CANCEL_DISTANCE) cleanup(gesture);
+        return;
+      }
+
+      if (event.cancelable) event.preventDefault();
+      const hit = getTargetAt(event.clientX, event.clientY, gesture.position);
+      setActive(actionIsAvailable(hit) ? hit : null);
+    };
+
+    gesture.onEnd = (event) => {
+      if (event.pointerId !== gesture.pointerId || holdRef.current !== gesture) return;
+      const hit = gesture.opened
+        ? getTargetAt(event.clientX, event.clientY, gesture.position)
+        : null;
+      cleanup(gesture);
+      if (actionIsAvailable(hit)) {
+        // A touch that begins on the trigger can still synthesize a click on a
+        // tray button in some mobile browsers. Suppress that follow-up click so
+        // one release always maps to one action.
+        ignoreTrayClickRef.current = true;
+        setTimeout(() => { ignoreTrayClickRef.current = false; }, 0);
+        void executeAction(hit);
+      }
+    };
+
+    gesture.onCancel = (event) => {
+      if (event.pointerId === gesture.pointerId) cleanup(gesture);
+    };
+
+    holdRef.current = gesture;
+    gesture.timer = setTimeout(() => {
+      if (holdRef.current !== gesture) return;
+      gesture.opened = true;
+      const pos = computeTrayPosition(gesture.startX, gesture.startY);
+      gesture.position = pos;
       setTrayState({ open: true, ...pos });
     }, HOLD_MS);
+    document.addEventListener('pointermove', gesture.onMove, { capture: true, passive: false });
+    document.addEventListener('pointerup', gesture.onEnd, true);
+    document.addEventListener('pointercancel', gesture.onCancel, true);
   };
 
-  const onPointerMove = (e) => {
-    const h = holdRef.current;
-    if (!h.active) {
-      // Before hold threshold: only cancel if this looks like a scroll gesture
-      const dy = Math.abs(e.clientY - h.startY);
-      const elapsed = Date.now() - h.moveStart;
-      // If vertical movement is fast and significant, it's a scroll — cancel
-      if (elapsed > 50 && dy / elapsed > SCROLL_CANCEL_VY && dy > 16) {
-        clearTimeout(h.timer);
-      }
-      return;
-    }
-    // After hold: track which target finger is over
-    const hit = getTargetAt(e.clientX, e.clientY);
-    setActive(hit);
-  };
-
-  const onPointerUp = (e) => {
-    const h = holdRef.current;
-    if (h.active) {
-      const hit = getTargetAt(e.clientX, e.clientY);
-      if (hit) executeAction(hit);
-    }
-    cleanup();
-  };
-
-  const onPointerCancel = () => cleanup();
+  useEffect(() => () => {
+    const gesture = holdRef.current;
+    if (!gesture) return;
+    clearTimeout(gesture.timer);
+    removeGestureListeners(gesture);
+    holdRef.current = null;
+  }, []);
 
   const isCreating = creatingJobId === item.id;
 
@@ -319,16 +394,19 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
         ref={triggerRef}
         className="action-tray-trigger"
         onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
         role="button"
         tabIndex={0}
         aria-label="Assignment actions"
+        onContextMenu={(e) => e.preventDefault()}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            onToggleDone(item);
+            const rect = triggerRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const pos = computeTrayPosition(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            setTrayState({ open: true, ...pos });
+          } else if (e.key === 'Escape') {
+            cleanup();
           }
         }}
       >
@@ -336,7 +414,7 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
       </div>
 
       {/* Action tray — fixed positioned, escapes all ancestor overflow */}
-      {trayState.open && (
+      {trayState.open && createPortal(
         <div
           className="action-tray"
           ref={trayRef}
@@ -352,6 +430,15 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
             data-action="agent"
             className={`action-tray-target action-agent ${active === 'agent' ? 'is-hovered' : ''} ${isCreating ? 'is-creating' : ''}`}
             disabled={isCreating || !connected}
+            aria-pressed={active === 'agent'}
+            onClick={(e) => {
+              if (ignoreTrayClickRef.current) {
+                e.preventDefault();
+                return;
+              }
+              cleanup();
+              void executeAction('agent');
+            }}
           >
             {isCreating ? <span className="agent-spinner-tiny" /> : <Glyph name="spark" className="h-4 w-4" />}
             <span className="action-tray-label">Agentic Start</span>
@@ -360,11 +447,21 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
             type="button"
             data-action="submit"
             className={`action-tray-target action-submit ${active === 'submit' ? 'is-hovered' : ''}`}
+            aria-pressed={active === 'submit'}
+            onClick={(e) => {
+              if (ignoreTrayClickRef.current) {
+                e.preventDefault();
+                return;
+              }
+              cleanup();
+              void executeAction('submit');
+            }}
           >
             <Glyph name="tasks" className="h-4 w-4" />
             <span className="action-tray-label">Submit</span>
           </button>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
