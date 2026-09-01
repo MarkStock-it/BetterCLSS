@@ -265,13 +265,19 @@ function createAgentRoutes({
         const body = await parseRequestBody(req);
         const { courseId, assignmentId, manifest } = body;
 
+        console.log('[DIAGNOSTIC] Received job creation request:', { userId, courseId, assignmentId, hasManifest: !!manifest });
+
         if (!courseId || !assignmentId) {
+          console.log('[DIAGNOSTIC] Validation failed - missing courseId or assignmentId');
           json(res, 400, { error: 'missing_parameters', message: 'courseId and assignmentId required.' });
           return true;
         }
 
         const job = agentJobService.createJob({ userId, courseId, assignmentId, manifest });
-        json(res, 201, { success: true, job: agentJobService.sanitizeJob(job) });
+        console.log('[DIAGNOSTIC] Job created:', { jobId: job?.id, jobState: job?.state, jobUserId: job?.userId });
+        const sanitized = agentJobService.sanitizeJob(job);
+        console.log('[DIAGNOSTIC] Job sanitized:', { sanitized, sanitizedKeys: Object.keys(sanitized) });
+        json(res, 201, { success: true, job: sanitized });
       } catch (error) {
         if (error.message === 'AGENT_DISABLED') {
           json(res, 403, { error: 'agent_disabled', message: 'Agentic Helper is not enabled.' });

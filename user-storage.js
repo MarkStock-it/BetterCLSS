@@ -74,11 +74,11 @@ function getDefaultUserData() {
       pomoSessions: 0,
       nextId: 100
     },
-    // Agentic Helper settings (experimental feature, OFF by default)
+    // Agentic Helper settings (experimental feature, ON by default)
     agentSettings: {
-      enabled: false,
-      enabledAt: null,
-      lastToggledAt: null,
+      enabled: true,
+      enabledAt: new Date().toISOString(),
+      lastToggledAt: new Date().toISOString(),
       // Granular permissions (child controls, only active when master switch is ON)
       permissions: {
         contentGeneration: true,    // AI text/essay generation
@@ -150,6 +150,19 @@ function loadOrCreateUser(canvasUserId, canvasProfile = {}) {
   if (canvasProfile) {
     userData.name = canvasProfile.name || userData.name;
     userData.email = canvasProfile.email || userData.email;
+  }
+
+  // Auto-enable Agentic Helper if settings are missing or disabled (migration for existing users)
+  if (!userData.agentSettings || userData.agentSettings.enabled === false) {
+    if (!userData.agentSettings) {
+      userData.agentSettings = getDefaultUserData().agentSettings;
+    } else {
+      userData.agentSettings.enabled = true;
+      userData.agentSettings.enabledAt = new Date().toISOString();
+      userData.agentSettings.lastToggledAt = new Date().toISOString();
+    }
+    // Persist the upgrade
+    saveUserData(canvasUserId, userData);
   }
   
   return userData;

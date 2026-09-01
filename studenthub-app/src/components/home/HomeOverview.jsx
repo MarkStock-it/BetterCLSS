@@ -210,11 +210,12 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
 
   const HOLD_MS = 350;
   const MOVE_CANCEL_DISTANCE = 12;
-  const TRAY_W = 142;
+  const TRAY_W = 262;  // Two 120px buttons + gap + padding
+  const TRAY_H = 56;
+  const TARGET_W = 120;
   const TARGET_H = 56;
   const TARGET_GAP = 6;
-  const TRAY_PAD = 10;
-  const TRAY_H = TARGET_H * 2 + TARGET_GAP + TRAY_PAD * 2 + 2;
+  const TRAY_PAD = 8;
   const FINGER_OFFSET = 16;
 
   const removeGestureListeners = (gesture) => {
@@ -229,6 +230,14 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
     if (gesture) {
       clearTimeout(gesture.timer);
       removeGestureListeners(gesture);
+      // Release pointer capture to return control to the browser
+      if (triggerRef.current && document.pointerLockElement !== triggerRef.current) {
+        try {
+          triggerRef.current.releasePointerCapture(gesture.pointerId);
+        } catch {
+          // Ignore errors if pointer was already released
+        }
+      }
       holdRef.current = null;
     }
     setTrayState({ open: false, x: 0, y: 0 });
@@ -236,9 +245,7 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
   };
 
   const getTargetAt = (cx, cy, position) => {
-    // Prefer the measured DOM target once React has rendered the portal. The
-    // geometry fallback makes the first drag/release reliable even when it
-    // happens in the same frame that the hold timer opens the tray.
+    // Prefer the measured DOM target once React has rendered the portal.
     if (trayRef.current) {
       for (const el of trayRef.current.querySelectorAll('[data-action]')) {
         const r = el.getBoundingClientRect();
@@ -249,30 +256,37 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
     }
 
     if (!position) return null;
-    const left = position.x + TRAY_PAD + 1;
-    const right = left + 120;
-    const agentTop = position.y + TRAY_PAD + 1;
-    const submitTop = agentTop + TARGET_H + TARGET_GAP;
-    if (cx < left || cx > right) return null;
-    if (cy >= agentTop && cy <= agentTop + TARGET_H) return 'agent';
-    if (cy >= submitTop && cy <= submitTop + TARGET_H) return 'submit';
+    const top = position.y + TRAY_PAD + 1;
+    const bottom = top + TARGET_H;
+    // Check if pointer is within the vertical bounds of the tray
+    if (cy < top || cy > bottom) return null;
+    
+    // Horizontal detection: agent on left, submit on right
+    const agentLeft = position.x + TRAY_PAD + 1;
+    const agentRight = agentLeft + TARGET_W;
+    const submitLeft = agentRight + TARGET_GAP;
+    const submitRight = submitLeft + TARGET_W;
+    
+    if (cx >= agentLeft && cx <= agentRight) return 'agent';
+    if (cx >= submitLeft && cx <= submitRight) return 'submit';
     return null;
   };
 
   const computeTrayPosition = (fingerX, fingerY) => {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    // Horizontal: center tray on finger
-    let x = fingerX - TRAY_W / 2;
-    x = Math.max(8, Math.min(vw - TRAY_W - 8, x));
-    // Vertical: place below finger
-    let y = fingerY + FINGER_OFFSET;
-    // If tray goes below viewport, place above finger
-    if (y + TRAY_H > vh - 8) {
-      y = fingerY - FINGER_OFFSET - TRAY_H;
+    // Position tray to the right of the trigger, or centered if enough space
+    let x = fingerX + 40;
+    if (x + TRAY_W > vw - 8) {
+      x = fingerX - TRAY_W - 40;
     }
-    // Final clamp
-    y = Math.max(8, y);
+    x = Math.max(8, Math.min(vw - TRAY_W - 8, x));
+    
+    // Vertical: center on finger, adjust if near edges
+    let y = fingerY - TRAY_H / 2;
+    if (y < 8) y = 8;
+    if (y + TRAY_H > vh - 8) y = vh - TRAY_H - 8;
+    
     return { x, y };
   };
 
@@ -308,14 +322,19 @@ export function DeadlineSlider({ item, connected, onToggleDone, onCreateAgentJob
     action === 'submit' || (action === 'agent' && connected && !creatingJobId)
   );
 
-  // The gesture is deliberately tracked on document, rather than the trigger.
-  // On touch devices this keeps receiving movement after the finger leaves the
-  // 34px trigger. Before the hold resolves, no event is cancelled, so a normal
-  // vertical swipe stays a normal page scroll. Once the tray is open, the
-  // non-passive listener prevents that drag from turning into a scroll.
+  // Horizontal gesture: hold the trigger, then drag left-to-right.
+  // This interaction does not conflict with vertical page scrolling.
+  // Pointer capture ensures all movement stays with this gesture.
   const onPointerDown = (e) => {
     if (e.button && e.button !== 0) return;
     e.stopPropagation();
+    e.preventDefault();
+    // Capture this pointer so all pointer events stay with this element,
+    // even if the finger moves away from the trigger. This prevents the browser
+    // from interpreting the movement as a page scroll.
+    if (triggerRef.current) {
+      triggerRef.current.setPointerCapture(e.pointerId);
+    }
     cleanup();
 
     const gesture = {
