@@ -648,9 +648,9 @@ a:focus-visible {
 /* The portal puts this fixed tray above animated cards and their overflow. */
 .action-tray {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 6px;
-  padding: 10px;
+  padding: 8px;
   border: 1px solid rgba(115, 137, 221, 0.25);
   border-radius: 16px;
   background: rgba(14, 17, 32, 0.96);
@@ -658,14 +658,16 @@ a:focus-visible {
     0 8px 28px rgba(0, 0, 0, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(12px);
-  animation: tray-pop 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: tray-pop-h 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
   touch-action: none;
 }
 
-@keyframes tray-pop {
-  from { opacity: 0; transform: scale(0.85) translateY(-4px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+@keyframes tray-pop-h {
+  from { opacity: 0; transform: scale(0.85) translateX(-4px); }
+  to { opacity: 1; transform: scale(1) translateX(0); }
 }
+
+
 
 /* Individual action target inside the tray — large touch targets */
 .action-tray-target {
