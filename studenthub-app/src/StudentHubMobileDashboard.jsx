@@ -22,6 +22,7 @@ import {
   readDashboardData,
   updateStoredLocalData,
   updateAgentSettings,
+  updateAgentPermissions,
   fetchAgentSettings,
   writeAgentSettings
 } from './lib/dashboard-data';
@@ -171,35 +172,50 @@ export default function StudentHubMobileDashboard() {
   };
 
   const handleAgentSettingsChange = (newSettings) => {
-    const isEnabledChange = typeof newSettings.enabled === 'boolean';
+    // A permission toggle arrives as `{ ...agentSettings, permissions }`, which
+    // includes the `enabled` key — so detect each change by what is actually new.
+    const isEnabledChange = 'enabled' in newSettings && !newSettings.permissions;
+    const isPermissionsChange = Boolean(newSettings.permissions);
     const previousEnabled = agentSettings.enabled;
+    const previousPermissions = agentSettings.permissions;
 
-    // Optimistic update so the toggle feels responsive.
+    // Optimistic update so the toggles feel responsive.
     applyAgentSettings((current) => ({
       ...current,
       ...newSettings,
       lastToggledAt: new Date().toISOString(),
     }));
 
-    // The enable switch is authoritative on the server; only permission
-    // toggles stay local. Persist it through, then reconcile the UI to the
-    // server's confirmed value — never let the UI claim a state the server
-    // doesn't have (that was the "reverts" / silent 403 bug).
-    if (!isEnabledChange) return;
+    // Both the enable switch and the granular permissions are authoritative on
+    // the server. Persist through, then reconcile the UI to the server's
+    // confirmed value — never let the UI claim a state the server doesn't have.
+    if (isEnabledChange) {
+      updateAgentSettings(newSettings.enabled).then((serverSettings) => {
+        if (!serverSettings) {
+          // Server did not persist it — roll back the enabled bit.
+          applyAgentSettings((current) => ({ ...current, enabled: previousEnabled }));
+          return;
+        }
+        applyAgentSettings((current) => ({
+          ...current,
+          enabled: Boolean(serverSettings.enabled),
+          enabledAt: serverSettings.enabledAt || current.enabledAt,
+          lastToggledAt: serverSettings.lastToggledAt || current.lastToggledAt,
+        }));
+      });
+      return;
+    }
 
-    updateAgentSettings(newSettings.enabled).then((serverSettings) => {
-      if (!serverSettings) {
-        // Server did not persist it — roll back the enabled bit.
-        applyAgentSettings((current) => ({ ...current, enabled: previousEnabled }));
-        return;
-      }
-      applyAgentSettings((current) => ({
-        ...current,
-        enabled: Boolean(serverSettings.enabled),
-        enabledAt: serverSettings.enabledAt || current.enabledAt,
-        lastToggledAt: serverSettings.lastToggledAt || current.lastToggledAt,
-      }));
-    });
+    if (isPermissionsChange) {
+      updateAgentPermissions(newSettings.permissions).then((serverPermissions) => {
+        if (!serverPermissions) {
+          // Server did not persist it — roll the permissions back.
+          applyAgentSettings((current) => ({ ...current, permissions: previousPermissions }));
+          return;
+        }
+        applyAgentSettings((current) => ({ ...current, permissions: serverPermissions }));
+      });
+    }
   };
 
   const handleCreateAgentJob = (job) => {

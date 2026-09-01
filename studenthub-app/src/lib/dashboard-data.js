@@ -638,6 +638,48 @@ export async function fetchAgentSettings() {
   }
 }
 
+/**
+ * Persist the Agentic Helper granular permissions to the server.
+ *
+ * Like the enabled flag, permissions are authoritative on the server (they
+ * gate tool execution via `checkToolPermission`), so they must be synced when
+ * a sub-switch is toggled — the browser localStorage copy alone is not enough
+ * and would not carry over to another device (e.g. the phone).
+ *
+ * @param {object} permissions - Map of permission key to boolean, e.g. `{ contentGeneration: true }`.
+ * @returns {Promise<object|null>} The server's confirmed permissions map, or null on failure.
+ */
+export async function updateAgentPermissions(permissions) {
+  const userId = getUserId();
+  if (!userId || !permissions) return null;
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  try {
+    const res = await fetch(`${base}/api/agent/settings/${userId}/permissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+      body: JSON.stringify({ permissions }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    // The server returns permissions as a list: [{ key, enabled, ... }, ...].
+    // Rebuild the object map the UI expects so state stays in sync.
+    if (Array.isArray(data.permissions)) {
+      const map = {};
+      for (const entry of data.permissions) map[entry.key] = Boolean(entry.enabled);
+      return map;
+    }
+    return data.permissions || null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Agent Job Creation Helpers ─────────────────────────────────
 
 /**
