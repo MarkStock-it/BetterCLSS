@@ -641,11 +641,12 @@ a:focus-visible {
 }
 .action-tray-trigger:active { cursor: grabbing; transform: scale(0.92); }
 
-/* Tray container — fixed positioned, escapes all ancestor overflow */
+/* Tray container — fixed positioned, vertical, escapes all ancestor overflow */
 .action-tray {
   display: flex;
-  gap: 8px;
-  padding: 8px;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
   border: 1px solid rgba(115, 137, 221, 0.25);
   border-radius: 16px;
   background: rgba(14, 17, 32, 0.96);
@@ -655,7 +656,6 @@ a:focus-visible {
   backdrop-filter: blur(12px);
   animation: tray-pop 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
   touch-action: none;
-  will-change: transform;
 }
 
 @keyframes tray-pop {
@@ -663,50 +663,38 @@ a:focus-visible {
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* Individual action target inside the tray */
+/* Individual action target inside the tray — large touch targets */
 .action-tray-target {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  width: 52px;
-  height: 52px;
+  gap: 3px;
+  width: 120px;
+  height: 56px;
   padding: 0;
   border-radius: 12px;
   cursor: pointer;
   touch-action: none;
-  transition: transform 120ms ease, background 100ms ease, border-color 100ms ease;
+  transition: transform 100ms ease, background 80ms ease, border-color 80ms ease;
 }
-.action-tray-target:active:not(:disabled) { transform: scale(0.9); }
+.action-tray-target:active:not(:disabled) { transform: scale(0.95); }
 .action-tray-target:disabled { opacity: 0.3; cursor: not-allowed; }
 .action-tray-target.is-hovered {
-  transform: scale(1.12);
+  transform: scale(1.06);
 }
 
 .action-tray-label {
-  font-size: 0.52rem;
+  font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   opacity: 0.7;
-  transition: opacity 100ms ease;
+  transition: opacity 80ms ease;
 }
 .action-tray-target.is-hovered .action-tray-label { opacity: 1; }
 
-/* Done target — green */
-.action-tray-target.action-done {
-  color: #34d399;
-  background: rgba(16, 185, 129, 0.12);
-  border: 1.5px solid rgba(52, 211, 153, 0.25);
-}
-.action-tray-target.action-done.is-hovered {
-  background: rgba(16, 185, 129, 0.3);
-  border-color: rgba(52, 211, 153, 0.6);
-  box-shadow: 0 0 16px rgba(52, 211, 153, 0.3);
-}
-
-/* Agent target — purple */
+/* Agentic Start target — purple */
 .action-tray-target.action-agent {
   color: #a78bfa;
   background: rgba(139, 92, 246, 0.12);
@@ -719,6 +707,18 @@ a:focus-visible {
 }
 .action-tray-target.action-agent.is-creating {
   opacity: 0.5;
+}
+
+/* Submit target — green */
+.action-tray-target.action-submit {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1.5px solid rgba(52, 211, 153, 0.25);
+}
+.action-tray-target.action-submit.is-hovered {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: rgba(52, 211, 153, 0.6);
+  box-shadow: 0 0 16px rgba(52, 211, 153, 0.3);
 }
 
 .agent-spinner-tiny {
