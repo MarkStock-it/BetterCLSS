@@ -21,6 +21,7 @@ import {
   readAgentSettings,
   readDashboardData,
   updateStoredLocalData,
+  updateAgentSettings,
   writeAgentSettings
 } from './lib/dashboard-data';
 
@@ -142,6 +143,9 @@ export default function StudentHubMobileDashboard() {
     };
     setAgentSettings(updated);
     writeAgentSettings(updated);
+    if (typeof newSettings.enabled === 'boolean') {
+      void updateAgentSettings(newSettings.enabled);
+    }
   };
 
   const handleCreateAgentJob = (job) => {

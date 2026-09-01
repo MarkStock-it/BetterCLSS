@@ -574,6 +574,38 @@ export async function fetchAgentSummary() {
   }
 }
 
+/**
+ * Persist the Agentic Helper enabled state to the server.
+ * This is the authoritative store read by the server-side feature gate
+ * (`isAgenticHelperEnabled`), so it must be synced whenever the user toggles
+ * the switch — the browser localStorage copy alone is not sufficient.
+ * @param {boolean} enabled
+ * @returns {Promise<object|null>}
+ */
+export async function updateAgentSettings(enabled) {
+  const userId = getUserId();
+  if (!userId) return null;
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  try {
+    const res = await fetch(`${base}/api/agent/settings/${userId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+      body: JSON.stringify({ enabled: Boolean(enabled) }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.settings || null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Agent Job Creation Helpers ─────────────────────────────────
 
 /**
