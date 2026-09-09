@@ -327,11 +327,10 @@
         <div class="study-container">
           <div class="section-header study-header">
             <div>
-              <div class="section-title">Study Area</div>
-              <div class="section-subtitle">Focus workspace for timer, notes, ambient audio, tasks, and analytics</div>
+              <div class="section-title">Study</div>
+              <div class="section-subtitle">One session at a time</div>
             </div>
             <div class="study-header-actions">
-              <span class="study-shortcut-chip">Press <kbd>F</kbd> to toggle focus mode</span>
               <button class="btn btn-secondary btn-sm" onclick="toggleStudyTheme()" id="studyThemeBtn">Study Theme: Dark</button>
               <button class="btn btn-secondary btn-sm" onclick="toggleFocusMode()" id="focusModeBtn">Focus Mode</button>
             </div>
@@ -345,90 +344,108 @@
           </div>
 
           <div class="study-grid" id="studyGrid">
-            <section class="card study-card study-hero-card mobile-active" role="tabpanel" data-stagger="0" data-study-panel="timer">
-              <div class="study-section-head">
-                <div class="card-title">Pomodoro Session</div>
-                <div class="study-inline-controls">
-                  <label class="study-inline-label" for="sessionTagInput">Session Tags</label>
-                  <input type="text" id="sessionTagInput" placeholder="Course, chapter, topic">
+            <!-- Primary: the session. Everything else supports it. -->
+            <section class="study-panel study-panel-timer mobile-active" role="tabpanel" data-stagger="0" data-study-panel="timer" aria-label="Study session">
+              <div class="study-stage">
+                <div class="study-phase-segment" id="studyPhaseSegment">
+                  <button type="button" class="phase-chip" data-phase="work" onclick="setStudyPhase('work')">Focus</button>
+                  <button type="button" class="phase-chip" data-phase="break" onclick="setStudyPhase('break')">Break</button>
+                  <button type="button" class="phase-chip" data-phase="long" onclick="setStudyPhase('long')">Long break</button>
+                </div>
+
+                <div class="study-session-type" id="studySessionType"></div>
+
+                <div class="study-timer-wrap" id="studyTimerWrap">
+                  <div class="study-timer-display" id="studyTimerDisplay">25:00</div>
+                  <div class="study-progress-track" aria-hidden="true"><div class="study-progress-line" id="studyRingProgress"></div></div>
+                </div>
+
+                <div class="study-controls-row">
+                  <button class="btn btn-primary study-pill-btn" id="studyStartPauseBtn" onclick="toggleStudyTimer()">Start</button>
+                  <button class="btn btn-ghost study-pill-btn" onclick="resetStudyTimer()">Reset</button>
+                </div>
+
+                <div class="study-presets-row" id="presetRow"></div>
+
+                <div class="study-durations-row">
+                  <label class="study-duration">
+                    <span class="study-duration-label">Focus</span>
+                    <input type="range" id="workInterval" min="10" max="180" step="1" value="25" aria-label="Focus minutes">
+                    <span class="study-duration-value" id="workIntervalValue">25 min</span>
+                  </label>
+                  <label class="study-duration">
+                    <span class="study-duration-label">Break</span>
+                    <input type="range" id="breakInterval" min="3" max="60" step="1" value="5" aria-label="Break minutes">
+                    <span class="study-duration-value" id="breakIntervalValue">5 min</span>
+                  </label>
+                  <label class="study-duration">
+                    <span class="study-duration-label">Long</span>
+                    <input type="range" id="longBreakInterval" min="10" max="90" step="1" value="15" aria-label="Long break minutes">
+                    <span class="study-duration-value" id="longBreakIntervalValue">15 min</span>
+                  </label>
                 </div>
               </div>
 
-              <div class="study-preset-row" id="presetRow"></div>
-
-              <div class="study-phase-segment" id="studyPhaseSegment">
-                <button type="button" class="phase-chip" data-phase="work" onclick="setStudyPhase('work')">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-                  Work
-                </button>
-                <button type="button" class="phase-chip" data-phase="break" onclick="setStudyPhase('break')">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg>
-                  Break
-                </button>
-                <button type="button" class="phase-chip" data-phase="long" onclick="setStudyPhase('long')">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-                  Long Break
-                </button>
-              </div>
-
-              <div class="study-session-type" id="studySessionType"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline;vertical-align:middle;margin-right:4px"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>Work</div>
-
-              <div class="study-ring-wrap" id="studyTimerWrap">
-                <svg class="study-ring" viewBox="0 0 240 240" aria-hidden="true">
-                  <defs>
-                    <linearGradient id="studyRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#6d88ff"></stop>
-                      <stop offset="55%" stop-color="#8f6fff"></stop>
-                      <stop offset="100%" stop-color="#3dd9a4"></stop>
-                    </linearGradient>
-                  </defs>
-                  <circle class="ring-bg" cx="120" cy="120" r="104"></circle>
-                  <circle class="ring-progress" id="studyRingProgress" cx="120" cy="120" r="104"></circle>
-                </svg>
-                <div class="study-timer-display" id="studyTimerDisplay">25:00</div>
-              </div>
-
-              <div class="study-controls-row">
-                <button class="btn btn-primary study-pill-btn" id="studyStartPauseBtn" onclick="toggleStudyTimer()">Start</button>
-                <button class="btn btn-secondary study-pill-btn" onclick="resetStudyTimer()">Reset</button>
-              </div>
-
-              <div class="study-interval-row">
-                <label class="study-interval-item">
-                  <span class="study-interval-head">
-                    <span class="study-interval-label">Work</span>
-                    <span class="study-interval-value" id="workIntervalValue">25 min</span>
+              <!-- Ambience: supporting, quiet, one line -->
+              <div class="study-ambience">
+                <button class="ambient-collapse-header" id="ambientCollapseHeader" onclick="toggleAmbientPanel()" aria-expanded="false" aria-controls="ambientCardRow">
+                  <span class="ambient-collapse-left">
+                    <span class="ambient-playing" id="ambientPlaying"><span class="eq-bars" aria-hidden="true"><span></span><span></span><span></span></span></span>
+                    <span class="ambient-collapse-labels">
+                      <span class="ambient-collapse-title">Ambience</span>
+                      <span class="ambient-collapse-subtitle" id="ambientCollapseSubtitle">Off</span>
+                    </span>
                   </span>
-                  <input type="range" id="workInterval" min="10" max="180" step="1" value="25" aria-label="Work minutes">
-                </label>
-                <label class="study-interval-item">
-                  <span class="study-interval-head">
-                    <span class="study-interval-label">Break</span>
-                    <span class="study-interval-value" id="breakIntervalValue">5 min</span>
-                  </span>
-                  <input type="range" id="breakInterval" min="3" max="60" step="1" value="5" aria-label="Break minutes">
-                </label>
-                <label class="study-interval-item">
-                  <span class="study-interval-head">
-                    <span class="study-interval-label">Long Break</span>
-                    <span class="study-interval-value" id="longBreakIntervalValue">15 min</span>
-                  </span>
-                  <input type="range" id="longBreakInterval" min="10" max="90" step="1" value="15" aria-label="Long break minutes">
-                </label>
+                  <svg class="ambient-chevron" id="ambientChevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div class="ambient-card-row" id="ambientCardRow">
+                  <button class="ambient-chip" data-mode="white" onclick="setAmbientMode('white')">White noise</button>
+                  <button class="ambient-chip" data-mode="rain" onclick="setAmbientMode('rain')">Rain</button>
+                  <button class="ambient-chip" data-mode="lofi" onclick="setAmbientMode('lofi')">Lo-fi</button>
+                  <button class="ambient-chip" data-mode="off" onclick="setAmbientMode('off')">Off</button>
+                </div>
+                <div class="ambient-volume-panel" id="ambientVolumePanel">
+                  <input class="ambient-range" type="range" id="ambientVolume" min="0" max="100" value="30" aria-label="Ambience volume" oninput="this.style.setProperty('--pct',this.value+'%');setAmbientVolume(this.value)" style="--pct:30%">
+                  <span class="ambient-volume-val" id="ambientVolumeVal">30%</span>
+                </div>
               </div>
             </section>
 
-            <section class="card study-card study-notes-card" role="tabpanel" data-stagger="1" data-study-panel="notes">
-              <div class="study-section-head">
-                <div class="card-title">Notes Workspace</div>
+            <!-- Context rail: what you're working on -->
+            <section class="study-panel study-panel-context" role="tabpanel" data-stagger="1" data-study-panel="tasks" aria-label="Study context">
+              <div class="context-block">
+                <label class="context-label" for="sessionTagInput">Studying</label>
+                <input type="text" id="sessionTagInput" placeholder="Course, chapter, topic…">
+              </div>
+              <div class="context-block">
+                <div class="context-label">Tasks</div>
+                <div class="study-task-row">
+                  <input type="text" id="studyTaskInput" placeholder="Add a task and press Enter" aria-label="New study task">
+                  <select id="studyTaskPriority" class="study-task-priority" aria-label="Task priority">
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+                <div id="studyTaskList" class="study-task-list"></div>
+              </div>
+              <div class="context-block context-today">
+                <div class="context-label">Today</div>
+                <div class="study-today-line" id="studyTodayLine">Nothing focused yet</div>
+              </div>
+            </section>
+
+            <!-- Notes: quiet writing surface -->
+            <section class="study-panel study-panel-notes" role="tabpanel" data-stagger="2" data-study-panel="notes" aria-label="Session notes">
+              <div class="notes-head">
+                <div class="study-session-type notes-hint">Notes save automatically · Ctrl+S to save now</div>
                 <div class="study-export-actions">
-                  <button class="btn btn-secondary btn-sm" onclick="exportStudyNote('md')">Export .md</button>
-                  <button class="btn btn-secondary btn-sm" onclick="exportStudyNote('txt')">Export .txt</button>
-                  <button class="btn btn-secondary btn-sm" onclick="exportStudyNote('pdf')">Export PDF</button>
+                  <button class="btn btn-secondary btn-sm" onclick="exportStudyNote('md')">.md</button>
+                  <button class="btn btn-secondary btn-sm" onclick="exportStudyNote('txt')">.txt</button>
+                  <button class="btn btn-secondary btn-sm" onclick="exportStudyNote('pdf')">PDF</button>
                   <button class="btn btn-secondary btn-sm study-mobile-collapse-btn" onclick="toggleNotesPane()" id="notesCollapseBtn">Collapse</button>
                 </div>
               </div>
-
               <div class="study-toolbar" id="studyToolbar">
                 <button class="toolbar-btn" onclick="formatStudyNote('bold')" title="Bold"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg></button>
                 <button class="toolbar-btn" onclick="formatStudyNote('italic')" title="Italic">𝘐</button>
@@ -436,11 +453,10 @@
                 <button class="toolbar-btn" onclick="formatStudyNote('ul')" title="Bullet List">• List</button>
                 <button class="toolbar-btn" onclick="insertCodeBlock()" title="Code Block">&lt;/&gt;</button>
               </div>
-
               <div class="study-split-wrap" id="studySplitWrap">
                 <div class="study-editor-pane" id="studyEditorPane">
                   <div class="line-numbers" id="studyLineNumbers"></div>
-                  <textarea id="studyNoteEditor" class="study-note-editor" placeholder="Write notes in markdown... (Ctrl+S save, Ctrl+N new note)"></textarea>
+                  <textarea id="studyNoteEditor" class="study-note-editor" placeholder="Write notes in markdown… (Ctrl+S save, Ctrl+N new note)"></textarea>
                 </div>
                 <div class="study-splitter" id="studySplitter" role="separator" aria-orientation="vertical" aria-label="Resize notes panes"></div>
                 <div class="study-preview-pane">
@@ -449,75 +465,12 @@
               </div>
             </section>
 
-            <section class="card study-card study-ambient-card" role="tabpanel" data-stagger="2" data-study-panel="tasks">
-              <div class="study-section-head"><div class="card-title">Ambient + Tasks</div></div>
-
-              <button class="ambient-collapse-header" id="ambientCollapseHeader" onclick="toggleAmbientPanel()" aria-expanded="false" aria-controls="ambientCardRow">
-                <span class="ambient-collapse-left">
-                  <svg class="ambient-collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-                  <span class="ambient-collapse-labels">
-                    <span class="ambient-collapse-title">Ambience</span>
-                    <span class="ambient-collapse-subtitle" id="ambientCollapseSubtitle">Off</span>
-                  </span>
-                </span>
-                <svg class="ambient-chevron" id="ambientChevron" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-              </button>
-              <div class="ambient-card-row" id="ambientCardRow">
-                <button class="ambient-card" data-mode="white" onclick="setAmbientMode('white')">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-                  <span>White Noise</span>
-                </button>
-                <button class="ambient-card" data-mode="rain" onclick="setAmbientMode('rain')">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></svg>
-                  <span>Rain</span>
-                </button>
-                <button class="ambient-card" data-mode="lofi" onclick="setAmbientMode('lofi')">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg>
-                  <span>Lo-fi</span>
-                </button>
-                <button class="ambient-card" data-mode="off" onclick="setAmbientMode('off')">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
-                  <span>Off</span>
-                </button>
-              </div>
-
-              <div class="ambient-volume-panel" id="ambientVolumePanel">
-                <div class="ambient-volume-row">
-                  <span class="ambient-volume-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg> Volume</span>
-                  <span class="ambient-volume-val" id="ambientVolumeVal">30%</span>
-                </div>
-                <input class="ambient-range" type="range" id="ambientVolume" min="0" max="100" value="30" oninput="this.style.setProperty('--pct',this.value+'%');setAmbientVolume(this.value)" style="--pct:30%">
-              </div>
-
-              <div class="ambient-meta-row">
-                <div class="ambient-playing" id="ambientPlaying">
-                  <span class="eq-bars" aria-hidden="true"><span></span><span></span><span></span></span>
-                  <span id="ambientPlayingText">Not playing</span>
-                </div>
-              </div>
-
-              <div class="study-task-row">
-                <input type="text" id="studyTaskInput" placeholder="Add a task and press Enter">
-                <select id="studyTaskPriority" class="study-task-priority" aria-label="Task priority">
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="low">Low</option>
-                </select>
-              </div>
-              <div id="studyTaskList" class="study-task-list"></div>
-              <button class="study-fab" onclick="addStudyTask()" aria-label="Add task">＋</button>
-            </section>
-
-            <section class="card study-card study-stats-card" role="tabpanel" data-stagger="3" data-study-panel="progress">
-              <div class="study-section-head"><div class="card-title">Progress + History</div></div>
-
-              <div class="progress-card">
-                <div class="progress-head">
-                  <div>
-                    <div class="progress-title">Today's Study Progress</div>
-                    <div class="progress-time" id="studyProgressLabel">0h / 4h</div>
-                  </div>
-                  <div class="progress-microcopy" id="studyProgressMotivation">Keep going</div>
+            <!-- Historical: progress + history, secondary -->
+            <section class="study-panel study-panel-progress" role="tabpanel" data-stagger="3" data-study-panel="progress" aria-label="Study progress and history">
+              <div class="progress-strip">
+                <div class="progress-meta">
+                  <span class="progress-time" id="studyProgressLabel">0h / 4h</span>
+                  <span class="progress-microcopy" id="studyProgressMotivation">Keep going</span>
                 </div>
                 <div class="milestone-track">
                   <div class="milestone-fill" id="studyProgressFill"></div>
@@ -531,11 +484,11 @@
               <div id="studyStatsPanel" class="study-stats-panel"></div>
 
               <div class="study-sparkline-wrap">
-                <div class="section-subtitle">Last 7 Days</div>
+                <div class="sparkline-caption">Last 7 days</div>
                 <svg id="studySparkline" viewBox="0 0 320 80" preserveAspectRatio="none"></svg>
               </div>
 
-              <div class="section-subtitle" style="margin:10px 0 8px">Session Timeline</div>
+              <div class="history-caption">Session history</div>
               <div id="studyHistoryList" class="study-history-list"></div>
             </section>
           </div>

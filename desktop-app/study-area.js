@@ -157,13 +157,8 @@ function getPhaseMinutes(phase) {
 }
 
 function phaseLabel(phase) {
-  const icons = {
-    work:  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline;vertical-align:middle;margin-right:4px"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>',
-    break: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg>',
-    long:  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>'
-  };
-  const labels = { work: 'Work', break: 'Break', long: 'Long Break' };
-  return (icons[phase] || icons.work) + (labels[phase] || 'Work');
+  const labels = { work: 'Focus', break: 'Break', long: 'Long break' };
+  return labels[phase] || 'Focus';
 }
 
 function setStudyPhase(phase) {
@@ -179,14 +174,11 @@ function setStudyPhase(phase) {
 }
 
 function updateStudyRing() {
-  const ring = document.getElementById('studyRingProgress');
-  if (!ring) return;
-  const radius = 104;
-  const circumference = 2 * Math.PI * radius;
-  ring.style.strokeDasharray = String(circumference);
+  const line = document.getElementById('studyRingProgress');
+  if (!line) return;
   const total = getPhaseMinutes(studyPhase) * 60;
-  const progress = total ? studyTimerSecs / total : 0;
-  ring.style.strokeDashoffset = String(circumference * (1 - Math.max(0, Math.min(1, progress))));
+  const progress = total ? Math.max(0, Math.min(1, studyTimerSecs / total)) : 0;
+  line.style.width = (progress * 100) + '%';
 }
 
 function setStudyTimerDisplay() {
@@ -341,14 +333,21 @@ function renderSparkline() {
 function updateProgressMotivation(hours, goal) {
   const node = document.getElementById('studyProgressMotivation');
   if (!node) return;
-  if (hours >= goal) node.textContent = '🎉 Goal complete!';
-  else if (hours >= goal * 0.5) node.textContent = '🔥 Halfway there!';
-  else if (hours >= 1) node.textContent = '⚡ Momentum building';
+  if (hours >= goal) node.textContent = 'Daily goal reached';
+  else if (hours >= goal * 0.5) node.textContent = 'Halfway to your goal';
+  else if (hours >= 1) node.textContent = 'Momentum building';
   else node.textContent = 'Keep going';
 }
 
 function renderStudyStatsAndHistory() {
   const stats = buildStudyStats();
+  const todayLine = document.getElementById('studyTodayLine');
+  if (todayLine) {
+    const todaySessions = (APP.local.studyHistory || []).filter((h) => h.date === getTodayKey()).length;
+    todayLine.textContent = stats.todaySecs > 0
+      ? fmtDur(stats.todaySecs) + ' focused · ' + todaySessions + (todaySessions === 1 ? ' session' : ' sessions')
+      : 'Nothing focused yet — a short session counts.';
+  }
   const statsPanel = document.getElementById('studyStatsPanel');
   if (statsPanel) {
     statsPanel.innerHTML =
@@ -570,7 +569,7 @@ function toggleAmbientPanel(forceClose) {
 
 function syncAmbientUI() {
   const mode = APP.local.studySettings.ambientMode || 'off';
-  document.querySelectorAll('.ambient-card').forEach((card) => card.classList.toggle('active', card.getAttribute('data-mode') === mode));
+  document.querySelectorAll('.ambient-chip').forEach((chip) => chip.classList.toggle('active', chip.getAttribute('data-mode') === mode));
   const text = document.getElementById('ambientPlayingText');
   if (text) text.textContent = mode === 'off' ? 'Not playing' : 'Now playing: ' + mode;
   const eq = document.querySelector('.eq-bars');
@@ -678,28 +677,15 @@ function initStudySplitter() {
 }
 
 function toggleNotesPane() {
-  const card = document.querySelector('.study-notes-card');
-  if (!card) return;
-  card.classList.toggle('collapsed-mobile');
+  const panel = document.querySelector('.study-panel-notes');
+  if (!panel) return;
+  panel.classList.toggle('collapsed-mobile');
   const btn = document.getElementById('notesCollapseBtn');
-  if (btn) btn.textContent = card.classList.contains('collapsed-mobile') ? 'Expand' : 'Collapse';
+  if (btn) btn.textContent = panel.classList.contains('collapsed-mobile') ? 'Expand' : 'Collapse';
 }
 
 function celebrateGoal() {
-  const root = document.getElementById('page-study');
-  if (!root) return;
-  const layer = document.createElement('div');
-  layer.className = 'confetti-layer';
-  for (let i = 0; i < 36; i += 1) {
-    const piece = document.createElement('span');
-    piece.className = 'confetti-piece';
-    piece.style.left = (Math.random() * 100) + '%';
-    piece.style.animationDelay = (Math.random() * 0.4) + 's';
-    piece.style.background = ['#6080ff', '#764ba2', '#3dd9a4', '#ffb84f'][i % 4];
-    layer.appendChild(piece);
-  }
-  root.appendChild(layer);
-  setTimeout(() => layer.remove(), 2200);
+  toast('Daily goal reached — ' + fmtDur((APP.local.studySettings.dailyGoalHours || 4) * 3600) + ' focused today.', 'success');
 }
 
 function initStudyRipple() {
@@ -717,10 +703,10 @@ function initStudyRipple() {
 }
 
 function runStudyStaggerAnimation() {
-  document.querySelectorAll('.study-card').forEach((card) => {
-    const idx = Number(card.getAttribute('data-stagger') || 0);
-    card.style.animationDelay = (idx * 100) + 'ms';
-    card.classList.add('card-enter');
+  document.querySelectorAll('.study-panel').forEach((panel) => {
+    const idx = Number(panel.getAttribute('data-stagger') || 0);
+    panel.style.animationDelay = (idx * 100) + 'ms';
+    panel.classList.add('card-enter');
   });
 }
 
