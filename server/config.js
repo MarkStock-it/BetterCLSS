@@ -40,11 +40,15 @@ function createConfig(rootDir) {
     canvasDomain: process.env.CANVAS_DOMAIN || 'usc.instructure.com',
     canvasToken: process.env.CANVAS_TOKEN || '',
     maxOverdueDays: Number(process.env.MAX_OVERDUE_DAYS || 30),
-    geminiModel: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+    // gemini-flash-latest auto-tracks the newest stable Flash model, so the
+    // app survives Google's model shutdowns (gemini-2.0-flash retired 2026-03).
+    geminiModel: process.env.GEMINI_MODEL || 'gemini-flash-latest',
     geminiTimeoutMs: Number(process.env.GEMINI_TIMEOUT_MS || 60000),
     geminiMaxOutputTokens: Number(process.env.GEMINI_MAX_OUTPUT_TOKENS || 8192),
     geminiTemperature: Number(process.env.GEMINI_TEMPERATURE || 0.4),
-    groqModel: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+    // Groq decommissioned llama-3.3-70b-versatile on free/developer plans
+    // (2026-08-16); gpt-oss-120b is their documented replacement.
+    groqModel: process.env.GROQ_MODEL || 'openai/gpt-oss-120b',
     groqTimeoutMs: Number(process.env.GROQ_TIMEOUT_MS || 60000),
     groqMaxOutputTokens: Number(process.env.GROQ_MAX_OUTPUT_TOKENS || 8192),
     groqTemperature: Number(process.env.GROQ_TEMPERATURE || 0.3),

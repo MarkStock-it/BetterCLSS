@@ -24,7 +24,7 @@ const { validateAgainstSchema } = require('./gemini-provider');
  *
  * @param {object} config
  * @param {string} [config.apiKey] - Ignored: Groq is bring-your-own-key (per-request)
- * @param {string} [config.model] - Model name (default: llama-3.3-70b-versatile)
+ * @param {string} [config.model] - Model name (default: openai/gpt-oss-120b)
  * @param {number} [config.timeoutMs] - Request timeout (default: 60000)
  * @param {number} [config.maxOutputTokens] - Max output tokens
  * @param {number} [config.temperature] - Generation temperature
@@ -35,7 +35,7 @@ function createGroqProvider(config) {
   const base = createBaseProvider('groq', { ...config, perRequestKey: true });
 
   const API_BASE = 'https://api.groq.com/openai/v1/chat/completions';
-  const model = config.model || 'llama-3.3-70b-versatile';
+  const model = config.model || 'openai/gpt-oss-120b';
   const timeoutMs = config.timeoutMs || 60000;
   const maxOutputTokens = config.maxOutputTokens || 8192;
   const temperature = config.temperature || 0.3;

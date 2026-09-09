@@ -18,7 +18,7 @@ const { AIError, AI_ERROR_CATEGORIES, fromGeminiResponse, fromNetworkError } = r
  *
  * @param {object} config
  * @param {string} [config.apiKey] - Ignored: Gemini is bring-your-own-key (per-request)
- * @param {string} [config.model] - Model name (default: gemini-2.0-flash)
+ * @param {string} [config.model] - Model name (default: gemini-flash-latest)
  * @param {number} [config.timeoutMs] - Request timeout (default: 60000)
  * @param {number} [config.maxOutputTokens] - Max output tokens
  * @param {number} [config.temperature] - Generation temperature
@@ -29,7 +29,7 @@ function createGeminiProvider(config) {
   const base = createBaseProvider('gemini', { ...config, perRequestKey: true });
 
   const API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-  const model = config.model || 'gemini-2.0-flash';
+  const model = config.model || 'gemini-flash-latest';
   const timeoutMs = config.timeoutMs || 60000;
   const maxOutputTokens = config.maxOutputTokens || 8192;
   const temperature = config.temperature || 0.4;
