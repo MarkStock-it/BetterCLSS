@@ -262,10 +262,22 @@
     overflow-x: auto;
     white-space: nowrap;
   }
+  /* Announcements feed: single column, thumb-friendly, still scannable */
   .announce-card {
-    padding: 17px 15px;
-    gap: 14px;
+    padding: 1rem;
+    gap: 9px;
+    border-radius: 14px;
   }
+  .announce-top { flex-wrap: wrap; gap: 8px; }
+  .announce-badge { order: -1; }
+  .announce-title { font-size: 0.95rem; }
+  .announce-snippet { -webkit-line-clamp: 3; font-size: 0.84rem; }
+  .announce-open, .announce-del { margin-left: 0; }
+  .announce-meta { gap: 10px; }
+  .announce-del { padding: 8px 10px; font-size: 0.95rem; }
+  .sidebar-course-name { display: none; }
+  .sidebar-course { padding: 7px; }
+  .sync-btn { padding: 0.6rem 0.9rem; font-size: 0.78rem; }
   .note-del-btn { opacity: 1; }
   .form-row { flex-direction: column; gap: 0; }
   .modal-overlay {

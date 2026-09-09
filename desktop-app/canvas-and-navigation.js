@@ -319,6 +319,13 @@ async function syncCanvas(fromStartup = false) {
   if (syncBtn) syncBtn.textContent = 'Syncing...';
   const dashboardSyncBtn = document.getElementById('dashboardSyncBtn');
   if (dashboardSyncBtn) dashboardSyncBtn.textContent = 'Syncing…';
+  const announceSyncBtn = document.getElementById('announceSyncBtn');
+  if (announceSyncBtn) {
+    announceSyncBtn.disabled = true;
+    announceSyncBtn.classList.add('spinning');
+    const label = announceSyncBtn.querySelector('.sync-btn-label');
+    if (label) label.textContent = 'Syncing…';
+  }
 
   try {
     const [assignments, announcements, grades] = await Promise.all([CanvasAPI.getAllAssignments(), CanvasAPI.getAllAnnouncements(), CanvasAPI.getGrades()]);
@@ -368,6 +375,13 @@ async function syncCanvas(fromStartup = false) {
     APP.canvas.syncing = false;
     if (syncBtn) syncBtn.textContent = 'Sync';
     if (dashboardSyncBtn) dashboardSyncBtn.textContent = 'Sync Canvas';
+    const announceSyncBtn = document.getElementById('announceSyncBtn');
+    if (announceSyncBtn) {
+      announceSyncBtn.disabled = false;
+      announceSyncBtn.classList.remove('spinning');
+      const label = announceSyncBtn.querySelector('.sync-btn-label');
+      if (label) label.textContent = 'Sync Canvas';
+    }
     renderAll();
   }
 }

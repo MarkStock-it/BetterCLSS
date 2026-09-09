@@ -21,9 +21,7 @@ function updateBadges() {
   document.getElementById('statOverdue').textContent = overdue;
   document.getElementById('statDone').textContent = done;
   document.getElementById('statAnnounce').textContent = ann;
-}
-
-function renderSidebar() {
+}  function renderSidebar() {
   const due = allAssignments().filter(a => !a.done).slice(0, 6);
   const sidebarDue = document.getElementById('sidebarDue');
   if (sidebarDue) {
@@ -32,7 +30,28 @@ function renderSidebar() {
   const sidebarCourses = document.getElementById('sidebarCourses');
   if (sidebarCourses) {
     const courses = [...APP.canvas.courses].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
-    sidebarCourses.innerHTML = courses.length ? courses.map(c => '<div style="font-size:0.78rem;color:var(--text-dim);padding:4px 0">' + esc(c.name) + '</div>').join('') : '<div style="font-size:0.75rem;color:var(--text-muted)">Not connected</div>';
+    const count = courses.length;
+    if (!count) {
+      sidebarCourses.innerHTML = '<div style="font-size:0.75rem;color:var(--text-muted)">Not connected</div>';
+    } else {
+      // Smart sidebar: show the courses with the most current work first,
+      // cap the list, and collapse the rest behind a "View all" toggle.
+      const pendingBySubject = {};
+      allAssignments().forEach(a => { if (!a.done && a.subject) pendingBySubject[a.subject] = (pendingBySubject[a.subject] || 0) + 1; });
+      const ranked = courses
+        .map(c => ({ ...c, pending: pendingBySubject[c.name] || 0 }))
+        .sort((a, b) => b.pending - a.pending || String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
+      const SHOW = 5;
+      const expanded = localStorage.getItem('bclss_courses_expanded') === '1';
+      const visible = expanded ? ranked : ranked.slice(0, SHOW);
+      const courseCode = (name) => String(name || '').trim().split(/\s+/).slice(0, 2).join(' ') || 'Course';
+      const row = (c) => '<div class="sidebar-course' + (c.pending ? ' has-work' : '') + '"><span class="sidebar-course-code">' + esc(courseCode(c.name)) + '</span><span class="sidebar-course-name">' + esc(c.name) + '</span>' + (c.pending ? '<span class="sidebar-course-count">' + c.pending + '</span>' : '') + '</div>';
+      let html = visible.map(row).join('');
+      if (count > SHOW) {
+        html += '<button class="sidebar-courses-more" onclick="toggleSidebarCoursesExpanded()">' + (expanded ? '− Show fewer' : '+ View all ' + count) + '</button>';
+      }
+      sidebarCourses.innerHTML = html;
+    }
   }
 }
 
@@ -68,7 +87,10 @@ function renderDashboard() {
   const grades = [...APP.canvas.grades].sort((a, b) => String(a.courseName || a.courseCode || '').localeCompare(String(b.courseName || b.courseCode || ''), undefined, { sensitivity: 'base' }));
   document.getElementById('dashGrades').innerHTML = grades.length ? grades.slice(0, 6).map(g => '<div class="feed-item"><div class="feed-info"><div class="feed-title">' + esc(g.courseName || g.courseCode || 'Course') + '</div><div class="feed-meta">' + esc(g.courseCode || '') + '</div></div><div class="grade-val">' + (g.currentScore == null ? '--' : Math.round(g.currentScore) + '%') + '</div></div>').join('') : '<div class="empty-state"><div class="empty-text">No grade data</div></div>';
   const ann = allAnnouncements().slice(0, 4);
-  document.getElementById('dashAnnouncements').innerHTML = ann.length ? ann.map(a => '<div class="feed-item"><div class="feed-info"><div class="feed-title">' + esc(a.title) + '</div><div class="feed-meta">' + esc(a.courseName || a.time || '') + '</div></div></div>').join('') : '<div class="empty-state"><div class="empty-text">No announcements</div></div>';
+  document.getElementById('dashAnnouncements').innerHTML = ann.length ? ann.map(a => {
+    const tier = ANNOUNCE_TIER_META[announcementTier(a)];
+    return '<div class="feed-item"><span class="announce-badge mini ' + tier.cls + '">' + tier.label + '</span><div class="feed-info"><div class="feed-title">' + esc(a.title) + '</div><div class="feed-meta">' + esc(a.courseName || a.time || '') + '</div></div></div>';
+  }).join('') : '<div class="empty-state"><div class="empty-text">No announcements</div></div>';
 }
 
 function filterAssign(filter, btn) {
@@ -247,11 +269,84 @@ function submitGrade() {
 
 function deleteLocalGrade(id) { APP.local.grades = APP.local.grades.filter(g => g.id !== id); save(); renderGrades(); }
 
+function toggleSidebarCoursesExpanded() {
+  const expanded = localStorage.getItem('bclss_courses_expanded') === '1';
+  localStorage.setItem('bclss_courses_expanded', expanded ? '0' : '1');
+  renderSidebar();
+}
+
+// Semantic announcement tiers: color carries meaning (red = act now, amber =
+// this week, teal = informational) so users can scan the feed in seconds.
+function announcementTier(a) {
+  const text = String(a.title + ' ' + (a.message || a.body || '')).toLowerCase();
+  if (/(urgent|asap|immediately|deadline today|due today|last day|closes today|exam|emergency)/.test(text)) return 'urgent';
+  const d = dueDays(a.due);
+  if (a.due && d !== null && d >= 0 && d <= 7) return 'due';
+  if (/(quiz|exam|test|due|submit|deadline|registration|register)/.test(text)) return 'due';
+  const ageDays = (Date.now() - Date.parse(a.postedAt || a.createdAt || '')) / 86400000;
+  if (Number.isFinite(ageDays) && ageDays <= 3) return 'new';
+  return 'fyi';
+}
+
+const ANNOUNCE_TIER_META = {
+  urgent: { cls: 'urgent', label: 'URGENT', icon: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' },
+  due:    { cls: 'due',    label: 'DUE SOON', icon: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' },
+  new:    { cls: 'new',    label: 'NEW',      icon: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' },
+  fyi:    { cls: 'fyi',    label: 'FYI',      icon: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>' },
+};
+
+function announcementSnippet(a) {
+  const raw = String(a.message || a.body || '').replace(/\s+/g, ' ').trim();
+  const words = raw.split(' ');
+  if (words.length <= 22) return raw;
+  return words.slice(0, 22).join(' ') + '…';
+}
+
+function announcementMeta(a) {
+  const parts = [];
+  if (a.courseName) parts.push(esc(a.courseName));
+  const posted = a.postedAt || a.createdAt;
+  if (posted && Number.isFinite(Date.parse(posted))) {
+    parts.push(esc(new Date(posted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })));
+  } else if (a.time) {
+    parts.push(esc(a.time));
+  }
+  if (a.author) parts.push(esc(a.author));
+  return parts.join(' · ');
+}
+
 function renderAnnouncements() {
   const list = allAnnouncements();
   const el = document.getElementById('announceList');
   if (!list.length) { el.innerHTML = '<div class="empty-state"><div class="empty-text">No announcements yet</div></div>'; return; }
-  el.innerHTML = list.map(a => '<div class="announce-card"><div class="announce-icon">' + (a.canvas ? '🎓' : '📌') + '</div><div class="announce-body-wrap"><div class="announce-title">' + esc(a.title) + '</div><div class="announce-body">' + esc(a.message || a.body || '') + '</div><div class="announce-time">' + esc(a.courseName || a.time || '') + '</div></div>' + (a.canvas ? '' : '<button class="btn btn-sm btn-danger" onclick="deleteLocalAnnouncement(' + a.id + ')">✕</button>') + '</div>').join('');
+  // Urgency-first: urgent and due-soon items float to the top of the feed.
+  const tierOrder = { urgent: 0, due: 1, new: 2, fyi: 3 };
+  const sorted = [...list].sort((a, b) => {
+    const ta = tierOrder[announcementTier(a)];
+    const tb = tierOrder[announcementTier(b)];
+    if (ta !== tb) return ta - tb;
+    return (Date.parse(b.postedAt || b.createdAt || '') || 0) - (Date.parse(a.postedAt || a.createdAt || '') || 0);
+  });
+  el.innerHTML = sorted.map((a) => {
+    const tier = ANNOUNCE_TIER_META[announcementTier(a)];
+    const snippet = announcementSnippet(a);
+    const externalUrl = safeExternalUrl(a.canvasUrl);
+    const bodyHtml = snippet
+      ? '<p class="announce-snippet">' + esc(snippet) + '</p>'
+      : '';
+    return '<article class="announce-card tier-' + tier.cls + '">'
+      + '<div class="announce-top">'
+      + '<span class="announce-badge ' + tier.cls + '">' + tier.icon + tier.label + '</span>'
+      + '<div class="announce-heading"><h3 class="announce-title">' + esc(a.title) + '</h3>'
+      + '<span class="announce-posted">' + esc(CanvasAPI.relativeTime(a.postedAt || a.createdAt || '')) + '</span></div>'
+      + '</div>'
+      + bodyHtml
+      + '<div class="announce-meta"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>'
+      + '<span>' + (announcementMeta(a) || 'General') + '</span>'
+      + (externalUrl ? '<a class="announce-open" target="_blank" rel="noopener noreferrer" href="' + esc(externalUrl) + '">Open in Canvas</a>' : '')
+      + (a.canvas ? '' : '<button class="announce-del" onclick="deleteLocalAnnouncement(' + a.id + ')" aria-label="Delete announcement">✕</button>')
+      + '</div></article>';
+  }).join('');
 }
 
 function openAddAnnouncement() {

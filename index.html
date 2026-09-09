@@ -261,10 +261,13 @@
         <div class="section-header">
           <div>
             <div class="section-title">Announcements</div>
-            <div class="section-subtitle">From Canvas + manually posted</div>
+            <div class="section-subtitle">From Canvas + manually posted · urgent items first</div>
           </div>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-secondary btn-sm" onclick="syncCanvas()">Sync</button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="sync-btn" id="announceSyncBtn" onclick="syncCanvas()">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              <span class="sync-btn-label">Sync Canvas</span>
+            </button>
             <button class="btn btn-primary" onclick="openAddAnnouncement()">+ Post</button>
           </div>
         </div>
