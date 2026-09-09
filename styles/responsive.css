@@ -63,8 +63,23 @@
     font-weight: 800;
   }
   .sidebar { display: none; }
-  .stats-row { grid-template-columns: repeat(2, 1fr); }
-  .dash-grid { grid-template-columns: 1fr; }
+  /* Dashboard collapses to a single narrative column; attention first */
+  .dash-context {
+    grid-template-columns: 1fr;
+  }
+  .dash-context > .dash-section:first-child {
+    padding-right: 0;
+  }
+  .dash-context > .dash-section:last-child {
+    padding-left: 0;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding-top: 1.4rem;
+    margin-top: 1.4rem;
+  }
+  .dash-work-row {
+    align-items: flex-start;
+  }
   .main-content {
     padding-top: 16px;
     padding-bottom: calc(var(--mobile-nav-h) + env(safe-area-inset-bottom) + 20px);
@@ -140,7 +155,23 @@
   }
   .topbar { padding: 0 14px; }
   .topbar-center { display: none; }
-  .stats-row { grid-template-columns: 1fr 1fr; }
+  .dash-attention-item {
+    padding: 0.75rem 0.8rem;
+    gap: 10px;
+  }
+  .dash-item-title {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .dash-link { min-height: 44px; display: inline-flex; align-items: center; }
+  .dash-study {
+    flex-wrap: wrap;
+  }
+  .dash-study .btn {
+    min-height: 44px;
+    flex: 1;
+    justify-content: center;
+  }
   .dashboard-welcome {
     align-items: flex-start;
     margin-bottom: 22px;
@@ -170,16 +201,11 @@
     flex: 1;
     justify-content: center;
   }
-  .stat-card {
-    padding: 18px;
-    min-height: 122px;
-  }
-  .stat-value { font-size: 1.8rem; }
   .card {
     padding: 20px;
     border-radius: 16px;
   }
-  .dash-grid { gap: 18px; }
+  .dash-grade-name { display: none; }
   .feed-item { padding: 13px 0; }
   .section-header {
     align-items: flex-start;
@@ -360,31 +386,11 @@
 }
 
 @media (max-width: 430px) {
-  .stats-row {
-    grid-template-columns: 1fr;
-    gap: 12px;
+  .dash-section-head {
+    flex-wrap: wrap;
+    row-gap: 2px;
   }
-  .stat-card {
-    min-height: 96px;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto;
-    align-items: center;
-  }
-  .stat-label {
-    align-self: end;
-    margin-bottom: 3px;
-  }
-  .stat-value {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    padding-left: 20px;
-    font-size: 2rem;
-  }
-  .stat-sub {
-    align-self: start;
-    margin-top: 0;
-  }
+  .dash-attention-head { font-size: 1.2rem; }
   .dashboard-welcome {
     flex-direction: column;
   }

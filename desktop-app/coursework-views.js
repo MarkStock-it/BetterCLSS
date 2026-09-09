@@ -17,16 +17,7 @@ function updateBadges() {
   mobilePendingBadge.textContent = pending > 99 ? '99+' : pending;
   mobilePendingBadge.classList.toggle('empty', pending === 0);
   document.getElementById('badgeAnnounce').textContent = ann;
-  document.getElementById('statPending').textContent = pending;
-  document.getElementById('statOverdue').textContent = overdue;
-  document.getElementById('statDone').textContent = done;
-  document.getElementById('statAnnounce').textContent = ann;
 }  function renderSidebar() {
-  const due = allAssignments().filter(a => !a.done).slice(0, 6);
-  const sidebarDue = document.getElementById('sidebarDue');
-  if (sidebarDue) {
-    sidebarDue.innerHTML = due.length ? due.map(a => { const chip = dueChip(dueDays(a.due)); return '<div class="mini-item"><div class="priority-dot ' + a.priority + '"></div><div class="mini-item-info"><div class="mini-item-title">' + esc(a.title) + '</div><div class="mini-item-due">' + chip.text + ' · ' + esc(a.subject) + '</div></div></div>'; }).join('') : '<div style="font-size:0.75rem;color:var(--text-muted)">Nothing pending</div>';
-  }
   const sidebarCourses = document.getElementById('sidebarCourses');
   if (sidebarCourses) {
     const courses = [...APP.canvas.courses].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
@@ -72,25 +63,183 @@ function updateDashboardWelcome() {
   });
 }
 
-function dashboardFeed(items) {
-  if (!items.length) return '<div class="empty-state"><div class="empty-text">Nothing to show</div></div>';
-  return items.map(a => { const chip = dueChip(dueDays(a.due)); return '<div class="feed-item"><div class="priority-dot ' + a.priority + '"></div><div class="feed-info"><div class="feed-title">' + esc(a.title) + '</div><div class="feed-meta">' + esc(a.subject) + '</div></div><div class="due-chip ' + chip.cls + '">' + chip.text + '</div></div>'; }).join('');
+// ─── Dashboard: focused student workspace ─────────────────────────
+// Hierarchy: (1) what needs attention now, (2) next up, (3) week +
+// standing, (4) tools. Sections are open (no nested cards) and use
+// typography + whitespace for hierarchy instead of borders.
+
+function attentionItems(all) {
+  const items = [];
+  all
+    .filter(a => !a.done && dueDays(a.due) !== null && dueDays(a.due) < 0)
+    .sort((a, b) => dueDays(a.due) - dueDays(b.due))
+    .slice(0, 3)
+    .forEach(a => items.push({ kind: 'overdue', a }));
+  all
+    .filter(a => !a.done && (dueDays(a.due) === 0 || dueDays(a.due) === 1))
+    .slice(0, 3)
+    .forEach(a => items.push({ kind: dueDays(a.due) === 0 ? 'today' : 'tomorrow', a }));
+  allAnnouncements()
+    .filter(x => announcementTier(x) === 'urgent')
+    .slice(0, 1)
+    .forEach(x => items.push({ kind: 'news', a: x }));
+  return items;
+}
+
+function attentionRow(item) {
+  const a = item.a;
+  const externalUrl = safeExternalUrl(a.canvasUrl || a.url);
+  const open = externalUrl ? '<a class="dash-item-open" target="_blank" rel="noopener noreferrer" href="' + esc(externalUrl) + '">Open</a>' : '';
+  let note;
+  if (item.kind === 'overdue') note = 'Overdue by ' + Math.abs(dueDays(a.due)) + 'd · ' + esc(a.subject);
+  else if (item.kind === 'today') note = 'Due today · ' + esc(a.subject);
+  else if (item.kind === 'tomorrow') note = 'Due tomorrow · ' + esc(a.subject);
+  else note = 'Posted in ' + esc(a.courseName || 'a course');
+  const cls = item.kind === 'news' ? 'news' : (item.kind === 'overdue' ? 'overdue' : 'due');
+  return '<div class="dash-attention-item ' + cls + '"><div class="dash-attention-info"><span class="dash-item-title">' + esc(a.title) + '</span><span class="dash-item-note">' + note + '</span></div>' + open + '</div>';
+}
+
+function renderAttention() {
+  const el = document.getElementById('dashAttention');
+  const head = document.getElementById('dashAttentionHead');
+  if (!el) return;
+  const items = attentionItems(allAssignments());
+  if (!items.length) {
+    if (head) head.textContent = 'Nothing urgent';
+    el.innerHTML = '<div class="dash-calm">You are caught up. Deadlines and urgent posts will surface here.</div>';
+    return;
+  }
+  if (head) head.textContent = items.length === 1 ? '1 thing needs your attention' : items.length + ' things need your attention';
+  el.innerHTML = items.map(attentionRow).join('');
+}
+
+function renderNextUp() {
+  const el = document.getElementById('dashNext');
+  if (!el) return;
+  const upcoming = allAssignments()
+    .filter(a => !a.done && dueDays(a.due) !== null && dueDays(a.due) >= 0)
+    .sort((a, b) => dueDays(a.due) - dueDays(b.due) || String(a.title).localeCompare(String(b.title)))
+    .slice(0, 6);
+  if (!upcoming.length) {
+    el.innerHTML = '<div class="dash-calm">No upcoming assignments with due dates. Add one or sync Canvas.</div>';
+    return;
+  }
+  const dayName = (d) => d === 0 ? 'Today' : d === 1 ? 'Tomorrow' : new Date(Date.now() + d * 86400000).toLocaleDateString('en-US', { weekday: 'long' });
+  const dateLabel = (due) => {
+    const dt = new Date(due + 'T00:00:00');
+    return Number.isNaN(dt.getTime()) ? '' : ' · ' + dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+  let html = '';
+  let lastDay = null;
+  upcoming.forEach((a) => {
+    const d = dueDays(a.due);
+    if (d !== lastDay) {
+      if (lastDay !== null) html += '</div>';
+      html += '<div class="dash-day-group"><div class="dash-day-label">' + dayName(d) + (d > 1 ? dateLabel(a.due) : '') + '</div>';
+      lastDay = d;
+    }
+    const externalUrl = safeExternalUrl(a.url);
+    html += '<div class="dash-work-row"><div class="dash-work-main"><span class="dash-item-title">' + esc(a.title) + '</span><span class="dash-item-note">' + esc(a.subject) + '</span></div>'
+      + (externalUrl ? '<a class="dash-item-open" target="_blank" rel="noopener noreferrer" href="' + esc(externalUrl) + '">Open</a>' : '')
+      + '</div>';
+  });
+  el.innerHTML = html + '</div>';
+}
+
+function renderWeek() {
+  const el = document.getElementById('dashWeek');
+  if (!el) return;
+  const work = allAssignments().filter(a => !a.done && a.due);
+  const days = [];
+  for (let i = 0; i < 7; i += 1) {
+    const date = new Date();
+    date.setDate(date.getDate() + i);
+    const key = date.toISOString().split('T')[0];
+    const due = work.filter(a => a.due === key);
+    const evts = APP.local.events.filter(e => e.date === key);
+    if (!due.length && !evts.length) continue;
+    days.push({
+      label: i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+      rows: [
+        ...due.map(a => '<div class="dash-week-row"><div class="priority-dot ' + a.priority + '"></div><span class="dash-week-text">' + esc(a.title) + '</span><span class="dash-week-course">' + esc(a.subject) + '</span></div>'),
+        ...evts.map(e => '<div class="dash-week-row"><span class="dash-week-dot"></span><span class="dash-week-text">' + esc(e.title) + '</span><span class="dash-week-course">' + esc(e.type || 'Event') + '</span></div>'),
+      ],
+    });
+  }
+  if (!days.length) {
+    el.innerHTML = '<div class="dash-calm">A clear week — nothing due in the next 7 days.</div>';
+    return;
+  }
+  el.innerHTML = days.map(day => '<div class="dash-week-group"><div class="dash-week-day">' + day.label + '</div>' + day.rows.join('') + '</div>').join('');
+}
+
+function gradeBand(score) {
+  if (score == null) return 'neutral';
+  if (score < 70) return 'low';
+  if (score < 85) return 'mid';
+  return 'good';
+}
+
+function renderStanding() {
+  const el = document.getElementById('dashGrades');
+  if (!el) return;
+  const live = [...APP.canvas.grades].sort((a, b) => String(a.courseName || a.courseCode || '').localeCompare(String(b.courseName || b.courseCode || ''), undefined, { sensitivity: 'base' }));
+  if (!live.length) {
+    el.innerHTML = '<div class="dash-calm">No grades yet. Connect Canvas and your course standing will appear here.</div>';
+    return;
+  }
+  const rows = live.slice(0, 5).map((g) => {
+    const band = gradeBand(g.currentScore);
+    const score = g.currentScore == null ? '—' : Math.round(g.currentScore) + '%';
+    return '<div class="dash-grade-row"><span class="dash-grade-course">' + esc(g.courseCode || g.courseName || 'Course') + '</span><span class="dash-grade-name">' + esc(g.courseName || '') + '</span><span class="dash-grade-val ' + band + '">' + score + '</span></div>';
+  }).join('');
+  el.innerHTML = '<div class="dash-grade-head"><span>Course</span><span>Current</span></div>' + rows
+    + (live.length > 5 ? '<div class="dash-calm subtle">' + (live.length - 5) + ' more on the Grades page</div>' : '');
+}
+
+function renderNews() {
+  const el = document.getElementById('dashNews');
+  if (!el) return;
+  const ann = allAnnouncements().slice(0, 2);
+  if (!ann.length) {
+    el.innerHTML = '<div class="dash-calm">No announcements. When instructors post, the latest shows up here.</div>';
+    return;
+  }
+  el.innerHTML = ann.map((a) => {
+    const tier = ANNOUNCE_TIER_META[announcementTier(a)];
+    const externalUrl = safeExternalUrl(a.canvasUrl);
+    const meta = [a.courseName, CanvasAPI.relativeTime(a.postedAt || a.createdAt || '')].filter(Boolean).join(' · ');
+    return '<div class="dash-news-row"><span class="announce-badge mini ' + tier.cls + '">' + tier.label + '</span><div class="dash-news-main"><span class="dash-item-title">' + esc(a.title) + '</span><span class="dash-item-note">' + esc(meta) + '</span></div>'
+      + (externalUrl ? '<a class="dash-item-open" target="_blank" rel="noopener noreferrer" href="' + esc(externalUrl) + '">Open</a>' : '')
+      + '</div>';
+  }).join('');
+}
+
+function formatStudyHours(h) {
+  const total = Math.max(0, Math.round(Number(h) * 60));
+  const hh = Math.floor(total / 60);
+  const mm = total % 60;
+  return hh ? (mm ? hh + 'h ' + mm + 'm' : hh + 'h') : mm + 'm';
+}
+
+function renderStudyStrip() {
+  const line = document.getElementById('dashStudyLine');
+  if (!line) return;
+  const hours = Number(APP.local.studyHours) || 0;
+  const goal = Number(APP.local.studyGoal) || 4;
+  line.textContent = hours > 0
+    ? formatStudyHours(hours) + ' of your ' + formatStudyHours(goal) + ' goal today'
+    : 'Nothing logged today yet — a short session counts.';
 }
 
 function renderDashboard() {
   updateDashboardWelcome();
-  const all = allAssignments();
-  const upcoming = all.filter(a => !a.done && (dueDays(a.due) === null || dueDays(a.due) >= 0)).slice(0, 6);
-  const urgent = all.filter(a => !a.done && (a.priority === 'high' || (dueDays(a.due) !== null && dueDays(a.due) < 0))).slice(0, 6);
-  document.getElementById('dashUpcoming').innerHTML = dashboardFeed(upcoming);
-  document.getElementById('dashOverdue').innerHTML = dashboardFeed(urgent);
-  const grades = [...APP.canvas.grades].sort((a, b) => String(a.courseName || a.courseCode || '').localeCompare(String(b.courseName || b.courseCode || ''), undefined, { sensitivity: 'base' }));
-  document.getElementById('dashGrades').innerHTML = grades.length ? grades.slice(0, 6).map(g => '<div class="feed-item"><div class="feed-info"><div class="feed-title">' + esc(g.courseName || g.courseCode || 'Course') + '</div><div class="feed-meta">' + esc(g.courseCode || '') + '</div></div><div class="grade-val">' + (g.currentScore == null ? '--' : Math.round(g.currentScore) + '%') + '</div></div>').join('') : '<div class="empty-state"><div class="empty-text">No grade data</div></div>';
-  const ann = allAnnouncements().slice(0, 4);
-  document.getElementById('dashAnnouncements').innerHTML = ann.length ? ann.map(a => {
-    const tier = ANNOUNCE_TIER_META[announcementTier(a)];
-    return '<div class="feed-item"><span class="announce-badge mini ' + tier.cls + '">' + tier.label + '</span><div class="feed-info"><div class="feed-title">' + esc(a.title) + '</div><div class="feed-meta">' + esc(a.courseName || a.time || '') + '</div></div></div>';
-  }).join('') : '<div class="empty-state"><div class="empty-text">No announcements</div></div>';
+  renderAttention();
+  renderNextUp();
+  renderWeek();
+  renderStanding();
+  renderNews();
+  renderStudyStrip();
 }
 
 function filterAssign(filter, btn) {

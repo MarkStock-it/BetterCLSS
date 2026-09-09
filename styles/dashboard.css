@@ -96,25 +96,17 @@
   margin-bottom: 22px;
 }
 
-.dashboard-welcome .eyebrow {
-  color: var(--accent);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  margin-bottom: 6px;
-  text-transform: uppercase;
-}
-
 .dashboard-welcome h1 {
-  font-size: clamp(1.65rem, 3vw, 2.35rem);
-  letter-spacing: -0.045em;
-  line-height: 1.05;
+  font-size: clamp(1.5rem, 2.6vw, 1.9rem);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-weight: 650;
 }
 
 .dashboard-welcome p {
   color: var(--text-dim);
   font-size: 0.82rem;
-  margin-top: 7px;
+  margin-top: 6px;
 }
 
 /* ============================================================
@@ -152,90 +144,285 @@
 }
 
 /* ============================================================
-   STAT CARDS
+   DASHBOARD — open composition, hierarchy via typography
+   No nested cards. The attention list is the focal point; every
+   other section is quiet, separated by whitespace and hairlines.
    ============================================================ */
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-bottom: 22px;
+
+.dash-section {
+  margin-top: 2.1rem;
 }
 
-.stat-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px 20px;
-  position: relative;
+.dash-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 0.65rem;
+}
+
+.dash-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+}
+
+.dash-link {
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--accent);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.dash-link:hover { text-decoration: underline; }
+
+/* Tier 1 — the focal point */
+.dash-attention-head {
+  font-size: 1.32rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.75rem;
+}
+
+.dash-attention-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.8rem 0.95rem;
+  border-left: 2px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 62%, transparent);
+  margin-bottom: 6px;
+  transition: border-color 0.15s;
+}
+.dash-attention-item:last-child { margin-bottom: 0; }
+.dash-attention-item.overdue { border-left-color: var(--red); }
+.dash-attention-item.due     { border-left-color: var(--yellow); }
+.dash-attention-item.news    { border-left-color: var(--accent); }
+
+.dash-attention-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dash-item-title {
+  font-size: 0.9rem;
+  font-weight: 560;
+  color: var(--text);
+  white-space: nowrap;
   overflow: hidden;
-  transition: background-color 0.25s ease, border-color 0.25s ease, transform 0.15s;
-}
-.stat-card:hover { transform: translateY(-2px); }
-
-.stats-row .stat-card,
-.dash-grid .card {
-  animation: cardRiseIn 0.45s cubic-bezier(0.22, 0.8, 0.3, 1) both;
-}
-.stats-row .stat-card:nth-child(2),
-.dash-grid .card:nth-child(2) { animation-delay: 55ms; }
-.stats-row .stat-card:nth-child(3),
-.dash-grid .card:nth-child(3) { animation-delay: 110ms; }
-.stats-row .stat-card:nth-child(4),
-.dash-grid .card:nth-child(4) { animation-delay: 165ms; }
-
-@keyframes cardRiseIn {
-  from { opacity: 0; transform: translateY(13px) scale(0.985); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  text-overflow: ellipsis;
 }
 
-[data-theme="light"] .stat-card {
-  box-shadow: 0 2px 14px rgba(20, 28, 70, 0.07);
+.dash-item-note {
+  font-size: 0.75rem;
+  color: var(--text-dim);
 }
 
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  border-radius: 14px 14px 0 0;
-}
-.stat-card.accent::before { background: linear-gradient(90deg, var(--accent), #8fa8ff); }
-.stat-card.red::before    { background: linear-gradient(90deg, var(--red), #ff8f9a); }
-.stat-card.green::before  { background: linear-gradient(90deg, var(--green), #7aefd0); }
-.stat-card.yellow::before { background: linear-gradient(90deg, var(--yellow), #ffd68a); }
-
-.stat-label {
+.dash-item-open {
+  flex-shrink: 0;
   font-size: 0.72rem;
   font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 4px 2px;
+}
+.dash-item-open:hover { text-decoration: underline; }
+
+/* Tier 2 — next up, grouped by day */
+.dash-day-group {
+  margin-bottom: 0.35rem;
+}
+.dash-day-group:last-child { margin-bottom: 0; }
+
+.dash-day-label {
+  font-size: 0.7rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
-  margin-bottom: 6px;
+  padding: 0.5rem 0 0.3rem;
 }
 
-.stat-value {
-  font-family: var(--font-display);
-  font-size: 2.1rem;
-  line-height: 1;
+.dash-work-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.65rem 0.95rem 0.65rem 0;
+  border-bottom: 1px solid var(--border);
 }
-.stat-card.accent .stat-value { color: var(--accent); }
-.stat-card.red .stat-value    { color: var(--red); }
-.stat-card.green .stat-value  { color: var(--green); }
-.stat-card.yellow .stat-value { color: var(--yellow); }
+.dash-work-row:last-child { border-bottom: none; }
 
-.stat-sub {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  margin-top: 4px;
+.dash-work-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-/* ============================================================
-   DASHBOARD GRID
-   ============================================================ */
-.dash-grid {
+/* Tier 3 — context, two quiet columns divided by a hairline */
+.dash-context {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 0;
+  margin-top: 2.1rem;
+}
+
+.dash-context > .dash-section {
+  margin-top: 0;
+}
+
+.dash-context > .dash-section:first-child {
+  padding-right: 1.6rem;
+}
+
+.dash-context > .dash-section:last-child {
+  padding-left: 1.6rem;
+  border-left: 1px solid var(--border);
+}
+
+.dash-week-group { margin-bottom: 0.6rem; }
+.dash-week-group:last-child { margin-bottom: 0; }
+
+.dash-week-day {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 0.4rem 0 0.25rem;
+}
+
+.dash-week-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.4rem 0;
+}
+
+.dash-week-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--yellow);
+}
+
+.dash-week-text {
+  font-size: 0.82rem;
+  color: var(--text);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-week-course {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* Grades as a table, not cards */
+.dash-grade-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 0.3rem 0;
+}
+
+.dash-grade-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.dash-grade-row:last-of-type { border-bottom: none; }
+
+.dash-grade-course {
+  font-size: 0.82rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.dash-grade-name {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.dash-grade-val {
+  font-size: 0.85rem;
+  font-weight: 650;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.dash-grade-val.good    { color: var(--green); }
+.dash-grade-val.mid     { color: var(--yellow); }
+.dash-grade-val.low     { color: var(--red); }
+.dash-grade-val.neutral { color: var(--text-muted); }
+
+.dash-calm.subtle { font-size: 0.72rem; padding-top: 0.5rem; padding-bottom: 0; }
+
+/* Announcements — quiet rows, not the feed's big cards */
+.dash-news-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.dash-news-row:last-child { border-bottom: none; }
+
+.dash-news-row .announce-badge.mini { flex-shrink: 0; }
+
+.dash-news-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Empty states — honest copy, no fake charts */
+.dash-calm {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.55;
+  padding: 0.9rem 0;
+  max-width: 52ch;
+}
+
+/* Tier 4 — study entry point, one hairline and one button */
+.dash-study {
+  margin-top: 2.4rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dash-study-line {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-top: 3px;
 }
 
 /* ============================================================

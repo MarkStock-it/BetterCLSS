@@ -63,7 +63,7 @@
 
       <!-- Sidebar nav -->
       <nav class="sidenav">
-        <div class="sidenav-section-label">Navigate</div>
+        <div class="sidenav-section-label">Overview</div>
         <div class="nav-tab active" data-page="dashboard" onclick="switchPage('dashboard', this)">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
           <span>Dashboard</span>
@@ -73,6 +73,7 @@
           <span>Assignments</span>
           <span class="tab-count" id="badgePending">0</span>
         </div>
+        <div class="sidenav-section-label">Academics</div>
         <div class="nav-tab" data-page="calendar" onclick="switchPage('calendar', this)">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
           <span>Calendar</span>
@@ -87,10 +88,12 @@
           <span class="tab-count alert" id="badgeAnnounce">0</span>
         </div>
         <div class="sidenav-sep"></div>
+        <div class="sidenav-section-label">Study</div>
         <div class="nav-tab" data-page="study" onclick="switchPage('study', this)">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
           <span>Study Area</span>
         </div>
+        <div class="sidenav-section-label">Other</div>
         <div class="nav-tab" data-page="resources" onclick="switchPage('resources', this)">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           <span>Links</span>
@@ -129,7 +132,6 @@
       <div class="page active" id="page-dashboard">
         <div class="dashboard-welcome">
           <div>
-            <div class="eyebrow">Student overview</div>
             <h1 id="dashboardGreeting">Your dashboard</h1>
             <p id="dashboardDate">Everything important, in one place.</p>
           </div>
@@ -148,37 +150,56 @@
           </div>
         </div>
 
-        <div class="stats-row">
-          <div class="stat-card accent"><div class="stat-label">Pending</div><div class="stat-value" id="statPending">0</div><div class="stat-sub">assignments</div></div>
-          <div class="stat-card red"><div class="stat-label">Overdue</div><div class="stat-value" id="statOverdue">0</div><div class="stat-sub">need attention</div></div>
-          <div class="stat-card green"><div class="stat-label">Submitted</div><div class="stat-value" id="statDone">0</div><div class="stat-sub">assignments</div></div>
-          <div class="stat-card yellow"><div class="stat-label">Announcements</div><div class="stat-value" id="statAnnounce">0</div><div class="stat-sub">unread</div></div>
-        </div>
+        <!-- Tier 1: what needs attention right now -->
+        <section class="dash-attention" aria-labelledby="dashAttentionHead">
+          <h2 class="dash-attention-head" id="dashAttentionHead">Needs your attention</h2>
+          <div id="dashAttention"></div>
+        </section>
 
-        <div class="dash-grid">
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">Upcoming Deadlines</div>
-              <button class="btn btn-sm btn-secondary" onclick="syncCanvas()" id="syncBtn">Sync</button>
+        <!-- Tier 2: upcoming work, the primary workspace -->
+        <section class="dash-section" aria-labelledby="dashNextHead">
+          <div class="dash-section-head">
+            <h2 class="dash-label" id="dashNextHead">Next up</h2>
+            <button class="dash-link" onclick="switchPage('assignments', document.querySelector('[data-page=\"assignments\"]'))">All assignments</button>
+          </div>
+          <div id="dashNext"></div>
+        </section>
+
+        <!-- Tier 3: context — schedule + standing -->
+        <div class="dash-context">
+          <section class="dash-section" aria-labelledby="dashWeekHead">
+            <div class="dash-section-head">
+              <h2 class="dash-label" id="dashWeekHead">Your week</h2>
+              <button class="dash-link" onclick="switchPage('calendar', document.querySelector('[data-page=\"calendar\"]'))">Calendar</button>
             </div>
-            <div id="dashUpcoming"></div>
-          </div>
-
-          <div class="card">
-            <div class="card-header"><div class="card-title">Overdue / High Priority</div></div>
-            <div id="dashOverdue"></div>
-          </div>
-
-          <div class="card">
-            <div class="card-header"><div class="card-title">Current Grades</div></div>
+            <div id="dashWeek"></div>
+          </section>
+          <section class="dash-section" aria-labelledby="dashGradesHead">
+            <div class="dash-section-head">
+              <h2 class="dash-label" id="dashGradesHead">Where you stand</h2>
+              <button class="dash-link" onclick="switchPage('grades', document.querySelector('[data-page=\"grades\"]'))">Grades</button>
+            </div>
             <div id="dashGrades"></div>
-          </div>
-
-          <div class="card">
-            <div class="card-header"><div class="card-title">Latest Announcements</div></div>
-            <div id="dashAnnouncements"></div>
-          </div>
+          </section>
         </div>
+
+        <!-- Tier 3/4: announcements, deliberately small -->
+        <section class="dash-section" aria-labelledby="dashNewsHead">
+          <div class="dash-section-head">
+            <h2 class="dash-label" id="dashNewsHead">Recently posted</h2>
+            <button class="dash-link" onclick="switchPage('announcements', document.querySelector('[data-page=\"announcements\"]'))">View all</button>
+          </div>
+          <div id="dashNews"></div>
+        </section>
+
+        <!-- Tier 4: study entry point -->
+        <section class="dash-study" aria-labelledby="dashStudyHead">
+          <div class="dash-study-left">
+            <h2 class="dash-label" id="dashStudyHead">Study</h2>
+            <p class="dash-study-line" id="dashStudyLine">Today's study — 0h of your goal</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="switchPage('study', document.querySelector('[data-page=\"study\"]'))">Continue studying</button>
+        </section>
       </div>
 
       <div class="page" id="page-assignments">
