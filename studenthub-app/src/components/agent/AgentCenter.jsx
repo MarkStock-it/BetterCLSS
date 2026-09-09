@@ -124,10 +124,12 @@ export function AgentCenter({ agentSettings }) {
   const handleExecute = useCallback(async (jobId) => {
     try {
       await executeAgentJob(jobId);
+      setError(null);
       // Reload jobs to see updated state
       await loadJobs();
-    } catch {
-      // Execution failed silently — job events will show the error
+    } catch (err) {
+      // Surface bring-your-own-key problems (e.g. missing API key) inline.
+      setError(err?.message || 'Could not execute the agent job');
     }
   }, [loadJobs]);
 

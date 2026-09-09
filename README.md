@@ -89,11 +89,6 @@ CANVAS_DOMAIN=usc.instructure.com
 CANVAS_TOKEN=
 PORT=5500
 MAX_OVERDUE_DAYS=30
-OPENCLAUDE_BASE_URL=http://127.0.0.1:1337/v1
-OPENCLAUDE_MODEL=qwen2.5-coder:7b
-OPENCLAUDE_API_KEY=
-AI_AUTOSTART_OLLAMA=1
-AI_MODEL_KEEP_ALIVE=0m
 ```
 
 Do not commit `.env`.
@@ -124,21 +119,13 @@ Token is saved in that user's browser storage.
 - Backend: Node.js HTTP server (`server.js`)
 - Canvas API: proxied via backend routes under `/api/canvas/*`
 
-## AI Chatbox (OpenClaude-Compatible)
+## AI Chatbox (Bring-Your-Own-Key)
 
 A small AI chatbox is built into the bottom-right corner of the dashboard.
 
 - It calls backend route: `/api/assistant/chat`
-- Backend forwards to an OpenAI-compatible endpoint (OpenClaude setup style)
-- It includes live dashboard context (due soon, grades, page state) in prompts
+- AI is **bring-your-own-key (BYOK)**: each user pastes their own **Gemini** or **Groq** API key in the app Settings (gear icon)
+- Keys are stored only in the user's browser and sent per request via `x-ai-key` (Gemini) / `x-groq-key` (Groq) headers
+- The backend never stores or falls back to a shared server-side AI key
 
-To use it:
-
-1. Run a local OpenAI-compatible model endpoint (for example, Atomic Chat / Ollama / LM Studio style endpoint)
-2. Set `OPENCLAUDE_BASE_URL` and `OPENCLAUDE_MODEL` in `.env`
-3. Restart `npm run dev`
-
-Efficiency options:
-
-- `AI_AUTOSTART_OLLAMA=1`: backend will try to start Ollama on first prompt if local
-- `AI_MODEL_KEEP_ALIVE=0m`: unload model after each response so idle periods use less memory
+The same BYOK keys power the mobile StudentHub AI assistant and the Agentic Helper (agent jobs).

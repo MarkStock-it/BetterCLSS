@@ -41,13 +41,14 @@ function createAgentRoutes({
 }) {
   return async function handleAgentRoute(req, res, pathname) {
     // Bring-your-own-key: read the per-user AI keys sent by the client
-    // (mirrors the assistant `x-ai-key` flow). Keys are optional — when
-    // absent, the server falls back to its own configured provider.
+    // (mirrors the assistant `x-ai-key` flow). Jobs run only with the user's
+    // own keys — there is no server-side provider fallback.
     const aiKeys = (() => {
       const gemini = String(req.headers['x-ai-key'] || '').trim();
       const groq = String(req.headers['x-groq-key'] || '').trim();
       return { gemini: gemini || undefined, groq: groq || undefined };
     })();
+    const hasAiKey = Boolean(aiKeys.gemini || aiKeys.groq);
 
     // GET /api/agent/config — public config, no auth required
     if (pathname === '/api/agent/config' && req.method === 'GET') {
@@ -462,6 +463,16 @@ function createAgentRoutes({
           return true;
         }
 
+        // BYOK guard: without a user key there is no provider to run the job.
+        if (!hasAiKey) {
+          json(res, 400, {
+            error: 'no_ai_key',
+            message: 'No AI provider key provided.',
+            hint: 'Add your Gemini or Groq API key in Settings (bring-your-own-key). The backend does not run agent jobs with a shared key.',
+          });
+          return true;
+        }
+
         // Approve
         foundJob.approval = approveRequest(foundJob.approval, userId);
         agentJobService.persistJob(userId, foundJob);
@@ -619,6 +630,16 @@ function createAgentRoutes({
           return true;
         }
         const body = await parseRequestBody(req).catch(() => ({}));
+
+        // BYOK guard: without a user key there is no provider to run the job.
+        if (!hasAiKey) {
+          json(res, 400, {
+            error: 'no_ai_key',
+            message: 'No AI provider key provided.',
+            hint: 'Add your Gemini or Groq API key in Settings (bring-your-own-key). The backend does not run agent jobs with a shared key.',
+          });
+          return true;
+        }
 
         // Get canvas auth for tool execution
         let canvasAuth = null;

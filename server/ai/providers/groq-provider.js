@@ -11,8 +11,7 @@
  * be swapped in / routed without touching the orchestrator.
  *
  * Security:
- *   - API key is server-side only
- *   - Never exposed to frontend
+ *   - Bring-your-own-key: the API key is supplied per request by the user
  *   - Never logged
  */
 
@@ -24,7 +23,7 @@ const { validateAgainstSchema } = require('./gemini-provider');
  * Create a Groq AI Provider.
  *
  * @param {object} config
- * @param {string} config.apiKey - Groq API key (server-side only)
+ * @param {string} [config.apiKey] - Ignored: Groq is bring-your-own-key (per-request)
  * @param {string} [config.model] - Model name (default: llama-3.3-70b-versatile)
  * @param {number} [config.timeoutMs] - Request timeout (default: 60000)
  * @param {number} [config.maxOutputTokens] - Max output tokens
@@ -37,21 +36,21 @@ function createGroqProvider(config) {
 
   const API_BASE = 'https://api.groq.com/openai/v1/chat/completions';
   const model = config.model || 'llama-3.3-70b-versatile';
-  const apiKey = config.apiKey || '';
   const timeoutMs = config.timeoutMs || 60000;
   const maxOutputTokens = config.maxOutputTokens || 8192;
   const temperature = config.temperature || 0.3;
 
   /**
-   * Resolve the effective API key for a request: prefer the per-user key sent
-   * with the request (BYOK), falling back to the configured key.
+   * Resolve the effective API key for a request. Bring-your-own-key: only the
+   * per-user key sent with the request is honored — there is no server-side
+   * fallback key.
    * @param {object} request - AIRequest (may carry `aiKeys.groq` or `apiKey`)
    * @returns {string}
    */
   function resolveKey(request) {
     return (request && request.aiKeys && request.aiKeys.groq)
       || (request && request.apiKey)
-      || apiKey;
+      || '';
   }
 
   /**

@@ -1,67 +1,4 @@
-const { spawn } = require('child_process');
-const { URL } = require('url');
-
 function createAssistantService(config) {
-  let ollamaBootPromise = null;
-
-  function isLocalOllamaBaseUrl(baseUrl) {
-    try {
-      const url = new URL(baseUrl);
-      return (
-        (url.hostname === '127.0.0.1' || url.hostname === 'localhost')
-        && String(url.port || '11434') === '11434'
-      );
-    } catch {
-      return false;
-    }
-  }
-
-  async function pingOllama(timeoutMs = 1200) {
-    const baseUrl = config.openClaudeBaseUrl.replace(/\/v1$/i, '');
-    const response = await fetch(`${baseUrl}/api/tags`, {
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    return response.ok;
-  }
-
-  async function ensureOllamaRunning() {
-    if (!config.aiAutostartOllama || !isLocalOllamaBaseUrl(config.openClaudeBaseUrl)) return;
-
-    try {
-      if (await pingOllama()) return;
-    } catch {
-      // Continue to the local autostart flow.
-    }
-
-    if (!ollamaBootPromise) {
-      ollamaBootPromise = (async () => {
-        try {
-          const child = spawn('ollama', ['serve'], {
-            detached: true,
-            stdio: 'ignore',
-          });
-          child.unref();
-        } catch {
-          // The availability check below reports a failed spawn consistently.
-        }
-
-        for (let attempt = 0; attempt < 16; attempt += 1) {
-          try {
-            if (await pingOllama(1000)) return;
-          } catch {
-            // Retry while the local model server boots.
-          }
-          await new Promise((resolve) => setTimeout(resolve, 500));
-        }
-        throw new Error('OLLAMA_NOT_AVAILABLE');
-      })().finally(() => {
-        ollamaBootPromise = null;
-      });
-    }
-
-    await ollamaBootPromise;
-  }
-
   function summarizeDashboardContext(context) {
     const safe = context && typeof context === 'object' ? context : {};
     const totals = safe.totals && typeof safe.totals === 'object' ? safe.totals : {};
@@ -164,18 +101,13 @@ function createAssistantService(config) {
     const systemPrompt = buildSystemPrompt();
     const userMessage = String(message || '').slice(0, 4000);
     const fullSystem = `${systemPrompt}\n\nDashboard summary:\n${contextSummary}\n\nDashboard context JSON: ${JSON.stringify(context).slice(0, 12000)}`;
-    const payload = {
-      model: config.openClaudeModel,
-      temperature: 0.4,
-      max_tokens: 700,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'system', content: `Dashboard summary:\n${contextSummary}` },
-        { role: 'system', content: `Dashboard context JSON: ${JSON.stringify(context).slice(0, 12000)}` },
-        ...safeHistory,
-        { role: 'user', content: userMessage },
-      ],
-    };
+
+    // Bring-your-own-key (BYOK): chat only ever uses the user's own API keys,
+    // saved in Settings and sent per request as `x-ai-key` (Gemini) or
+    // `x-groq-key` (Groq). The server never falls back to a shared provider.
+    if (!callerApiKey && !callerGroqKey) {
+      throw new Error('NO_AI_KEY_CONFIGURED');
+    }
 
     if (callerApiKey) {
       const response = await fetch(
@@ -249,66 +181,6 @@ function createAssistantService(config) {
       if (!content) throw new Error('AI_EMPTY');
       return parseAssistantResult(content);
     }
-
-    // No user-supplied key. Only attempt a server-side fallback if the server
-    // is actually configured with a reachable provider (an OpenAI-compatible
-    // endpoint with a key, or a local Ollama that autostarts). The deployed
-    // config is bring-your-own-key with no server provider and Ollama
-    // autostart disabled, so the default localhost URL is never reachable —
-    // surface a clear error instead of a confusing "fetch failed".
-    const hasServerFallback = Boolean(
-      config.openClaudeApiKey
-      || (config.aiAutostartOllama && isLocalOllamaBaseUrl(config.openClaudeBaseUrl))
-    );
-    if (!hasServerFallback) throw new Error('NO_AI_KEY_CONFIGURED');
-
-    await ensureOllamaRunning();
-    const headers = {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    };
-    if (config.openClaudeApiKey) headers.Authorization = `Bearer ${config.openClaudeApiKey}`;
-
-    const response = await fetch(`${config.openClaudeBaseUrl}/chat/completions`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload),
-    });
-
-    if (response.status === 404) {
-      const apiBase = config.openClaudeBaseUrl.replace(/\/v1$/i, '');
-      const nativeResponse = await fetch(`${apiBase}/api/chat`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          model: config.openClaudeModel,
-          messages: payload.messages,
-          stream: false,
-          keep_alive: config.aiModelKeepAlive,
-          options: {
-            temperature: payload.temperature,
-            num_predict: payload.max_tokens,
-          },
-        }),
-      });
-      if (!nativeResponse.ok) {
-        const detail = await nativeResponse.text().catch(() => '');
-        throw new Error(`AI_HTTP_${nativeResponse.status}${detail ? `:${detail.slice(0, 300)}` : ''}`);
-      }
-      const data = await nativeResponse.json();
-      const content = data?.message?.content;
-      if (!content) throw new Error('AI_EMPTY');
-      return parseAssistantResult(content);
-    }
-
-    if (!response.ok) {
-      const detail = await response.text().catch(() => '');
-      throw new Error(`AI_HTTP_${response.status}${detail ? `:${detail.slice(0, 300)}` : ''}`);
-    }
-    const data = await response.json();
-    const content = data?.choices?.[0]?.message?.content;
-    if (!content) throw new Error('AI_EMPTY');
-    return parseAssistantResult(content);
   }
 
   function normalizeError(error) {
@@ -320,7 +192,7 @@ function createAssistantService(config) {
         status: 400,
         code: 'no_ai_key',
         message: 'No AI provider key is configured for chat.',
-        hint: 'Add a Gemini or Groq API key in Settings, or set a server-side AI provider key. The deployed backend is bring-your-own-key.',
+        hint: 'This app is bring-your-own-key: paste your Gemini or Groq API key in Settings (gear icon). The backend does not use server-side AI keys.',
       };
     }
 
@@ -333,18 +205,10 @@ function createAssistantService(config) {
         status: 502,
         code: 'ai_provider_unreachable',
         message: 'The AI provider is unreachable.',
-        hint: 'No AI key is configured for chat and the server cannot reach its default AI endpoint. Add a Gemini or Groq API key in Settings.',
+        hint: 'Your Gemini or Groq key is set but the provider could not be reached. Check your connection or paste a fresh key in Settings (gear icon).',
       };
     }
 
-    if (rawMessage === 'OLLAMA_NOT_AVAILABLE') {
-      return {
-        status: 502,
-        code: 'ollama_unavailable',
-        message: 'Local Ollama is not reachable.',
-        hint: 'Start Ollama or set OPENCLAUDE_BASE_URL to a reachable OpenAI-compatible endpoint.',
-      };
-    }
     if (rawMessage === 'AI_EMPTY') {
       return {
         status: 502,
@@ -375,8 +239,8 @@ function createAssistantService(config) {
         return {
           status: 401,
           code: 'ai_auth_error',
-          message: 'AI API key is invalid or expired.',
-          hint: 'Set a fresh key in assistant settings (gear icon) or update OPENCLAUDE_API_KEY in backend environment variables.',
+          message: 'Your AI API key is invalid or expired.',
+          hint: 'Paste a fresh Gemini or Groq key in assistant settings (gear icon). Keys are stored on this device only.',
           providerStatus,
           detail: detailSingleLine || undefined,
         };
@@ -396,7 +260,7 @@ function createAssistantService(config) {
           status: 502,
           code: 'ai_endpoint_not_found',
           message: 'AI endpoint was not found.',
-          hint: 'Verify OPENCLAUDE_BASE_URL includes the correct /v1 path for your provider.',
+          hint: 'The AI provider rejected the request. Check that your key in Settings matches the provider (Gemini or Groq) and try again.',
           providerStatus,
           detail: detailSingleLine || undefined,
         };
@@ -405,7 +269,7 @@ function createAssistantService(config) {
         status: 502,
         code: 'ai_provider_http_error',
         message: `AI provider returned HTTP ${providerStatus}.`,
-        hint: 'Check provider health, model name, backend URL, and deployed environment variables.',
+        hint: 'The AI provider reported an error. Check your key in Settings and try again, or switch providers.',
         providerStatus,
         detail: detailSingleLine || undefined,
       };

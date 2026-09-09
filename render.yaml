@@ -13,10 +13,7 @@ pservices:
         value: usc.instructure.com
       - key: MAX_OVERDUE_DAYS
         value: 20
-      - key: AI_AUTOSTART_OLLAMA
-        value: 0
-      - key: AI_MODEL_KEEP_ALIVE
-        value: 0m
-      # AI providers are bring-your-own-key (BYOK): users enter their own
-      # Groq/Gemini API keys in the app Settings. No provider keys live in the
-      # environment, so one user's quota can never be consumed by others.
+      # AI is bring-your-own-key (BYOK): users enter their own Groq/Gemini API
+      # keys in the app Settings and they are sent per request. No AI provider
+      # keys live in the environment, so one user's quota can never be consumed
+      # by others, and the backend never falls back to a shared key.

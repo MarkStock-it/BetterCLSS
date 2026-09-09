@@ -556,8 +556,8 @@
         <button class="assistant-close" onclick="toggleAssistant(false)">×</button>
       </div>
       <div class="assistant-key-row" id="assistantKeyRow" style="display:none">
-        <input type="password" id="aiKeyInput" placeholder="Paste your Gemini API key (optional)" autocomplete="off" oninput="saveAiApiKey()" />
-        <span class="assistant-key-hint">Stored locally on this device only. Leave blank to use the shared BetterCLSS provider.</span>
+        <input type="password" id="aiKeyInput" placeholder="Paste your Gemini API key (required)" autocomplete="off" oninput="saveAiApiKey()" />
+        <span class="assistant-key-hint">Bring your own key: stored on this device only and sent only with your requests. A Groq key can also be set in StudentHub settings — there is no shared server key.</span>
       </div>
       <div class="assistant-messages" id="assistantMessages"></div>
       <div class="assistant-input-row">

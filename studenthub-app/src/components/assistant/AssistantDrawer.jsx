@@ -123,7 +123,9 @@ export function AssistantDrawer({ open, onClose, data, assignments, onCreateDeck
     } catch (error) {
       setMessages((current) => [...current, {
         role: 'assistant',
-        content: `I could not reach the BetterCLSS AI backend. ${error.message || 'Please try again.'}`
+        content: error.message
+          ? `AI request failed: ${error.message}`
+          : 'AI request failed. Make sure your Gemini or Groq API key is saved in Settings (bring-your-own-key), then try again.'
       }]);
     } finally {
       setSending(false);

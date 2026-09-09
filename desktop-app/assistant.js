@@ -109,7 +109,7 @@ function buildAssistantContext() {
     activePage: (document.querySelector('.page.active') || {}).id || 'page-dashboard',
     canvasConnected: !!APP.canvas.connected,
     canvasSyncing: !!APP.canvas.syncing,
-    aiKeyMode: getAiApiKey() ? 'user' : 'shared',
+    aiKeyMode: getAiApiKey() ? 'user' : 'none',
     totals: {
       assignmentsTotal: all.length,
       pending: pending.length,
@@ -160,8 +160,14 @@ async function sendAssistantMessage() {
 
   try {
     const history = APP.ai.messages.slice(-12).map((m) => ({ role: m.role, content: m.content }));
-    const aiKey = getAiApiKey();
     const reqHeaders = { 'Content-Type': 'application/json' };
+    // Bring-your-own-key: send the user's own Gemini and Groq keys per request.
+    // The backend does not fall back to any shared server-side provider.
+    try {
+      const groqKey = localStorage.getItem('bclss_groq_key') || '';
+      if (groqKey) reqHeaders['x-groq-key'] = groqKey;
+    } catch (_) {}
+    const aiKey = getAiApiKey();
     if (aiKey) reqHeaders['x-ai-key'] = aiKey;
     const response = await fetch(CanvasAPI.apiUrl('/api/assistant/chat'), {
       method: 'POST',
@@ -175,17 +181,23 @@ async function sendAssistantMessage() {
 
     if (!response.ok) {
       let detail = '';
+      let hint = '';
       try {
         const err = await response.json();
         detail = err.message || err.error || '';
+        hint = err.hint || '';
       } catch (_) {}
-      throw new Error(detail || ('HTTP ' + response.status));
+      if (response.status === 400) {
+        // BYOK: no usable key was sent — tell the user exactly how to fix it.
+        throw new Error(detail || 'No AI API key found. Open the assistant settings (gear icon) and paste your Gemini or Groq API key.');
+      }
+      throw new Error([detail, hint].filter(Boolean).join(' — ') || ('HTTP ' + response.status));
     }
     const data = await response.json();
     addAssistantMessage('assistant', data.reply || 'No reply from model.');
   } catch (err) {
     const text = err && err.message ? err.message : 'Unknown assistant error';
-    addAssistantMessage('assistant', 'AI backend error: ' + text + '. Check your backend URL and deployed environment variables.');
+    addAssistantMessage('assistant', 'AI request failed: ' + text + '. If the problem persists, check your API key in assistant settings (gear icon) or try a different provider key.');
   } finally {
     APP.ai.sending = false;
     if (btn) btn.textContent = 'Send';

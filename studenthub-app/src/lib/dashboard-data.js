@@ -423,6 +423,7 @@ export async function approveAgentRequest(approvalId) {
         'Content-Type': 'application/json',
         'x-canvas-token': token,
         'x-canvas-domain': domain,
+        ...getAiKeyHeaders(),
       },
       body: JSON.stringify({}),
     });
@@ -499,8 +500,8 @@ export async function downloadAgentArtifact(artifactId) {
 /**
  * Build per-user AI key headers (bring-your-own-key).
  * The user's Gemini key goes as `x-ai-key` (matching the assistant flow),
- * and their Groq key as `x-groq-key`. Empty keys are omitted so the server
- * falls back to its own configuration.
+ * and their Groq key as `x-groq-key`. Jobs run only with these user keys —
+ * the server has no shared fallback provider.
  */
 function getAiKeyHeaders() {
   const headers = {};
@@ -560,10 +561,20 @@ export async function executeAgentJob(jobId) {
       },
       body: JSON.stringify({}),
     });
-    if (!res.ok) return null;
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      // Surface BYOK problems (e.g. missing key) instead of failing silently.
+      const reason = data.hint || data.message || '';
+      if (reason) {
+        const error = new Error(reason);
+        error.fromServer = true;
+        throw error;
+      }
+      return null;
+    }
     return data;
-  } catch {
+  } catch (error) {
+    if (error && error.fromServer) throw error;
     return null;
   }
 }

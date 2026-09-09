@@ -6,8 +6,7 @@
  * Implements the AI Provider interface for use by Agentic Helper.
  *
  * Security:
- *   - API key is server-side only
- *   - Never exposed to frontend
+ *   - Bring-your-own-key: the API key is supplied per request by the user
  *   - Never logged
  */
 
@@ -18,7 +17,7 @@ const { AIError, AI_ERROR_CATEGORIES, fromGeminiResponse, fromNetworkError } = r
  * Create a Gemini AI Provider.
  *
  * @param {object} config
- * @param {string} config.apiKey - Gemini API key (server-side only)
+ * @param {string} [config.apiKey] - Ignored: Gemini is bring-your-own-key (per-request)
  * @param {string} [config.model] - Model name (default: gemini-2.0-flash)
  * @param {number} [config.timeoutMs] - Request timeout (default: 60000)
  * @param {number} [config.maxOutputTokens] - Max output tokens
@@ -31,21 +30,21 @@ function createGeminiProvider(config) {
 
   const API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
   const model = config.model || 'gemini-2.0-flash';
-  const apiKey = config.apiKey || '';
   const timeoutMs = config.timeoutMs || 60000;
   const maxOutputTokens = config.maxOutputTokens || 8192;
   const temperature = config.temperature || 0.4;
 
   /**
-   * Resolve the effective API key for a request: prefer the per-user key sent
-   * with the request (BYOK), falling back to the configured key.
+   * Resolve the effective API key for a request. Bring-your-own-key: only the
+   * per-user key sent with the request is honored — there is no server-side
+   * fallback key.
    * @param {object} request - AIRequest (may carry `aiKeys.gemini` or `apiKey`)
    * @returns {string}
    */
   function resolveKey(request) {
     return (request && request.aiKeys && request.aiKeys.gemini)
       || (request && request.apiKey)
-      || apiKey;
+      || '';
   }
 
   /**

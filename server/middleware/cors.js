@@ -13,7 +13,7 @@ function createCorsMiddleware(corsAllowOrigin) {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': corsAllowOrigin,
       'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Accept, x-canvas-token, x-canvas-domain, x-ai-key, x-admin-key',
+      'Access-Control-Allow-Headers': 'Content-Type, Accept, x-canvas-token, x-canvas-domain, x-ai-key, x-groq-key, x-admin-key',
       'Access-Control-Max-Age': '86400',
       Vary: 'Origin',
     });
