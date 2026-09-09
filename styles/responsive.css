@@ -63,6 +63,11 @@
     font-weight: 800;
   }
   .sidebar { display: none; }
+  /* Grades: keep GPA dominant, rows thumb-friendly */
+  .gcourse-row { padding: 0.95rem 0; }
+  .gcourse-row .gcourse-pct { min-height: 44px; display: inline-flex; align-items: center; }
+  .gcourse-detail { padding-left: 0.8rem; }
+  .gactivity-row { padding: 0.8rem 0; }
   /* Dashboard collapses to a single narrative column; attention first */
   .dash-context {
     grid-template-columns: 1fr;
@@ -205,6 +210,11 @@
     padding: 20px;
     border-radius: 16px;
   }
+  .gpa-standing { padding: 1.4rem 0 1.6rem; }
+  .gpa-value { font-size: 2.5rem; }
+  .gpa-meta { font-size: 0.78rem; }
+  .gactivity-side { align-items: flex-end; }
+  .gpa-calm .btn { min-height: 44px; }
   .dash-grade-name { display: none; }
   .feed-item { padding: 13px 0; }
   .section-header {
@@ -288,6 +298,8 @@
     overflow-x: auto;
     white-space: nowrap;
   }
+  .gcourse-detail { margin-bottom: 0.9rem; }
+  .gpa-calm { padding: 0.9rem 0; }
   /* Announcements feed: single column, thumb-friendly, still scannable */
   .announce-card {
     padding: 1rem;

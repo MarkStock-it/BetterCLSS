@@ -393,17 +393,258 @@ function submitEvent() {
 
 function deleteEvent(id) { APP.local.events = APP.local.events.filter(e => e.id !== id); save(); renderCalendar(); }
 
+// ─── Grades: academic performance workspace ──────────────────────
+// Hierarchy: (1) overall standing, (2) per-course performance with
+// expandable evidence, (3) recent activity, (4) full history.
+// No trend arrows are shown: BetterCLSS keeps no grade snapshots,
+// so any trend would be invented data.
+
+function percentFromParts(score, total) {
+  const s = Number(score);
+  const t = Number(total);
+  if (!Number.isFinite(s) || !Number.isFinite(t) || t <= 0) return null;
+  return (s / t) * 100;
+}
+
+function computeStanding() {
+  const scored = APP.canvas.grades.filter(g => g.currentScore != null);
+  const hasUnits = APP.canvas.courses.length > 0 && APP.canvas.courses.every(c => c.units != null);
+  return {
+    gpa: scored.length ? scored.reduce((sum, g) => sum + Number(g.currentScore), 0) / scored.length : null,
+    scoredCount: scored.length,
+    courseCount: APP.canvas.grades.length || APP.canvas.courses.length,
+    hasUnits,
+    unitCount: hasUnits ? APP.canvas.courses.reduce((sum, c) => sum + (Number(c.units) || 0), 0) : 0,
+  };
+}
+
+function renderGpaStanding() {
+  const el = document.getElementById('gpaStanding');
+  if (!el) return;
+  if (APP.canvas.syncing && !APP.canvas.grades.length && !APP.canvas.courses.length) {
+    el.innerHTML = '<div class="gpa-skeleton" aria-hidden="true"></div><div class="gpa-skeleton-line" aria-hidden="true"></div>';
+    return;
+  }
+  if (!APP.canvas.connected && !APP.canvas.grades.length) {
+    el.innerHTML = '<div class="gpa-calm"><div class="gpa-calm-title">No grades yet</div><p>Your grades will appear here once Canvas has synced your courses.</p><button class="btn btn-secondary btn-sm" onclick="showCanvasSetup()">Connect Canvas</button></div>';
+    return;
+  }
+  const standing = computeStanding();
+  if (!standing.scoredCount) {
+    el.innerHTML = '<div class="gpa-calm"><div class="gpa-calm-title">' + standing.courseCount + ' course' + (standing.courseCount === 1 ? '' : 's') + ' synced</div><p>Canvas has not published scores yet. Your average will appear here as soon as grading starts.</p></div>';
+    return;
+  }
+  let meta = standing.scoredCount + ' of ' + (standing.courseCount || standing.scoredCount) + ' courses currently graded'
+    + (standing.hasUnits ? ' · ' + standing.unitCount + ' units' : '');
+  if (standing.courseCount > standing.scoredCount) {
+    meta += '<span class="gpa-meta-note">' + (standing.courseCount - standing.scoredCount) + ' course' + (standing.courseCount - standing.scoredCount === 1 ? ' has' : 's have') + ' no posted score yet</span>';
+  }
+  el.innerHTML = '<div class="gpa-value">' + standing.gpa.toFixed(2) + '</div><div class="gpa-caption">Current average</div><div class="gpa-meta">' + meta + '</div>';
+}
+
+function coursesForGrades() {
+  const list = [];
+  const indexByKey = {};
+  APP.canvas.grades.forEach((g) => {
+    const row = { courseId: g.courseId ?? g.id ?? null, courseName: g.courseName || g.courseCode || '', courseCode: g.courseCode || null, currentScore: g.currentScore, currentGrade: g.currentGrade, finalScore: g.finalScore ?? null };
+    const key = String(row.courseId ?? row.courseName ?? '');
+    indexByKey[key] = row;
+    list.push(row);
+  });
+  APP.canvas.courses.forEach((c) => {
+    const key = String(c.courseId ?? c.id ?? c.name ?? '');
+    if (indexByKey[key]) {
+      if (!indexByKey[key].courseCode && c.courseCode) indexByKey[key].courseCode = c.courseCode;
+      return;
+    }
+    const byName = list.find(r => r.courseName && c.name && r.courseName.toLowerCase() === String(c.name).toLowerCase());
+    if (byName) return;
+    list.push({ courseId: c.courseId ?? c.id ?? null, courseName: c.name || 'Course', courseCode: c.courseCode || null, currentScore: null, currentGrade: null, finalScore: null });
+  });
+  return list.sort((a, b) => String(a.courseName || a.courseCode || '').localeCompare(String(b.courseName || b.courseCode || ''), undefined, { sensitivity: 'base' }));
+}
+
+function gradeEvidenceFor(course) {
+  const graded = APP.canvas.assignments.filter((a) => {
+    if (!a.graded || typeof a.score !== 'number' || !a.pointsPossible) return false;
+    if (course.courseId != null && a.courseId != null) return String(a.courseId) === String(course.courseId);
+    return Boolean(course.courseName) && a.courseName === course.courseName;
+  });
+  const manual = APP.local.grades.filter((g) => {
+    const subject = String(g.subject || '').toLowerCase().trim();
+    const name = String(course.courseName || '').toLowerCase().trim();
+    const code = String(course.courseCode || '').toLowerCase().trim();
+    if (!subject || (!name && !code)) return false;
+    return (name && (subject === name || name.includes(subject) || subject.includes(name)))
+      || (code && (subject === code || subject.includes(code)));
+  });
+  return { graded, manual };
+}
+
+function gradeRowTime(a) { return a.submittedAt || a.dueAt || null; }
+
+function assessmentGroup(label) {
+  const text = String(label || '').toLowerCase();
+  if (/exam|final|midterm|test\b/.test(text)) return 'Exams';
+  if (/quiz/.test(text)) return 'Quizzes';
+  if (/project|portfolio|capstone/.test(text)) return 'Projects';
+  return 'Assignments';
+}
+
+const GRADE_GROUP_ORDER = ['Exams', 'Quizzes', 'Projects', 'Assignments'];
+
+function courseDetailHtml(course) {
+  const { graded, manual } = gradeEvidenceFor(course);
+  const groups = {};
+  graded.forEach((a) => {
+    const pct = percentFromParts(a.score, a.pointsPossible);
+    if (pct == null) return;
+    const group = assessmentGroup(a.title);
+    (groups[group] = groups[group] || []).push({ label: a.title, pct, at: gradeRowTime(a) });
+  });
+  let html = '';
+  const sections = GRADE_GROUP_ORDER.filter(name => groups[name] && groups[name].length);
+  if (sections.length) {
+    html += '<div class="gdetail-block"><div class="gdetail-label">Assessment breakdown · Canvas</div>';
+    sections.forEach((name) => {
+      const rows = groups[name].sort((a, b) => (Date.parse(b.at) || 0) - (Date.parse(a.at) || 0));
+      html += '<div class="gdetail-group"><div class="gdetail-group-name">' + esc(name) + '</div>'
+        + rows.map(r => '<div class="gdetail-row"><span class="gdetail-name">' + esc(r.label) + '</span><span class="gdetail-val">' + Math.round(r.pct) + '%</span></div>').join('')
+        + '</div>';
+    });
+    html += '</div>';
+  }
+  if (manual.length) {
+    html += '<div class="gdetail-block"><div class="gdetail-label">Logged manually</div>'
+      + manual.map(g => '<div class="gdetail-row"><span class="gdetail-name">' + esc(g.label) + '</span><span class="gdetail-val">' + esc(String(g.score) + '/' + String(g.total)) + '</span></div>').join('')
+      + '</div>';
+  }
+  if (!html) {
+    html = '<div class="gpa-calm subtle"><p>Canvas has not returned graded work for this course yet. Assessment details appear here once instructors publish scores.</p></div>';
+  }
+  return html;
+}
+
+function renderGradesCourseList() {
+  const el = document.getElementById('gradesCourseList');
+  if (!el) return;
+  const courses = coursesForGrades();
+  if (!courses.length) {
+    const skeleton = APP.canvas.syncing && !APP.canvas.grades.length;
+    el.innerHTML = skeleton
+      ? '<div class="skeleton-row" style="width:82%" aria-hidden="true"></div><div class="skeleton-row" style="width:64%" aria-hidden="true"></div><div class="skeleton-row" style="width:74%" aria-hidden="true"></div>'
+      : '<div class="gpa-calm subtle"><p>No courses yet. Once Canvas syncs your enrollments, they will appear here.</p></div>';
+    return;
+  }
+  el.innerHTML = courses.map((course) => {
+    const key = String(course.courseId ?? course.courseName);
+    const open = APP.ui.courseDetail === key;
+    const pct = course.currentScore == null ? null : Number(course.currentScore);
+    const value = pct == null ? '—' : Math.round(pct) + '%';
+    const sub = [course.courseCode, course.currentGrade].filter(Boolean).map(esc).join(' · ');
+    return '<div class="gcourse' + (open ? ' open' : '') + (pct == null ? ' unscored' : '') + '">'
+      + '<button class="gcourse-row" onclick=\"toggleCourseDetail(\'' + jsQuote(key) + '\')\" aria-expanded="' + open + '">'
+      + '<span class="gcourse-identity"><span class="gcourse-name">' + esc(course.courseName || course.courseCode || 'Course') + '</span>'
+      + (sub ? '<span class="gcourse-sub">' + sub + '</span>' : '') + '</span>'
+      + '<span class="gcourse-value"><span class="gcourse-pct">' + value + '</span>'
+      + '<svg class="gcourse-caret" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span>'
+      + '</button>'
+      + '<div class="gcourse-detail" id="gdetail-' + esc(key) + '"' + (open ? '' : ' hidden') + '>' + courseDetailHtml(course) + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function toggleCourseDetail(key) {
+  APP.ui.courseDetail = APP.ui.courseDetail === key ? null : key;
+  renderGradesCourseList();
+}
+
+function renderGradesActivity() {
+  const el = document.getElementById('gradesActivity');
+  if (!el) return;
+  const canvasRows = APP.canvas.assignments
+    .filter(a => a.graded && typeof a.score === 'number' && a.pointsPossible)
+    .map(a => ({ at: gradeRowTime(a), course: a.courseName || a.courseCode || '', label: a.title, value: percentFromParts(a.score, a.pointsPossible), kind: 'canvas' }));
+  const manualRows = APP.local.grades
+    .map(g => ({ at: g.loggedAt || null, course: g.subject, label: g.label, value: String(g.score) + '/' + String(g.total), kind: 'manual' }));
+  const timeOf = (r) => (r.at && Date.parse(r.at)) || 0;
+  const rows = [...canvasRows, ...manualRows].sort((a, b) => timeOf(b) - timeOf(a)).slice(0, 8);
+  if (!rows.length) {
+    el.innerHTML = APP.canvas.syncing
+      ? '<div class="skeleton-row" style="width:70%" aria-hidden="true"></div><div class="skeleton-row" style="width:55%" aria-hidden="true"></div>'
+      : '<div class="gpa-calm subtle"><p>No grade activity yet. Scores appear here as instructors grade your work.</p></div>';
+    return;
+  }
+  el.innerHTML = rows.map((r) => {
+    const value = r.kind === 'manual' ? esc(r.value) : (r.value == null ? '—' : Math.round(r.value) + '%');
+    const when = r.at ? esc(CanvasAPI.relativeTime(r.at)) : 'Logged manually';
+    return '<div class="gactivity-row"><div class="gactivity-main"><span class="gactivity-course">' + esc(r.course || 'Course') + '</span><span class="gactivity-title">' + esc(r.label) + '</span></div><div class="gactivity-side"><span class="gactivity-value">' + value + '</span><span class="gactivity-when">' + when + '</span></div></div>';
+  }).join('');
+}
+
+function renderGradeHistory() {
+  const el = document.getElementById('gradeLog');
+  const toggle = document.getElementById('gradesHistoryToggle');
+  if (!el) return;
+  const entries = [...APP.local.grades].sort((a, b) => ((b.loggedAt && Date.parse(b.loggedAt)) || 0) - ((a.loggedAt && Date.parse(a.loggedAt)) || 0));
+  if (!entries.length) {
+    if (toggle) toggle.hidden = true;
+    el.innerHTML = '<div class="gpa-calm subtle"><p>No manually logged grades yet. Use “Log grade” to record results Canvas does not track.</p></div>';
+    return;
+  }
+  const expanded = APP.ui.gradesHistoryExpanded;
+  const visible = expanded ? entries : entries.slice(0, 6);
+  if (toggle) {
+    toggle.hidden = entries.length <= 6;
+    toggle.textContent = expanded ? 'Show fewer' : 'Show all (' + entries.length + ')';
+  }
+  el.innerHTML = '<table class="grade-table"><thead><tr><th scope="col">Course</th><th scope="col">Activity</th><th scope="col" class="num">Score</th><th scope="col"><span class="visually-hidden">Delete</span></th></tr></thead><tbody>'
+    + visible.map(g => '<tr><td>' + esc(g.subject) + '</td><td>' + esc(g.label) + '</td><td class="num">' + esc(String(g.score) + '/' + String(g.total)) + '</td><td class="num"><button class="grade-del" onclick="deleteLocalGrade(' + g.id + ')" aria-label="Delete logged grade ' + esc(g.label) + '">✕</button></td></tr>').join('')
+    + '</tbody></table>';
+}
+
+function toggleGradesHistory() {
+  APP.ui.gradesHistoryExpanded = !APP.ui.gradesHistoryExpanded;
+  renderGradeHistory();
+}
+
+function renderGradesSyncError() {
+  const el = document.getElementById('gradesSyncError');
+  if (!el) return;
+  const hasData = APP.canvas.grades.length > 0;
+  if (APP.canvas.lastSyncError && !APP.canvas.syncing) {
+    el.innerHTML = '<div class="sync-error-main"><span class="sync-error-title">Canvas couldn\u2019t be synced.</span><span class="sync-error-note">'
+      + (hasData ? 'Your last synced grades are still available.' : 'Connect and try again to load your grades.')
+      + '</span></div><button class="btn btn-secondary btn-sm" onclick="syncCanvas()">Try again</button>';
+    el.hidden = false;
+    return;
+  }
+  el.hidden = true;
+  el.innerHTML = '';
+}
+
+function updateGradesSyncState() {
+  const label = document.getElementById('gradesSyncState');
+  if (!label) return;
+  if (APP.canvas.syncing) { label.textContent = 'Syncing Canvas…'; return; }
+  let savedAt = null;
+  try { savedAt = (JSON.parse(localStorage.getItem('bclss_canvas_cache') || 'null') || {}).savedAt || null; } catch (_) { savedAt = null; }
+  if (savedAt) label.textContent = 'Synced ' + CanvasAPI.relativeTime(savedAt) + ' · Canvas + manually logged';
+  else if (APP.canvas.connected) label.textContent = 'Connected to Canvas';
+  else label.textContent = 'Not connected — sync to load your live grades';
+}
+
 function renderGrades() {
-  const overview = document.getElementById('gradesOverview');
-  const log = document.getElementById('gradeLog');
-  const live = [...APP.canvas.grades].sort((a, b) => String(a.courseName || a.courseCode || '').localeCompare(String(b.courseName || b.courseCode || ''), undefined, { sensitivity: 'base' }));
-  overview.innerHTML = live.length ? live.map(g => { const score = g.currentScore == null ? '--' : Math.round(g.currentScore) + '%'; return '<div class="grade-card"><div class="grade-course">' + esc(g.courseCode || g.courseName || '') + '</div><div class="grade-val">' + score + '</div></div>'; }).join('') : '<div style="font-size:0.82rem;color:var(--text-muted)">Sync Canvas to see live grades.</div>';
-  if (!APP.local.grades.length) { log.innerHTML = '<div class="empty-state"><div class="empty-text">No manually logged grades yet</div></div>'; return; }
-  log.innerHTML = '<table class="grade-table"><thead><tr><th>Course</th><th>Activity</th><th style="text-align:right">Score</th><th></th></tr></thead><tbody>' + APP.local.grades.map(g => '<tr><td>' + esc(g.subject) + '</td><td>' + esc(g.label) + '</td><td style="text-align:right">' + g.score + '/' + g.total + '</td><td style="text-align:right"><button class="btn btn-sm btn-danger" onclick="deleteLocalGrade(' + g.id + ')">✕</button></td></tr>').join('') + '</tbody></table>';
+  updateGradesSyncState();
+  renderGradesSyncError();
+  renderGpaStanding();
+  renderGradesCourseList();
+  renderGradesActivity();
+  renderGradeHistory();
 }
 
 function openAddGrade() {
-  openModal('<div class="modal-title">Log Grade</div><div class="form-group"><label class="form-label">Course *</label><input id="g-sub" type="text"></div><div class="form-group"><label class="form-label">Activity</label><input id="g-label" type="text"></div><div class="form-row"><div class="form-group"><label class="form-label">Score *</label><input id="g-score" type="text"></div><div class="form-group"><label class="form-label">Out of *</label><input id="g-total" type="text"></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitGrade()">Log</button></div>');
+  openModal('<div class="modal-title">Log grade</div><div class="form-group"><label class="form-label">Course *</label><input id="g-sub" type="text" placeholder="e.g. CIS 2101"></div><div class="form-group"><label class="form-label">Assessment</label><input id="g-label" type="text" placeholder="e.g. Midterm exam"></div><div class="form-row"><div class="form-group"><label class="form-label">Score *</label><input id="g-score" type="text" inputmode="decimal"></div><div class="form-group"><label class="form-label">Out of *</label><input id="g-total" type="text" inputmode="decimal"></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitGrade()">Log grade</button></div>');
 }
 
 function submitGrade() {
@@ -412,11 +653,12 @@ function submitGrade() {
   const score = parseFloat(document.getElementById('g-score').value);
   const total = parseFloat(document.getElementById('g-total').value);
   if (!subject || Number.isNaN(score) || Number.isNaN(total) || total <= 0) { toast('Please fill fields correctly', 'warn'); return; }
-  APP.local.grades.push({ id: uid(), subject, label, score, total });
+  APP.local.grades.push({ id: uid(), subject, label, score, total, loggedAt: new Date().toISOString() });
+  APP.ui.gradesHistoryExpanded = true;
   save(); closeModal(); renderGrades(); toast('Grade logged', 'success');
 }
 
-function deleteLocalGrade(id) { APP.local.grades = APP.local.grades.filter(g => g.id !== id); save(); renderGrades(); }
+function deleteLocalGrade(id) { APP.local.grades = APP.local.grades.filter(g => g.id !== id); save(); renderGrades(); toast('Logged grade removed', 'info'); }
 
 function toggleSidebarCoursesExpanded() {
   const expanded = localStorage.getItem('bclss_courses_expanded') === '1';

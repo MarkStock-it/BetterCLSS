@@ -314,11 +314,19 @@ async function syncCanvas(fromStartup = false) {
   if (APP.canvas.syncing) return false;
 
   APP.canvas.syncing = true;
+  APP.canvas.lastSyncError = false;
   updateConnectionStatus();
   const syncBtn = document.getElementById('syncBtn');
   if (syncBtn) syncBtn.textContent = 'Syncing...';
   const dashboardSyncBtn = document.getElementById('dashboardSyncBtn');
   if (dashboardSyncBtn) dashboardSyncBtn.textContent = 'Syncing…';
+  const gradesSyncBtn = document.getElementById('gradesSyncBtn');
+  if (gradesSyncBtn) {
+    gradesSyncBtn.disabled = true;
+    gradesSyncBtn.classList.add('spinning');
+    const label = gradesSyncBtn.querySelector('.sync-btn-label');
+    if (label) label.textContent = 'Syncing…';
+  }
   const announceSyncBtn = document.getElementById('announceSyncBtn');
   if (announceSyncBtn) {
     announceSyncBtn.disabled = true;
@@ -369,12 +377,20 @@ async function syncCanvas(fromStartup = false) {
     return true;
   } catch (_) {
     APP.canvas.connected = false;
+    APP.canvas.lastSyncError = true;
     toast(fromStartup ? 'Canvas could not sync in the background.' : 'Canvas sync failed. Check your connection or token.', 'error');
     return false;
   } finally {
     APP.canvas.syncing = false;
     if (syncBtn) syncBtn.textContent = 'Sync';
     if (dashboardSyncBtn) dashboardSyncBtn.textContent = 'Sync Canvas';
+    const gradesSyncBtn = document.getElementById('gradesSyncBtn');
+    if (gradesSyncBtn) {
+      gradesSyncBtn.disabled = false;
+      gradesSyncBtn.classList.remove('spinning');
+      const label = gradesSyncBtn.querySelector('.sync-btn-label');
+      if (label) label.textContent = 'Sync Canvas';
+    }
     const announceSyncBtn = document.getElementById('announceSyncBtn');
     if (announceSyncBtn) {
       announceSyncBtn.disabled = false;

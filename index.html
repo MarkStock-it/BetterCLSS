@@ -267,15 +267,43 @@
         <div class="section-header">
           <div>
             <div class="section-title">Grades</div>
-            <div class="section-subtitle">Canvas live scores + manually logged grades</div>
+            <div class="section-subtitle" id="gradesSyncState">Canvas live scores + manually logged grades</div>
           </div>
           <div style="display:flex;gap:8px">
-            <button class="btn btn-secondary btn-sm" onclick="syncCanvas()">Sync</button>
-            <button class="btn btn-primary" onclick="openAddGrade()">+ Log Grade</button>
+            <button class="sync-btn" id="gradesSyncBtn" onclick="syncCanvas()">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              <span class="sync-btn-label">Sync Canvas</span>
+            </button>
+            <button class="btn btn-primary" onclick="openAddGrade()">Log grade</button>
           </div>
         </div>
-        <div class="grades-overview" id="gradesOverview"></div>
-        <div class="card"><div class="card-title" style="margin-bottom:14px">Grade Log</div><div id="gradeLog"></div></div>
+
+        <!-- Contextual sync error: shown near the data it affects -->
+        <div class="sync-error" id="gradesSyncError" hidden></div>
+
+        <!-- Level 1: academic standing -->
+        <section class="gpa-standing" id="gpaStanding" aria-label="Academic standing"></section>
+
+        <!-- Level 2: course performance -->
+        <section class="grades-section" aria-labelledby="gradesCoursesHead">
+          <h2 class="dash-label" id="gradesCoursesHead">Your courses</h2>
+          <div id="gradesCourseList"></div>
+        </section>
+
+        <!-- Level 3: recent activity -->
+        <section class="grades-section" aria-labelledby="gradesActivityHead">
+          <h2 class="dash-label" id="gradesActivityHead">Recent grade activity</h2>
+          <div id="gradesActivity"></div>
+        </section>
+
+        <!-- Level 4: full record, progressive disclosure -->
+        <section class="grades-section grades-history" aria-labelledby="gradesHistoryHead">
+          <div class="grades-section-head">
+            <h2 class="dash-label" id="gradesHistoryHead">Grade history · manually logged</h2>
+            <button class="dash-link" id="gradesHistoryToggle" onclick="toggleGradesHistory()" hidden>Show all</button>
+          </div>
+          <div id="gradeLog"></div>
+        </section>
       </div>
 
       <div class="page" id="page-announcements">

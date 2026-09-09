@@ -83,33 +83,361 @@
 .cal-event-row:last-child { border-bottom: none; }
 
 /* ============================================================
-   GRADES
+   GRADES — academic record, not a card grid
+   Open composition: typography + hairlines, one hero number.
    ============================================================ */
-.grades-overview {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 10px;
-  margin-bottom: 18px;
+.grades-section {
+  margin-top: 2.1rem;
 }
-.grade-card {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 14px;
-  text-align: center;
-}
-.grade-course { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
-.grade-val {
-  font-family: var(--font-display);
-  font-size: 1.9rem;
-  line-height: 1;
-}
-.grade-val.a { color: var(--green); }
-.grade-val.b { color: var(--accent); }
-.grade-val.c { color: var(--yellow); }
-.grade-val.d, .grade-val.f { color: var(--red); }
-.grade-letter { font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; }
 
+.grades-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 0.65rem;
+}
+
+.grades-section > .dash-label {
+  display: block;
+  margin-bottom: 0.65rem;
+}
+
+/* Level 1 — standing */
+.gpa-standing {
+  padding: 1.9rem 0 2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.gpa-value {
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 5vw, 3.4rem);
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.gpa-caption {
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+}
+
+.gpa-meta {
+  margin-top: 0.8rem;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.gpa-meta-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.73rem;
+  color: var(--text-muted);
+}
+
+/* Honest empty states */
+.gpa-calm {
+  padding: 1.1rem 0;
+  max-width: 52ch;
+}
+
+.gpa-calm-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.gpa-calm p {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.55;
+  margin-bottom: 0.9rem;
+}
+
+.gpa-calm.subtle {
+  padding: 0.7rem 0;
+}
+
+.gpa-calm.subtle p {
+  margin-bottom: 0;
+  font-size: 0.78rem;
+}
+
+/* Contextual sync error — calm, actionable, not alarming */
+.sync-error {
+  margin-top: 1.2rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--red) 32%, transparent);
+  border-left: 2px solid var(--red);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.sync-error-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sync-error-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sync-error-note {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.sync-error .btn {
+  flex-shrink: 0;
+}
+
+/* Loading skeletons — structure holds while data loads */
+.gpa-skeleton {
+  height: 3rem;
+  width: 8.5rem;
+  border-radius: 8px;
+  margin-bottom: 0.8rem;
+}
+
+.gpa-skeleton-line {
+  height: 0.75rem;
+  width: 15rem;
+  max-width: 70%;
+  border-radius: 6px;
+}
+
+.skeleton-row {
+  height: 0.85rem;
+  margin: 1.05rem 0;
+  border-radius: 6px;
+}
+
+.gpa-skeleton,
+.gpa-skeleton-line,
+.skeleton-row {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 42%, var(--surface-2) 58%);
+  background-size: 200% 100%;
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeletonPulse {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gpa-skeleton,
+  .gpa-skeleton-line,
+  .skeleton-row {
+    animation: none;
+  }
+}
+
+/* Level 2 — courses as an open record, not cards */
+.gcourse {
+  border-bottom: 1px solid var(--border);
+}
+
+.gcourse:last-child {
+  border-bottom: none;
+}
+
+.gcourse-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0.85rem 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gcourse-row:hover .gcourse-name {
+  color: var(--accent);
+}
+
+.gcourse-identity {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gcourse-name {
+  font-size: 0.92rem;
+  font-weight: 560;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.15s;
+}
+
+.gcourse-sub {
+  font-size: 0.73rem;
+  color: var(--text-muted);
+}
+
+.gcourse-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.gcourse-pct {
+  font-size: 0.95rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.gcourse.unscored .gcourse-pct {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.gcourse-caret {
+  color: var(--text-muted);
+  transition: transform 0.18s;
+}
+
+.gcourse.open .gcourse-caret {
+  transform: rotate(180deg);
+}
+
+/* Detail panel — indented evidence, no nested card */
+.gcourse-detail {
+  padding: 0.2rem 0 1.2rem 1.05rem;
+  border-left: 1px solid var(--border);
+  margin-left: 3px;
+  margin-bottom: 0.6rem;
+}
+
+.gdetail-block {
+  margin-bottom: 1rem;
+}
+
+.gdetail-block:last-child {
+  margin-bottom: 0;
+}
+
+.gdetail-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.gdetail-group {
+  margin-bottom: 0.7rem;
+}
+
+.gdetail-group:last-child {
+  margin-bottom: 0;
+}
+
+.gdetail-group-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.gdetail-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0.28rem 0;
+}
+
+.gdetail-name {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gdetail-val {
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Level 3 — recent activity */
+.gactivity-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.gactivity-row:last-child {
+  border-bottom: none;
+}
+
+.gactivity-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gactivity-course {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+
+.gactivity-title {
+  font-size: 0.86rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gactivity-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.gactivity-value {
+  font-size: 0.9rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.gactivity-when {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* History table */
 .grade-table {
   width: 100%;
   border-collapse: collapse;
@@ -129,6 +457,26 @@
   vertical-align: middle;
 }
 .grade-table tr:last-child td { border-bottom: none; }
+.grade-table .num { text-align: right; }
+
+.grade-del {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.grade-del:hover {
+  color: var(--red);
+  border-color: var(--red);
+}
 
 /* ============================================================
    NOTES

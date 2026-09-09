@@ -34,7 +34,8 @@ const APP = {
     grades: [],
     courses: [],
     connected: false,
-    syncing: false
+    syncing: false,
+    lastSyncError: false
   },
   ui: {
     assignFilter: 'all',
