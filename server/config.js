@@ -40,9 +40,9 @@ function createConfig(rootDir) {
     canvasDomain: process.env.CANVAS_DOMAIN || 'usc.instructure.com',
     canvasToken: process.env.CANVAS_TOKEN || '',
     maxOverdueDays: Number(process.env.MAX_OVERDUE_DAYS || 30),
-    // gemini-flash-latest auto-tracks the newest stable Flash model, so the
-    // app survives Google's model shutdowns (gemini-2.0-flash retired 2026-03).
-    geminiModel: process.env.GEMINI_MODEL || 'gemini-flash-latest',
+    // Verified live (2026-09). gemini-flash-latest also exists but was
+    // returning transient 503s under load; pin the stable Flash model.
+    geminiModel: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
     geminiTimeoutMs: Number(process.env.GEMINI_TIMEOUT_MS || 60000),
     geminiMaxOutputTokens: Number(process.env.GEMINI_MAX_OUTPUT_TOKENS || 8192),
     geminiTemperature: Number(process.env.GEMINI_TEMPERATURE || 0.4),

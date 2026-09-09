@@ -17,7 +17,7 @@ function createAIConfig(appConfig) {
     // Gemini configuration (used for chat / tokenization)
     gemini: {
       apiKey: appConfig.geminiApiKey || '',
-      model: appConfig.geminiModel || 'gemini-flash-latest',
+      model: appConfig.geminiModel || 'gemini-3.8-flash',
       timeoutMs: appConfig.geminiTimeoutMs || 60000,
       maxOutputTokens: appConfig.geminiMaxOutputTokens || 8192,
       temperature: appConfig.geminiTemperature || 0.4,
@@ -53,7 +53,7 @@ function createAIConfigFromEnv() {
   return {
     gemini: {
       apiKey: process.env.GEMINI_API_KEY || '',
-      model: process.env.GEMINI_MODEL || 'gemini-flash-latest',
+      model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
       timeoutMs: Number(process.env.GEMINI_TIMEOUT_MS || 60000),
       maxOutputTokens: Number(process.env.GEMINI_MAX_OUTPUT_TOKENS || 8192),
       temperature: Number(process.env.GEMINI_TEMPERATURE || 0.4),

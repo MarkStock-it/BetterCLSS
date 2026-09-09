@@ -1,4 +1,36 @@
 function createAssistantService(config) {
+  // Retry transient provider failures (capacity spikes like Gemini's 503s,
+  // rate limits, or network blips) so a single blip never reaches the user.
+  // Each attempt gets a hard timeout: a stalled connection must never hang
+  // the request handler open-endedly (chat is latency-sensitive).
+  const TRANSIENT_HTTP_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+  const CHAT_ATTEMPT_TIMEOUT_MS = 25000;
+
+  async function fetchWithTransientRetry(url, init, retries = 2) {
+    let lastError = null;
+    let response = null;
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      try {
+        response = await fetch(url, {
+          ...init,
+          signal: AbortSignal.timeout(CHAT_ATTEMPT_TIMEOUT_MS),
+        });
+      } catch (error) {
+        lastError = error;
+        response = null;
+      }
+      if (response && (response.ok || !TRANSIENT_HTTP_STATUSES.has(response.status))) {
+        return response;
+      }
+      if (attempt < retries) {
+        const delayMs = 700 * (attempt + 1) + Math.floor(Math.random() * 400);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+    if (!response) throw lastError;
+    return response;
+  }
+
   function summarizeDashboardContext(context) {
     const safe = context && typeof context === 'object' ? context : {};
     const totals = safe.totals && typeof safe.totals === 'object' ? safe.totals : {};
@@ -110,7 +142,7 @@ function createAssistantService(config) {
     }
 
     if (callerApiKey) {
-      const response = await fetch(
+      const response = await fetchWithTransientRetry(
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(config.geminiModel)}:generateContent`,
         {
           method: 'POST',
@@ -155,7 +187,7 @@ function createAssistantService(config) {
     // BYOK Groq path (bring-your-own-key): the user's Groq key, saved in
     // Settings and sent as `x-groq-key`, is honored for chat just like Gemini.
     if (callerGroqKey) {
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const response = await fetchWithTransientRetry('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
