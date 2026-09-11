@@ -757,8 +757,249 @@ a:focus-visible {
 .undo-btn:hover { background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.45); }
 .undo-btn:active { transform: scale(0.88); }
 
-.task-row-item { margin-bottom: 12px; }
-.task-row-item:last-child { margin-bottom: 0; }
+/* ─── Assignments: grouped continuous list ─────────────────── */
+
+.tasks-list-wrap {
+  margin-top: 18px;
+}
+
+.task-group + .task-group {
+  margin-top: 30px;
+}
+
+.task-group-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 4px;
+  color: var(--task-meta);
+  font-size: 0.64rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.task-group-overdue .task-group-label {
+  color: #ff8291;
+}
+
+.task-group-count {
+  color: var(--task-meta);
+  font-size: 0.62rem;
+  font-weight: 650;
+}
+
+.task-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid rgba(101, 118, 176, 0.13);
+}
+
+.task-list > li {
+  border-bottom: 1px solid rgba(101, 118, 176, 0.13);
+}
+
+.task-list > li:last-child {
+  border-bottom: 0;
+}
+
+.task-row-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 12px 4px;
+  color: inherit;
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.task-row-main:hover {
+  background: rgba(93, 114, 199, 0.05);
+}
+
+.task-row-main:focus-visible {
+  outline: 2px solid #8198ff;
+  outline-offset: -2px;
+}
+
+.task-status-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #5f6c93;
+}
+
+.task-status-dot.overdue {
+  background: #ff6377;
+}
+
+.task-status-dot.done {
+  background: #42dda9;
+}
+
+.task-row-text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.task-row-text .task-title {
+  overflow: hidden;
+  color: var(--task-title);
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-row.is-done .task-row-text .task-title {
+  color: var(--task-meta);
+  font-weight: 550;
+}
+
+.task-meta {
+  display: flex;
+  gap: 4px;
+  overflow: hidden;
+  color: var(--task-meta);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.task-course {
+  overflow: hidden;
+  flex: 0 1 auto;
+  text-overflow: ellipsis;
+}
+
+.task-course::after {
+  content: "·";
+  margin-left: 4px;
+}
+
+.task-due {
+  flex: 0 0 auto;
+  font-weight: 600;
+}
+
+.task-due.overdue {
+  color: #ff8291;
+}
+
+.task-row-chevron {
+  flex: 0 0 auto;
+  color: var(--task-meta);
+  transform: rotate(-90deg);
+  transition: transform 160ms ease;
+}
+
+.task-row-chevron.open {
+  transform: rotate(0deg);
+}
+
+.task-actions {
+  display: flex;
+  gap: 8px;
+  overflow: hidden;
+  padding: 0 4px 12px 23px;
+}
+
+.task-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 13px;
+  color: var(--pager-text);
+  border: 1px solid var(--pager-border);
+  border-radius: 10px;
+  background: var(--pager-surface);
+  font-size: 0.7rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease, background-color 150ms ease;
+}
+
+.task-action-btn:hover:not(:disabled),
+.task-action-btn:focus-visible {
+  color: var(--task-title);
+  border-color: var(--pager-accent-border);
+  background: var(--pager-hover);
+}
+
+.task-action-btn.submit:hover:not(:disabled) {
+  color: #42dda9;
+  border-color: rgba(66, 221, 169, 0.35);
+  background: rgba(66, 221, 169, 0.08);
+}
+
+.task-action-btn.agent {
+  color: #a78bfa;
+  border-color: rgba(167, 139, 250, 0.22);
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.task-action-btn.agent:hover:not(:disabled),
+.task-action-btn.agent:focus-visible {
+  color: #c4b5fd;
+  border-color: rgba(167, 139, 250, 0.45);
+  background: rgba(139, 92, 246, 0.16);
+}
+
+.task-action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.task-action-btn.agent.is-creating {
+  opacity: 0.6;
+}
+
+.empty-tasks {
+  padding: 30px 10px 16px;
+  text-align: center;
+}
+
+.empty-tasks h3 {
+  margin: 0;
+  color: #edf1ff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.empty-tasks p {
+  max-width: 280px;
+  margin: 8px auto 0;
+  color: #747f9f;
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+
+.empty-tasks .empty-action {
+  min-height: 42px;
+  margin-top: 16px;
+  padding: 0 15px;
+  font-size: 0.7rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-row-main,
+  .task-row-chevron,
+  .task-action-btn {
+    transition: none;
+  }
+}
 
 .section-card {
   padding: 22px;
@@ -922,88 +1163,6 @@ a:focus-visible {
   color: var(--task-meta);
 }
 
-.task-page-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: -2px 1px 14px;
-  color: var(--pager-muted);
-  font-size: 0.64rem;
-}
-
-.task-page-summary strong {
-  padding: 4px 8px;
-  color: var(--pager-accent);
-  border: 1px solid var(--pager-border);
-  border-radius: 999px;
-  background: var(--pager-hover);
-  font-size: 0.58rem;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
-
-.task-pagination {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  margin-top: 17px;
-  padding-top: 16px;
-  border-top: 1px solid var(--pager-border);
-}
-
-.task-pagination > button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  min-height: 42px;
-  gap: 6px;
-  padding: 0 11px;
-  color: var(--pager-text);
-  border: 1px solid var(--pager-border);
-  border-radius: 13px;
-  background: var(--pager-surface);
-  font-size: 0.66rem;
-  font-weight: 700;
-  transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
-}
-
-.task-pagination > button:last-child {
-  justify-self: end;
-}
-
-.task-pagination > button:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-.task-pagination > button:hover:not(:disabled) {
-  color: var(--task-title);
-  border-color: var(--pager-accent-border);
-  background: var(--pager-hover);
-}
-
-.task-pagination > button:disabled {
-  cursor: not-allowed;
-  opacity: 0.34;
-}
-
-.task-page-status {
-  display: inline-flex;
-  align-items: baseline;
-  justify-content: center;
-  min-width: 56px;
-  gap: 4px;
-  color: var(--pager-muted);
-  font-size: 0.61rem;
-  white-space: nowrap;
-}
-
-.task-page-status strong {
-  color: var(--pager-accent);
-  font-size: 0.82rem;
-}
 
 .priority-rail {
   position: absolute;

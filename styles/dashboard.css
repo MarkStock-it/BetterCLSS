@@ -568,7 +568,7 @@
 .assign-sort-control select {
   width: auto;
   min-width: 168px;
-  padding: 8px 34px 8px 11px;
+  padding: 8px 30px 8px 11px;
   background-color: var(--surface-2);
   cursor: pointer;
 }

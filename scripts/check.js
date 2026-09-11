@@ -157,10 +157,10 @@ assert(
   'StudentHub Canvas setup must preserve StudentHub as the post-authentication destination'
 );
 assert(
-  studentHubImplementation.includes('const TASKS_PER_PAGE = 5;') &&
-    studentHubImplementation.includes('className="task-pagination"') &&
-    studentHubImplementation.includes('aria-label="Task pages"'),
-  'StudentHub task management must show five assignments per page'
+  studentHubImplementation.includes('className="task-list"') &&
+    studentHubImplementation.includes('aria-expanded={expanded}') &&
+    !studentHubImplementation.includes('TASKS_PER_PAGE'),
+  'StudentHub task management must use a continuous grouped assignment list with inline actions'
 );
 assert(
   desktopSource.includes("launchParams.get('returnTo') === 'studenthub'") &&

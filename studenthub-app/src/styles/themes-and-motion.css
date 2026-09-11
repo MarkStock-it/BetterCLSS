@@ -42,6 +42,7 @@
 :root[data-theme="light"] .study-heading h1,
 :root[data-theme="light"] .section-card-head h2,
 :root[data-theme="light"] .empty-deadlines h3,
+:root[data-theme="light"] .empty-tasks h3,
 :root[data-theme="light"] .study-secondary-panel > h2,
 :root[data-theme="light"] .secondary-row h2 {
   color: #1f263a;
@@ -51,6 +52,7 @@
 :root[data-theme="light"] .view-heading p,
 :root[data-theme="light"] .study-heading p,
 :root[data-theme="light"] .empty-deadlines p,
+:root[data-theme="light"] .empty-tasks p,
 :root[data-theme="light"] .secondary-row p,
 :root[data-theme="light"] .study-empty-copy {
   color: #68738f;
@@ -190,6 +192,55 @@
   color: #33446f;
   background: rgba(255, 255, 255, 0.8);
   box-shadow: inset 0 0 0 1px rgba(91, 112, 185, 0.13), 0 5px 15px rgba(65, 79, 128, 0.08);
+}
+
+:root[data-theme="light"] .task-list,
+:root[data-theme="light"] .task-list > li {
+  border-color: rgba(71, 86, 137, 0.13);
+}
+
+:root[data-theme="light"] .task-row-main:hover {
+  background: rgba(80, 101, 184, 0.05);
+}
+
+:root[data-theme="light"] .task-action-btn {
+  color: #556080;
+  border-color: rgba(71, 86, 137, 0.2);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+:root[data-theme="light"] .task-action-btn:hover:not(:disabled),
+:root[data-theme="light"] .task-action-btn:focus-visible {
+  color: #26304c;
+  border-color: rgba(91, 112, 185, 0.45);
+  background: rgba(100, 126, 224, 0.09);
+}
+
+:root[data-theme="light"] .task-action-btn.submit:hover:not(:disabled) {
+  color: #1f7a58;
+  border-color: rgba(47, 151, 108, 0.4);
+  background: rgba(70, 183, 132, 0.1);
+}
+
+:root[data-theme="light"] .task-action-btn.agent {
+  color: #6d5bd0;
+  border-color: rgba(109, 91, 208, 0.28);
+  background: rgba(109, 91, 208, 0.07);
+}
+
+:root[data-theme="light"] .task-action-btn.agent:hover:not(:disabled),
+:root[data-theme="light"] .task-action-btn.agent:focus-visible {
+  color: #5747b8;
+  border-color: rgba(109, 91, 208, 0.5);
+  background: rgba(109, 91, 208, 0.14);
+}
+
+:root[data-theme="light"] .task-due.overdue {
+  color: #c2455a;
+}
+
+:root[data-theme="light"] .task-group-overdue .task-group-label {
+  color: #c2455a;
 }
 
 :root[data-theme="light"] .timer-mode-card {

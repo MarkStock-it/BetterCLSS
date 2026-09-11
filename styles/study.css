@@ -382,7 +382,8 @@
 
 .study-task-priority {
   width: auto;
-  padding: 8px 26px 8px 9px;
+  padding: 8px 30px 8px 9px;
+  background-position: right 8px center;
 }
 
 .study-task-list {
