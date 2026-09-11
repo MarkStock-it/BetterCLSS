@@ -43,7 +43,20 @@ function assertEqual(actual, expected, testName) {
 function assertThrows(fn, testName) {
   total++;
   try {
-    fn();
+    const result = typeof fn === 'function' && fn.constructor.name === 'AsyncFunction' ? fn() : fn();
+    if (result && typeof result.catch === 'function') {
+      result.then(
+        () => {
+          failed++;
+          console.log(`  ✗ ${testName} — expected error but none thrown`);
+        },
+        () => {
+          passed++;
+          console.log(`  ✓ ${testName}`);
+        }
+      );
+      return;
+    }
     failed++;
     console.log(`  ✗ ${testName} — expected error but none thrown`);
   } catch {
@@ -177,7 +190,7 @@ console.log('\n=== Error Classification ===');
 
 console.log('\n=== Job Service: Feature Gate ===');
 
-(() => {
+await (async () => {
   // Mock services
   const mockUserStorage = {
     _users: {},
@@ -215,7 +228,7 @@ console.log('\n=== Job Service: Feature Gate ===');
 
   // Test: Agent disabled → job creation rejected
   assertThrows(
-    () => jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 }),
+    async async () => await jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 }),
     'Job creation rejected when agent disabled'
   );
 
@@ -228,7 +241,7 @@ console.log('\n=== Job Service: Feature Gate ===');
   };
 
   // Test: Agent enabled → job creation succeeds
-  const job = jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
+  const job = await jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
   assert(job !== null, 'Job created when agent enabled');
   assertEqual(job.state, 'DISCOVERED', 'Job starts in DISCOVERED state');
   assertEqual(job.userId, 100, 'Job has correct userId');
@@ -241,7 +254,7 @@ console.log('\n=== Job Service: Feature Gate ===');
 
 console.log('\n=== Job Service: Idempotency ===');
 
-(() => {
+await (async () => {
   const mockUserStorage = {
     _users: {
       100: {
@@ -267,17 +280,17 @@ console.log('\n=== Job Service: Idempotency ===');
   );
 
   // Create first job
-  const job1 = jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
+  const job1 = await jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
 
   // Attempt duplicate
-  const job2 = jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
+  const job2 = await jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
 
   assertEqual(job1.id, job2.id, 'Duplicate request returns same job');
 })();
 
 console.log('\n=== Job Service: State Transitions ===');
 
-(() => {
+await (async () => {
   const mockUserStorage = {
     _users: {
       100: {
@@ -302,31 +315,31 @@ console.log('\n=== Job Service: State Transitions ===');
     mockUserStorage
   );
 
-  const job = jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
+  const job = await jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
   assertEqual(job.state, 'DISCOVERED', 'Initial state: DISCOVERED');
 
   // Valid transition
-  const job2 = jobService.transitionJob(100, job.id, 'ANALYZING');
+  const job2 = await jobService.transitionJob(100, job.id, 'ANALYZING');
   assertEqual(job2.state, 'ANALYZING', 'After transition: ANALYZING');
   assertEqual(job2.previousState, 'DISCOVERED', 'Previous state recorded');
 
   // Continue valid transitions
-  const job3 = jobService.transitionJob(100, job.id, 'CAPABILITY_CHECK');
+  const job3 = await jobService.transitionJob(100, job.id, 'CAPABILITY_CHECK');
   assertEqual(job3.state, 'CAPABILITY_CHECK', 'After transition: CAPABILITY_CHECK');
 
-  const job4 = jobService.transitionJob(100, job.id, 'PLANNING');
+  const job4 = await jobService.transitionJob(100, job.id, 'PLANNING');
   assertEqual(job4.state, 'PLANNING', 'After transition: PLANNING');
 
   // Invalid transition
   assertThrows(
-    () => jobService.transitionJob(100, job.id, 'COMPLETED'),
+    async () => await jobService.transitionJob(100, job.id, 'COMPLETED'),
     'Invalid transition COMPLETED from PLANNING throws error'
   );
 })();
 
 console.log('\n=== Job Service: Unsupported Job ===');
 
-(() => {
+await (async () => {
   const mockUserStorage = {
     _users: {
       100: {
@@ -360,7 +373,7 @@ console.log('\n=== Job Service: Unsupported Job ===');
     mockUserStorage
   );
 
-  const job = jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
+  const job = await jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
   assertEqual(job.state, 'UNSUPPORTED', 'Unsupported assignment starts in UNSUPPORTED');
   assertEqual(job.capabilityStatus, 'UNSUPPORTED', 'capabilityStatus is UNSUPPORTED');
   assert(job.completedAt !== null, 'Unsupported job has completedAt');
@@ -368,7 +381,7 @@ console.log('\n=== Job Service: Unsupported Job ===');
 
 console.log('\n=== Job Service: Cancellation ===');
 
-(() => {
+await (async () => {
   const mockUserStorage = {
     _users: {
       100: {
@@ -393,24 +406,24 @@ console.log('\n=== Job Service: Cancellation ===');
     mockUserStorage
   );
 
-  const job = jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
-  jobService.transitionJob(100, job.id, 'ANALYZING');
+  const job = await jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
+  await jobService.transitionJob(100, job.id, 'ANALYZING');
 
   // Cancel from non-terminal
-  const cancelled = jobService.cancelJob(100, job.id);
+  const cancelled = await jobService.cancelJob(100, job.id);
   assertEqual(cancelled.state, 'CANCELLED', 'Job cancelled');
   assert(cancelled.completedAt !== null, 'Cancelled job has completedAt');
 
   // Cannot cancel a terminal job
   assertThrows(
-    () => jobService.cancelJob(100, job.id),
+    async () => await jobService.cancelJob(100, job.id),
     'Cannot cancel already-cancelled job'
   );
 })();
 
 console.log('\n=== Job Service: User Isolation ===');
 
-(() => {
+await (async () => {
   const mockUserStorage = {
     _users: {
       100: {
@@ -442,29 +455,29 @@ console.log('\n=== Job Service: User Isolation ===');
   );
 
   // Create jobs for different users
-  const jobA = jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
-  const jobB = jobService.createJob({ userId: 200, courseId: 200, assignmentId: 300 });
+  const jobA = await jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
+  const jobB = await jobService.createJob({ userId: 200, courseId: 200, assignmentId: 300 });
 
   // User A can see their own job
-  const foundA = jobService.getJob(100, jobA.id);
+  const foundA = await jobService.getJob(100, jobA.id);
   assert(foundA !== null, 'User A can retrieve their own job');
 
   // User A cannot see User B's job
-  const stolen = jobService.getJob(100, jobB.id);
+  const stolen = await jobService.getJob(100, jobB.id);
   assert(stolen === null, 'User A cannot retrieve User B job');
 
   // User B cannot see User A's job
-  const stolen2 = jobService.getJob(200, jobA.id);
+  const stolen2 = await jobService.getJob(200, jobA.id);
   assert(stolen2 === null, 'User B cannot retrieve User A job');
 
   // User A's job list does not include User B's job
-  const listA = jobService.getUserJobs(100);
+  const listA = await jobService.getUserJobs(100);
   assert(!listA.some((j) => j.id === jobB.id), 'User A job list excludes User B jobs');
 })();
 
 console.log('\n=== Job Service: Error Handling & Retry ===');
 
-(() => {
+await (async () => {
   const mockUserStorage = {
     _users: {
       100: {
@@ -489,29 +502,29 @@ console.log('\n=== Job Service: Error Handling & Retry ===');
     mockUserStorage
   );
 
-  const job = jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
-  jobService.transitionJob(100, job.id, 'ANALYZING');
-  jobService.transitionJob(100, job.id, 'CAPABILITY_CHECK');
-  jobService.transitionJob(100, job.id, 'PLANNING');
-  jobService.transitionJob(100, job.id, 'GENERATING');
+  const job = await jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
+  await jobService.transitionJob(100, job.id, 'ANALYZING');
+  await jobService.transitionJob(100, job.id, 'CAPABILITY_CHECK');
+  await jobService.transitionJob(100, job.id, 'PLANNING');
+  await jobService.transitionJob(100, job.id, 'GENERATING');
 
   // Handle retryable error
   const retryableError = { code: 'TIMEOUT', message: 'Request timeout' };
-  const afterRetry = jobService.handleJobFailure(100, job.id, retryableError);
+  const afterRetry = await jobService.handleJobFailure(100, job.id, retryableError);
   assertEqual(afterRetry.state, 'GENERATING', 'Retryable error keeps job in current state');
   assert(afterRetry.retryCount === 1, 'Retry count incremented');
   assert(afterRetry.nextRetryAt !== null, 'Next retry time set');
 
   // Handle non-retryable error
   const nonRetryableError = { code: 'UNAUTHORIZED', message: 'Invalid token' };
-  const afterFail = jobService.handleJobFailure(100, job.id, nonRetryableError);
+  const afterFail = await jobService.handleJobFailure(100, job.id, nonRetryableError);
   assertEqual(afterFail.state, 'FAILED', 'Non-retryable error fails job');
   assertEqual(afterFail.error.category, 'NON_RETRYABLE', 'Error category correct');
 })();
 
 console.log('\n=== Job Service: Sanitize Job ===');
 
-(() => {
+await (async () => {
   const mockUserStorage = {
     _users: {
       100: {
@@ -536,7 +549,7 @@ console.log('\n=== Job Service: Sanitize Job ===');
     mockUserStorage
   );
 
-  const job = jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
+  const job = await jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 });
   const sanitized = jobService.sanitizeJob(job);
 
   // Should not expose internal details
@@ -550,7 +563,7 @@ console.log('\n=== Job Service: Sanitize Job ===');
 
 console.log('\n=== Job Service: Job Summary ===');
 
-(() => {
+await (async () => {
   const mockUserStorage = {
     _users: {
       100: {
@@ -576,13 +589,13 @@ console.log('\n=== Job Service: Job Summary ===');
   );
 
   // Create various jobs
-  const job1 = jobService.createJob({ userId: 100, courseId: 1, assignmentId: 1 });
-  jobService.transitionJob(100, job1.id, 'ANALYZING');
+  const job1 = await jobService.createJob({ userId: 100, courseId: 1, assignmentId: 1 });
+  await jobService.transitionJob(100, job1.id, 'ANALYZING');
 
-  const job2 = jobService.createJob({ userId: 100, courseId: 2, assignmentId: 2 });
+  const job2 = await jobService.createJob({ userId: 100, courseId: 2, assignmentId: 2 });
   // job2 stays in DISCOVERED
 
-  const job3 = jobService.createJob({
+  const job3 = await jobService.createJob({
     userId: 100, courseId: 3, assignmentId: 3,
     manifest: {
       identity: { courseName: 'Test' },
@@ -592,7 +605,7 @@ console.log('\n=== Job Service: Job Summary ===');
   });
   // job3 is UNSUPPORTED
 
-  const summary = jobService.getJobSummary(100);
+  const summary = await jobService.getJobSummary(100);
   assert(summary.total >= 3, 'Summary total >= 3');
   assert(summary.running >= 2, 'Summary running >= 2');
   assert(summary.unsupported >= 1, 'Summary unsupported >= 1');
@@ -609,3 +622,4 @@ if (failed > 0) {
 } else {
   console.log('\nAll tests passed!\n');
 }
+

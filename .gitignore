@@ -4,3 +4,13 @@
 npm-debug.log*
 node_modules/
 openclaude/
+
+# ── Runtime data & secrets (never commit) ──────────────────────
+.env.*
+*.env
+!.env.example
+# Generated artifacts & exports that may contain user data
+*.docx
+*.7z
+# OS noise
+Thumbs.db
