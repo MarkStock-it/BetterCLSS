@@ -621,7 +621,7 @@ function AgentReviewScreen({ job, onBack, onComplete }) {
       {/* Validation status */}
       <div className="agent-review-status">
         {job.manifest?.capabilityResult?.status === 'SUPPORTED' ? (
-          <span className="agent-review-badge agent-review-ok">✓ Requirements met</span>
+          <span className="agent-review-badge agent-review-ok"><svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg> Requirements met</span>
         ) : (
           <span className="agent-review-badge agent-review-warn">⚠ Check requirements</span>
         )}

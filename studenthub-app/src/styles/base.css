@@ -752,7 +752,7 @@ a:focus-visible {
   border: 1.5px solid rgba(245, 158, 11, 0.25);
   border-radius: 999px;
   cursor: pointer;
-  transition: all 120ms ease;
+  transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease;
 }
 .undo-btn:hover { background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.45); }
 .undo-btn:active { transform: scale(0.88); }
@@ -1488,12 +1488,17 @@ a:focus-visible {
   color: #e1e6f8;
   border: 1px solid rgba(105, 125, 195, 0.18);
   border-radius: 15px;
-  outline: none;
   background: rgba(19, 24, 43, 0.88);
   padding: 12px 13px;
   font: inherit;
   font-size: 0.72rem;
   line-height: 1.45;
+}
+
+.assistant-composer textarea:focus-visible {
+  border-color: rgba(121, 146, 241, 0.5);
+  box-shadow: 0 0 0 3px rgba(101, 128, 235, 0.08);
+  outline: none;
 }
 
 .assistant-composer textarea:focus {

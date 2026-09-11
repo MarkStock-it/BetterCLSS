@@ -251,7 +251,7 @@
   cursor: pointer;
   font-size: 0.72rem;
   font-family: var(--font-ui);
-  transition: all 0.12s;
+  transition: border-color 0.12s, color 0.12s;
 }
 .study-btn:hover { border-color: var(--accent); color: var(--accent); }
 
@@ -269,7 +269,7 @@
   font-weight: 600;
   cursor: pointer;
   border: none;
-  transition: all 0.16s ease;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
   white-space: nowrap;
   text-decoration: none;
   letter-spacing: 0.01em;
@@ -290,7 +290,7 @@
 .btn-danger    { background: rgba(255,79,94,0.1); color: var(--red); border: 1px solid rgba(255,79,94,0.2); }
 .btn-danger:hover { background: rgba(255,79,94,0.2); }
 
-.btn-canvas    { background: linear-gradient(135deg, var(--accent), var(--purple)); color: white; box-shadow: 0 2px 14px rgba(96, 128, 255, 0.3); }
+.btn-canvas    { background: var(--accent); color: white; box-shadow: 0 2px 14px rgba(96, 128, 255, 0.3); }
 .btn-canvas:hover { opacity: 0.9; box-shadow: 0 4px 20px rgba(96, 128, 255, 0.45); }
 
 .btn-sm  { padding: 5px 12px; font-size: 0.78rem; }

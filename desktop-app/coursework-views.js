@@ -287,10 +287,12 @@ function renderAssignments() {
 
   el.innerHTML = list.map(a => {
     const chip = dueChip(dueDays(a.due));
+    const checkIcon = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+    const xIcon = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
     const toggle = a.source === 'local'
-      ? '<button class="check-btn" onclick="toggleLocalDone(' + a.localId + ')">' + (a.done ? '✓' : '') + '</button>'
-      : '<button class="check-btn" onclick="toggleCanvasDone(\'' + jsQuote(a.id) + '\',' + (a.done ? 'true' : 'false') + ')">' + (a.done ? '✓' : '') + '</button>';
-    const del = a.source === 'local' ? '<button class="btn btn-sm btn-danger" onclick="deleteLocalAssign(' + a.localId + ')">✕</button>' : '';
+      ? '<button class="check-btn" onclick="toggleLocalDone(' + a.localId + ')">' + (a.done ? checkIcon : '') + '</button>'
+      : '<button class="check-btn" onclick="toggleCanvasDone(\'' + jsQuote(a.id) + '\',' + (a.done ? 'true' : 'false') + ')">' + (a.done ? checkIcon : '') + '</button>';
+    const del = a.source === 'local' ? '<button class="btn btn-sm btn-danger" onclick="deleteLocalAssign(' + a.localId + ')">' + xIcon + '</button>' : '';
     const externalUrl = safeExternalUrl(a.url);
     const link = externalUrl ? '<a class="btn btn-sm btn-secondary" target="_blank" rel="noopener noreferrer" href="' + esc(externalUrl) + '">Open</a>' : '';
     return '<div class="assign-item ' + (a.done ? 'done' : '') + '"><div class="priority-dot ' + a.priority + '"></div><div class="assign-info"><div class="assign-title">' + esc(a.title) + '</div><div class="assign-sub">' + esc(a.subject) + (a.due ? ' · Due ' + esc(a.due) : '') + (a.source === 'canvas' && a.manualDone ? ' · Manual done' : '') + '</div></div><div class="assign-right"><span class="due-chip ' + chip.cls + '">' + chip.text + '</span>' + link + toggle + del + '</div></div>';
@@ -361,7 +363,7 @@ function renderCalPanel(day) {
   const events = APP.local.events.filter(e => e.date === day);
   const panel = document.getElementById('calPanel');
   if (!assign.length && !events.length) { panel.innerHTML = '<div style="font-size:0.8rem;color:var(--text-muted)">No items on this day.</div>'; return; }
-  panel.innerHTML = assign.map(a => '<div class="cal-event-row"><div class="priority-dot ' + a.priority + '"></div><div style="flex:1">' + esc(a.title) + ' · ' + esc(a.subject) + '</div></div>').join('') + events.map(e => '<div class="cal-event-row"><div style="width:8px;height:8px;border-radius:50%;background:var(--yellow)"></div><div style="flex:1">' + esc(e.title) + ' · ' + esc(e.type) + '</div><button class="btn btn-sm btn-danger" onclick="deleteEvent(' + e.id + ')">✕</button></div>').join('');
+  panel.innerHTML = assign.map(a => '<div class="cal-event-row"><div class="priority-dot ' + a.priority + '"></div><div style="flex:1">' + esc(a.title) + ' · ' + esc(a.subject) + '</div></div>').join('') + events.map(e => '<div class="cal-event-row"><div style="width:8px;height:8px;border-radius:50%;background:var(--yellow)"></div><div style="flex:1">' + esc(e.title) + ' · ' + esc(e.type) + '</div><button class="btn btn-sm btn-danger" onclick="deleteEvent(' + e.id + ')"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>').join('');
 }
 
 function changeMonth(direction) {
@@ -599,7 +601,7 @@ function renderGradeHistory() {
     toggle.textContent = expanded ? 'Show fewer' : 'Show all (' + entries.length + ')';
   }
   el.innerHTML = '<table class="grade-table"><thead><tr><th scope="col">Course</th><th scope="col">Activity</th><th scope="col" class="num">Score</th><th scope="col"><span class="visually-hidden">Delete</span></th></tr></thead><tbody>'
-    + visible.map(g => '<tr><td>' + esc(g.subject) + '</td><td>' + esc(g.label) + '</td><td class="num">' + esc(String(g.score) + '/' + String(g.total)) + '</td><td class="num"><button class="grade-del" onclick="deleteLocalGrade(' + g.id + ')" aria-label="Delete logged grade ' + esc(g.label) + '">✕</button></td></tr>').join('')
+    + visible.map(g => '<tr><td>' + esc(g.subject) + '</td><td>' + esc(g.label) + '</td><td class="num">' + esc(String(g.score) + '/' + String(g.total)) + '</td><td class="num"><button class="grade-del" onclick="deleteLocalGrade(' + g.id + ')" aria-label="Delete logged grade ' + esc(g.label) + '"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></td></tr>').join('')
     + '</tbody></table>';
 }
 
@@ -735,7 +737,7 @@ function renderAnnouncements() {
       + '<div class="announce-meta"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>'
       + '<span>' + (announcementMeta(a) || 'General') + '</span>'
       + (externalUrl ? '<a class="announce-open" target="_blank" rel="noopener noreferrer" href="' + esc(externalUrl) + '">Open in Canvas</a>' : '')
-      + (a.canvas ? '' : '<button class="announce-del" onclick="deleteLocalAnnouncement(' + a.id + ')" aria-label="Delete announcement">✕</button>')
+      + (a.canvas ? '' : '<button class="announce-del" onclick="deleteLocalAnnouncement(' + a.id + ')" aria-label="Delete announcement"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>')
       + '</div></article>';
   }).join('');
 }
@@ -756,7 +758,7 @@ function deleteLocalAnnouncement(id) { APP.local.announcements = APP.local.annou
 
 function renderNotes() {
   const el = document.getElementById('notesGrid');
-  el.innerHTML = APP.local.notes.map(n => '<div class="note-card ' + n.color + '"><button class="note-del-btn" onclick="deleteNote(' + n.id + ')">✕</button><div class="note-title">' + esc(n.title) + '</div><div class="note-body">' + esc(n.content) + '</div><div class="note-date">' + esc(n.date || '') + '</div></div>').join('') + '<div class="add-note-card" onclick="openAddNote()"><div class="plus">+</div><div>Add Note</div></div>';
+  el.innerHTML = APP.local.notes.map(n => '<div class="note-card ' + n.color + '"><button class="note-del-btn" onclick="deleteNote(' + n.id + ')"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button><div class="note-title">' + esc(n.title) + '</div><div class="note-body">' + esc(n.content) + '</div><div class="note-date">' + esc(n.date || '') + '</div></div>').join('') + '<div class="add-note-card" onclick="openAddNote()"><div class="plus">+</div><div>Add Note</div></div>';
 }
 
 function openAddNote() {

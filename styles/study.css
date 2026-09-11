@@ -408,8 +408,8 @@
 
 .study-task-item .check-btn { width: 20px; height: 20px; font-size: 10px; }
 .study-task-item .task-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.study-task-item .btn-danger { opacity: 0; transition: opacity 0.12s; }
-.study-task-item:hover .btn-danger { opacity: 1; }
+.study-task-item .btn-danger { opacity: 0.45; transition: opacity 0.12s; }
+.study-task-item:hover .btn-danger, .study-task-item:focus-within .btn-danger { opacity: 1; }
 
 .study-fab { display: none; }
 

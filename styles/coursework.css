@@ -524,7 +524,7 @@
   cursor: pointer;
   color: var(--text-muted);
   font-size: 0.82rem;
-  transition: all 0.15s;
+  transition: border-color 0.15s, color 0.15s, background-color 0.15s;
 }
 .add-note-card:hover { border-color: var(--accent); color: var(--accent); background: rgba(91,127,255,0.05); }
 .add-note-card .plus { font-size: 1.4rem; }
@@ -553,7 +553,7 @@
   background: transparent;
   color: var(--text-muted);
   font-family: var(--font-ui);
-  transition: all 0.15s;
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s;
 }
 .pomo-mode-btn.active {
   background: var(--accent);

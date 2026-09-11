@@ -830,7 +830,6 @@
   color: #dce3fa;
   border: 1px solid rgba(103, 121, 182, 0.16);
   border-radius: 17px;
-  outline: none;
   background: rgba(7, 10, 21, 0.5);
   font: inherit;
   font-size: 0.76rem;
@@ -1041,6 +1040,12 @@
 .timer-profile-control {
   position: relative;
   margin-top: 9px;
+}
+
+.study-secondary-panel textarea:focus-visible {
+  border-color: rgba(123, 147, 239, 0.5);
+  box-shadow: 0 0 0 3px rgba(100, 127, 231, 0.09);
+  outline: none;
 }
 
 .timer-profile-control select {
