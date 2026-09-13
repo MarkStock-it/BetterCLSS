@@ -316,7 +316,8 @@ export function buildCourseDecks(assignments, savedDecks = []) {
  */
 function getAgentApiBase() {
   try {
-    return window.BCLSS_API_BASE_URL || '';
+    // Agent jobs live on the DATA backend (it owns the user DB).
+    return window.BCLSS_DATA_API_BASE_URL || window.BCLSS_API_BASE_URL || '';
   } catch {
     return '';
   }

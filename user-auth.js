@@ -156,12 +156,13 @@ const UserAuth = (() => {
   }
 
   /**
-   * Save user's Canvas sync results to backend
-   * Called after successfully syncing Canvas assignments, announcements, grades
+   * Save user's Canvas sync results to backend.
+   * Uses the CANVAS backend base (egress-capable) because sync data
+   * originates from Canvas; falls back to the data base.
    * 
    * @param {number} userId - Canvas user ID
    * @param {object} canvasData - Canvas data with assignments, announcements, grades, courses
-   * @param {string} apiBase - Backend API base URL
+   * @param {string} apiBase - Backend API base URL (data base, used as fallback)
    * @returns {Promise<{success}>}
    */
   async function saveCanvasSync(userId, canvasData, apiBase) {
@@ -169,7 +170,12 @@ const UserAuth = (() => {
       throw new Error('User ID required to save Canvas sync');
     }
 
-    const apiUrl = apiBase ? `${apiBase}/api/user/sync/${userId}` : `/api/user/sync/${userId}`;
+    // Prefer the Canvas backend (which fetched the data), fall back to data base.
+    const canvasBase = (typeof CanvasAPI !== 'undefined' && CanvasAPI.getCanvasApiBase)
+      ? CanvasAPI.getCanvasApiBase()
+      : '';
+    const base = canvasBase || apiBase || '';
+    const apiUrl = base ? `${base}/api/user/sync/${userId}` : `/api/user/sync/${userId}`;
     
     const response = await fetchWithTimeout(apiUrl, {
       method: 'POST',

@@ -89,7 +89,10 @@ export function AssistantDrawer({ open, onClose, data, assignments, onCreateDeck
       let canvasToken = '';
       let canvasDomain = '';
       try {
-        apiBase = (localStorage.getItem('bclss_api_base') || 'https://betterclss.onrender.com').replace(/\/+$/, '');
+        // Assistant chat proxies to Canvas/AI providers — use the CANVAS base.
+        apiBase = (localStorage.getItem('bclss_canvas_api_base')
+          || window.BCLSS_CANVAS_API_BASE_URL
+          || 'https://betterclss.onrender.com').replace(/\/+$/, '');
         aiKey = localStorage.getItem('bclss_ai_key') || '';
         groqKey = localStorage.getItem('bclss_groq_key') || '';
         canvasToken = localStorage.getItem('bclss_canvas_token') || '';

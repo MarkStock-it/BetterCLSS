@@ -1,23 +1,44 @@
 /**
- * canvas-api.js
- * Browser client for Canvas proxy using per-user credentials.
- * Token/domain are stored locally in the user's browser.
+ * canvas-api.js — dual-API routing.
+ *
+ * BetterCLSS uses TWO backend bases:
+ *  - DATA base: user persistence (authenticate, /api/user/*, agent jobs).
+ *    Points at the dcism backend, which has the MariaDB with user data.
+ *  - CANVAS base: Canvas proxy calls (/api/canvas/*, /api/assistant/*).
+ *    Points at the Render backend, which has outbound internet to Canvas.
+ *
+ * Set via config.js: BCLSS_DATA_API_BASE_URL and BCLSS_CANVAS_API_BASE_URL.
+ * A single BCLSS_API_BASE_URL still works (used for both) for simple setups.
  */
 
 const CanvasAPI = (() => {
   const TOKEN_KEY = 'bclss_canvas_token';
   const DOMAIN_KEY = 'bclss_canvas_domain';
   const API_BASE_KEY = 'bclss_api_base';
+  const CANVAS_BASE_KEY = 'bclss_canvas_api_base';
 
   function normalizeApiBase(input) {
     const val = String(input || '').trim();
     return val.replace(/\/+$/, '');
   }
 
-  function getApiBase() {
-    const fromWindow = typeof window !== 'undefined' ? window.BCLSS_API_BASE_URL : '';
+  function getDataApiBase() {
     const fromStorage = localStorage.getItem(API_BASE_KEY) || '';
-    return normalizeApiBase(fromStorage || fromWindow || '');
+    const fromWindow = typeof window !== 'undefined' ? window.BCLSS_DATA_API_BASE_URL : '';
+    const fromLegacy = typeof window !== 'undefined' ? window.BCLSS_API_BASE_URL : '';
+    return normalizeApiBase(fromStorage || fromWindow || fromLegacy || '');
+  }
+
+  function getCanvasApiBase() {
+    const fromStorage = localStorage.getItem(CANVAS_BASE_KEY) || '';
+    const fromWindow = typeof window !== 'undefined' ? window.BCLSS_CANVAS_API_BASE_URL : '';
+    // Fall back to the data base so simple single-backend setups still work.
+    return normalizeApiBase(fromStorage || fromWindow || getDataApiBase());
+  }
+
+  // Kept for backwards compatibility with existing callers.
+  function getApiBase() {
+    return getDataApiBase();
   }
 
   function setApiBase(baseUrl) {
@@ -29,8 +50,22 @@ const CanvasAPI = (() => {
     localStorage.setItem(API_BASE_KEY, clean);
   }
 
+  function setCanvasApiBase(baseUrl) {
+    const clean = normalizeApiBase(baseUrl);
+    if (!clean) {
+      localStorage.removeItem(CANVAS_BASE_KEY);
+      return;
+    }
+    localStorage.setItem(CANVAS_BASE_KEY, clean);
+  }
+
   function apiUrl(path) {
-    const base = getApiBase();
+    // Canvas-bound routes go to the Canvas (egress-capable) backend.
+    const isCanvasRoute = (
+      path.startsWith('/api/canvas/')
+      || path.startsWith('/api/assistant/')
+    );
+    const base = isCanvasRoute ? getCanvasApiBase() : getDataApiBase();
     return base ? `${base}${path}` : path;
   }
 
@@ -58,44 +93,30 @@ const CanvasAPI = (() => {
     const token = getToken();
     const domain = getDomain();
 
-    const headers = { Accept: 'application/json' };
-    if (token) headers['x-canvas-token'] = token;
-    if (domain) headers['x-canvas-domain'] = domain;
-
-    const url = apiUrl(path);
-    let lastError = null;
-
-    // Render free-tier services can cold-start; retry a few times before failing.
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      let res;
-      try {
-        res = await fetch(url, { headers });
-      } catch (err) {
-        lastError = err;
-        await delay(900 * (attempt + 1));
-        continue;
-      }
-
-      if (res.ok) {
-        return res.json();
-      }
-
-      if (res.status >= 500 && attempt < 2) {
-        await delay(900 * (attempt + 1));
-        continue;
-      }
-
-      let msg = `HTTP ${res.status}`;
-      try {
-        const data = await res.json();
-        msg = data.message || data.error || msg;
-      } catch (_) {}
-      if (res.status === 401) throw new Error('UNAUTHORIZED');
-      throw new Error(msg);
+    if (!token) {
+      const error = new Error('Canvas token is missing. Please connect your Canvas account.');
+      error.code = 'MISSING_TOKEN';
+      throw error;
     }
 
-    if (lastError) {
-      throw new Error('Load failed (backend cold start or network issue). Please retry in 15-30 seconds.');
+    const url = apiUrl(path);
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'x-canvas-token': token,
+          'x-canvas-domain': domain,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (err) {
+      if (err.code === 'MISSING_TOKEN') throw err;
+      console.warn(`API request to ${url} failed:`, err);
+      throw new Error('Load failed');
     }
 
     throw new Error('Load failed');
@@ -179,6 +200,9 @@ const CanvasAPI = (() => {
     clearCredentials,
     setApiBase,
     getApiBase,
+    getDataApiBase,
+    getCanvasApiBase,
+    setCanvasApiBase,
     apiUrl,
     getDomain,
     getToken,
@@ -192,3 +216,7 @@ const CanvasAPI = (() => {
     stripHtml,
   };
 })();
+
+if (typeof window !== 'undefined') {
+  window.CanvasAPI = CanvasAPI;
+}
