@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const dbStore = require('../../user-storage-db');
 
 function createUserRoutes({
   canvasService,
@@ -25,6 +26,11 @@ function createUserRoutes({
           name: profile.name,
           email: profile.primary_email || profile.email,
         });
+        // Activity/history: append a login event (durable, DB-backed when configured).
+        dbStore.recordActivity(userId, 'login', {
+          isNewUser,
+          at: new Date().toISOString(),
+        }).catch(() => {});
         canvasService.cacheVerifiedUser(canvasAuth, profile);
         json(res, 200, {
           success: true,
@@ -53,12 +59,14 @@ function createUserRoutes({
       try {
         await canvasService.verifyUserRequest(req, userId);
         const userData = userStorage.loadOrCreateUser(userId);
+        const activities = await dbStore.listActivity(userId).catch(() => []);
         json(res, 200, {
           success: true,
           userId,
           localData: userData.local,
           canvasData: userData.canvas,
           uiData: userData.ui,
+          activity: activities,
         });
       } catch (error) {
         if (!canvasService.writeUserAuthError(res, error)) {

@@ -14,6 +14,10 @@
 
 const fs = require('fs');
 const path = require('path');
+const { hashUserId } = require('./user-identity');
+
+// Durable persistence mirror (MariaDB). Optional — absent config = file-only mode.
+const dbStore = require('./user-storage-db');
 
 // Use a data directory to store user files
 const DATA_DIR = path.join(__dirname, '.betterclss_data');
@@ -24,12 +28,16 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 
 /**
- * Get the file path for a user's data
- * @param {number} canvasUserId - The Canvas user ID
+ * Get the file path for a user's data.
+ * Uses a hashed internal key — raw Canvas user IDs are never used as
+ * storage identifiers at rest.
+ * @param {number} canvasUserId - The Canvas user ID (verified server-side)
  * @returns {string} File path for user's data
  */
 function getUserDataPath(canvasUserId) {
-  const filename = `user_${canvasUserId}.json`;
+  const filename = dbStore.getFileNameForWorkingSet
+    ? dbStore.getFileNameForWorkingSet(canvasUserId)
+    : `user_${hashUserId('local', canvasUserId).slice(0, 32)}.json`;
   return path.join(DATA_DIR, filename);
 }
 
@@ -174,6 +182,9 @@ function saveUserData(canvasUserId, userData) {
     
     // Rename temp to actual file (atomic on most systems)
     fs.renameSync(tempPath, filePath);
+    // Fire-and-forget durable mirror to MariaDB (no-op when DB unconfigured).
+    // Canvas tokens are never part of userData; only the hashed id is persisted.
+    dbStore.persistUser(canvasUserId, userData).catch(() => {});
     return true;
   } catch (err) {
     console.error(`Failed to save user ${canvasUserId}:`, err.message);
@@ -243,6 +254,7 @@ function deleteUserData(canvasUserId) {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
+    // Best-effort DB deletion is handled by the DB store when configured.
     return true;
   } catch (err) {
     console.error(`Failed to delete user ${canvasUserId}:`, err.message);

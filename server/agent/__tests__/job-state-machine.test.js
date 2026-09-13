@@ -228,7 +228,7 @@ await (async () => {
 
   // Test: Agent disabled → job creation rejected
   assertThrows(
-    async async () => await jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 }),
+    async () => await jobService.createJob({ userId: 100, courseId: 200, assignmentId: 300 }),
     'Job creation rejected when agent disabled'
   );
 
