@@ -1,0 +1,29 @@
+# BetterCLSS — Apache configuration (shared hosting)
+Options -Indexes
+
+# Static files (frontend) are served directly from this docroot.
+# Dynamic backend routes are proxied to the Node service managed by pm2
+# on localhost:5510 (must always match PORT in ~/BetterCLSS/.env).
+
+RewriteEngine On
+
+# Backend routes handled by Node: /api/*, /register-token, /send-notification
+RewriteCond %{REQUEST_URI} ^/api/ [OR]
+RewriteCond %{REQUEST_URI} ^/register-token [OR]
+RewriteCond %{REQUEST_URI} ^/send-notification
+RewriteRule ^(.*)$ http://127.0.0.1:5510/$1 [P,L,QSA]
+
+# Never expose runtime data, secrets, or internals
+RedirectMatch 404 ^/\.betterclss_data/
+RedirectMatch 404 ^/\.env
+RedirectMatch 404 ^/node_modules/
+RedirectMatch 404 ^/server/
+RedirectMatch 404 ^/db/
+RedirectMatch 404 ^/scripts/
+
+# Security headers
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
