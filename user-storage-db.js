@@ -125,7 +125,7 @@ async function restoreAllFromDb() {
   try {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
     const [rows] = await pool.query(
-      'SELECT user_id, canvas_domain, data, JSON_EXTRACT(data, "$.__canvasUserId") AS raw_id FROM user_data'
+      'SELECT user_id, data, JSON_EXTRACT(data, "$.\u005f\u005fcanvasUserId") AS raw_id FROM user_data'
     );
     let restored = 0;
     for (const row of rows) {
