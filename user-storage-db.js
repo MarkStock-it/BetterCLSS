@@ -37,20 +37,21 @@ function isDbConfigured() {
 function getPool() {
   if (!isDbConfigured()) return null;
   if (!poolPromise) {
-    const mysql = require('mysql2/promise');
-    poolPromise = mysql.createPool({
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT || 3306),
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      waitForConnections: true,
-      connectionLimit: 5,
-    }).catch((err) => {
+    try {
+      const mysql = require('mysql2/promise');
+      poolPromise = mysql.createPool({
+        host: process.env.DB_HOST,
+        port: Number(process.env.DB_PORT || 3306),
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        waitForConnections: true,
+        connectionLimit: 5,
+      });
+    } catch (err) {
       console.error('[user-storage-db] pool creation failed:', err.message);
       poolPromise = null;
-      return null;
-    });
+    }
   }
   return poolPromise;
 }
