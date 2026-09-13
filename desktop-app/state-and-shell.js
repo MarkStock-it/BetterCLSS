@@ -200,6 +200,14 @@ function mergeLocalData(incoming) {
       ? incoming.canvasOverrides
       : defaults.canvasOverrides
   };
+  // Keep the prefs block (stored alongside local in the server document).
+  if (incoming.prefs && typeof incoming.prefs === 'object') {
+    Object.keys(APP.prefs).forEach((key) => {
+      if (incoming.prefs[key] !== null && incoming.prefs[key] !== undefined) {
+        APP.prefs[key] = incoming.prefs[key];
+      }
+    });
+  }
 }
 
 function mergeCanvasData(incoming) {

@@ -254,7 +254,9 @@ function deleteUserData(canvasUserId) {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
-    // Best-effort DB deletion is handled by the DB store when configured.
+    // Also remove the durable DB row — otherwise restoreAllFromDb() would
+    // resurrect the deleted user's data on the next server restart.
+    dbStore.deleteUser(canvasUserId).catch(() => {});
     return true;
   } catch (err) {
     console.error(`Failed to delete user ${canvasUserId}:`, err.message);

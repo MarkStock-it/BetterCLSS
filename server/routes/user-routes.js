@@ -20,8 +20,11 @@ function createUserRoutes({
         }
 
         const userId = profile.id;
-        const filePath = path.join(rootDir, '.betterclss_data', `user_${userId}.json`);
-        const isNewUser = !fs.existsSync(filePath);
+        // Check both the hashed working-set file and any pre-migration
+        // legacy raw-ID file before declaring this a brand-new user.
+        const hashedPath = dbStore.getFilePathForWorkingSet(userId);
+        const legacyPath = path.join(rootDir, '.betterclss_data', `user_${userId}.json`);
+        const isNewUser = !fs.existsSync(hashedPath) && !fs.existsSync(legacyPath);
         const userData = userStorage.loadOrCreateUser(userId, {
           name: profile.name,
           email: profile.primary_email || profile.email,

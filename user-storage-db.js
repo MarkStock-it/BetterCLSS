@@ -201,6 +201,17 @@ async function recordActivity(canvasUserId, kind, detail = null, domain = 'usc.i
 }
 
 /**
+ * Delete a user's durable DB record (identity + data + activity, via cascade).
+ */
+async function deleteUser(canvasUserId, domain = 'usc.instructure.com') {
+  if (!isDbConfigured()) return;
+  const internalId = hashUserId(domain, canvasUserId);
+  const pool = getPool();
+  if (!pool || !(await ensureSchema(pool))) return;
+  await pool.query('DELETE FROM users WHERE id = ?', [internalId]);
+}
+
+/**
  * List recent activity entries for a user (most recent first, capped).
  */
 async function listActivity(canvasUserId, limit = 50, domain = 'usc.instructure.com') {
@@ -224,6 +235,7 @@ module.exports = {
   restoreAllFromDb,
   persistUser,
   recordActivity,
+  deleteUser,
   listActivity,
   getFilePathForWorkingSet,
   getFileNameForWorkingSet,
