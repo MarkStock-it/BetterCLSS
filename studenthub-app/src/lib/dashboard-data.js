@@ -166,6 +166,47 @@ export function dateKey(date = new Date()) {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * Fetch the user's cross-device preferences (theme, accent color, etc.) from
+ * the server and apply them to this device. The server document's `local.prefs`
+ * block is the authoritative copy; localStorage is only a per-device cache.
+ * @returns {Promise<object|null>} The prefs object, or null when unavailable.
+ */
+export async function fetchUserPrefs() {
+  const userId = getUserId();
+  if (!userId) return null;
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  try {
+    const res = await fetch(`${base}/api/user/data/${userId}`, {
+      headers: {
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const prefs = data.localData && data.localData.prefs;
+    if (!prefs || typeof prefs !== 'object') return null;
+
+    // Apply theme
+    if (prefs.theme === 'light' || prefs.theme === 'dark') {
+      localStorage.setItem('bclss_theme', prefs.theme);
+      document.documentElement.dataset.theme = prefs.theme;
+      document.querySelector('meta[name="theme-color"]')?.setAttribute(
+        'content',
+        prefs.theme === 'light' ? '#f1f3fb' : '#070913'
+      );
+    }
+    // Cache remaining prefs for the rest of the mobile app.
+    localStorage.setItem('bclss_prefs', JSON.stringify(prefs));
+    return prefs;
+  } catch {
+    return null;
+  }
+}
+
 export function weekStartKey(date = new Date()) {
   const start = new Date(date);
   const day = start.getDay();

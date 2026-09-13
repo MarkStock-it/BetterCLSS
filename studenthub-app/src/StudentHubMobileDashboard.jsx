@@ -24,6 +24,7 @@ import {
   updateAgentSettings,
   updateAgentPermissions,
   fetchAgentSettings,
+  fetchUserPrefs,
   writeAgentSettings
 } from './lib/dashboard-data';
 
@@ -63,6 +64,19 @@ export default function StudentHubMobileDashboard() {
   // only a per-device cache — on a phone that has never written it, it would
   // show OFF even when the server has the helper enabled. Reconcile the UI to
   // the server's value on mount so the toggle is the same on every device.
+  // Cross-device preferences (theme/accent) — reconcile from the server on
+  // mount so the app looks the same on every device.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const prefs = await fetchUserPrefs();
+      if (cancelled || !prefs) return;
+      // Force a re-render if the applied theme changed anything visual.
+      setAgentSettings((current) => ({ ...current }));
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {

@@ -239,6 +239,7 @@ async function connectCanvas() {
     localStorage.setItem('bclss_student_id', String(authResult.userId || ''));
     mergeLocalData(authResult.localData);
     mergeCanvasData(authResult.canvasData);
+    if (typeof applyRemotePrefs === 'function') applyRemotePrefs(authResult.localData && authResult.localData.prefs);
     
     hideModalLoading();
     closeModal();
@@ -297,6 +298,7 @@ async function restoreUserSession() {
     localStorage.setItem('bclss_student_id', String(authResult.userId || ''));
     mergeLocalData(authResult.localData);
     mergeCanvasData(authResult.canvasData);
+    if (typeof applyRemotePrefs === 'function') applyRemotePrefs(authResult.localData && authResult.localData.prefs);
     APP.canvas.connected = true;
     updateDashboardWelcome();
     return true;

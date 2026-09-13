@@ -253,6 +253,7 @@ function setAssignmentSort(mode) {
   const allowed = ['smart', 'due', 'priority', 'status', 'course', 'title'];
   APP.ui.assignSort = allowed.includes(mode) ? mode : 'smart';
   localStorage.setItem('bclss_assign_sort', APP.ui.assignSort);
+  if (typeof setPref === 'function') setPref('assignSort', APP.ui.assignSort);
   renderAssignments();
 }
 

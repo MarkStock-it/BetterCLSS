@@ -55,11 +55,13 @@ function readStoredStudyIntervals() {
 }
 
 function saveStudyIntervalsToStorage() {
-  localStorage.setItem(STUDY_INTERVALS_STORAGE_KEY, JSON.stringify({
+  const intervals = {
     workMins: APP.local.studySettings.workMins,
     breakMins: APP.local.studySettings.breakMins,
     longBreakMins: APP.local.studySettings.longBreakMins
-  }));
+  };
+  localStorage.setItem(STUDY_INTERVALS_STORAGE_KEY, JSON.stringify(intervals));
+  if (typeof setPref === 'function') setPref('studyIntervals', intervals);
 }
 
 function updateStudyIntervalSliderUI(inputId, valueId) {

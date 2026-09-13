@@ -45,6 +45,17 @@ const APP = {
     calYear: new Date().getFullYear(),
     selectedDate: null
   },
+  // Cross-device appearance/view preferences (persisted to the server).
+  // Kept in APP.prefs as the single source of truth; localStorage remains a
+  // per-device cache applied before authentication completes.
+  prefs: {
+    theme: null,
+    accentColor: null,
+    assignSort: null,
+    coursesCollapsed: null,
+    tutorialSkipped: null,
+    studyIntervals: null
+  },
   ai: {
     open: false,
     sending: false,
@@ -91,6 +102,56 @@ function save() {
   scheduleRemoteSave();
 }
 
+// Schedule a server save that also carries the prefs block.
+function schedulePrefsSync() {
+  scheduleRemoteSave();
+}
+
+// Persist one preference locally + to the server document.
+function setPref(key, value) {
+  if (!(key in APP.prefs)) return;
+  APP.prefs[key] = value;
+  schedulePrefsSync();
+}
+
+// Apply prefs received from the server onto this device.
+function applyRemotePrefs(prefs) {
+  if (!prefs || typeof prefs !== 'object') return;
+  Object.keys(APP.prefs).forEach((key) => {
+    if (prefs[key] !== null && prefs[key] !== undefined) APP.prefs[key] = prefs[key];
+  });
+  if (APP.prefs.theme === 'light' || APP.prefs.theme === 'dark') {
+    document.documentElement.setAttribute('data-theme', APP.prefs.theme);
+    localStorage.setItem('bclss_theme', APP.prefs.theme);
+    if (typeof setThemeIcon === 'function') setThemeIcon(APP.prefs.theme);
+    if (typeof updateThemeChrome === 'function') updateThemeChrome(APP.prefs.theme);
+  }
+  if (APP.prefs.accentColor) {
+    localStorage.setItem(ACCENT_STORAGE_KEY, APP.prefs.accentColor);
+    if (typeof applyAccentColor === 'function') applyAccentColor(APP.prefs.accentColor);
+    if (typeof syncAccentControls === 'function') syncAccentControls();
+  }
+  if (APP.prefs.assignSort) {
+    APP.ui.assignSort = APP.prefs.assignSort;
+    localStorage.setItem('bclss_assign_sort', APP.prefs.assignSort);
+  }
+  if (typeof APP.prefs.coursesCollapsed === 'boolean') {
+    sidebarCoursesCollapsed = APP.prefs.coursesCollapsed;
+    localStorage.setItem('bclss_courses_collapsed', APP.prefs.coursesCollapsed ? '1' : '0');
+    if (typeof setSidebarCoursesCollapsed === 'function') setSidebarCoursesCollapsed(sidebarCoursesCollapsed);
+  }
+  if (APP.prefs.tutorialSkipped === true) {
+    localStorage.setItem(TUTORIAL_SKIP_KEY, '1');
+  }
+  if (APP.prefs.studyIntervals && typeof APP.prefs.studyIntervals === 'object') {
+    localStorage.setItem(STUDY_INTERVALS_STORAGE_KEY, JSON.stringify(APP.prefs.studyIntervals));
+    const s = APP.prefs.studyIntervals;
+    if (s.workMins) APP.local.studySettings.workMins = s.workMins;
+    if (s.breakMins) APP.local.studySettings.breakMins = s.breakMins;
+    if (s.longBreakMins) APP.local.studySettings.longBreakMins = s.longBreakMins;
+  }
+}
+
 function scheduleRemoteSave() {
   const user = UserAuth.getCurrentUser();
   if (!user.id) return;
@@ -106,7 +167,7 @@ async function flushRemoteSave() {
   remoteSavePending = false;
   remoteSaveInFlight = true;
   try {
-    await UserAuth.saveUserData(user.id, APP.local, CanvasAPI.getApiBase());
+    await UserAuth.saveUserData(user.id, { ...APP.local, prefs: APP.prefs }, CanvasAPI.getApiBase());
   } catch (err) {
     console.debug('Background save to backend failed:', err.message);
   } finally {
@@ -167,6 +228,7 @@ function toggleTheme() {
   const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   root.setAttribute('data-theme', next);
   localStorage.setItem('bclss_theme', next);
+  setPref('theme', next);
   setThemeIcon(next);
   updateThemeChrome(next);
 }
@@ -235,6 +297,7 @@ function setAccentColor(accent, showToast = true) {
   localStorage.setItem(ACCENT_STORAGE_KEY, clean);
   applyAccentColor(clean);
   syncAccentControls();
+  setPref('accentColor', clean);
   if (showToast) toast('Accent updated', 'success');
 }
 
@@ -316,6 +379,7 @@ function updateInstallButtonState() {
 function setSidebarCoursesCollapsed(collapsed) {
   sidebarCoursesCollapsed = !!collapsed;
   localStorage.setItem('bclss_courses_collapsed', sidebarCoursesCollapsed ? '1' : '0');
+  if (typeof setPref === 'function') setPref('coursesCollapsed', sidebarCoursesCollapsed);
 
   const wrap = document.getElementById('sidebarCoursesWrap');
   const caret = document.getElementById('sidebarCoursesCaret');
@@ -343,11 +407,13 @@ function setupInstallPrompt() {
 
 function resetTutorialSkip() {
   localStorage.removeItem(TUTORIAL_SKIP_KEY);
+  setPref('tutorialSkipped', false);
   toast('Tutorial will show on next app open.', 'info');
 }
 
 function skipTutorial() {
   localStorage.setItem(TUTORIAL_SKIP_KEY, '1');
+  setPref('tutorialSkipped', true);
   closeModal();
 }
 
