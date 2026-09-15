@@ -25,6 +25,7 @@ import {
   updateAgentPermissions,
   fetchAgentSettings,
   fetchUserPrefs,
+  fetchRemoteLocalData,
   writeAgentSettings
 } from './lib/dashboard-data';
 
@@ -73,6 +74,20 @@ export default function StudentHubMobileDashboard() {
       if (cancelled || !prefs) return;
       // Force a re-render if the applied theme changed anything visual.
       setAgentSettings((current) => ({ ...current }));
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Pull the authoritative server document on every load so ticks, notes and
+  // links made on other devices appear here (server copy wins for shared data).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const merged = await fetchRemoteLocalData();
+      if (cancelled || !merged) return;
+      const fresh = readDashboardData();
+      setAssignments(fresh.assignments);
+      setStudyDecks(fresh.studyDecks);
     })();
     return () => { cancelled = true; };
   }, []);

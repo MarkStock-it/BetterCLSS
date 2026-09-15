@@ -157,8 +157,104 @@ export function updateStoredLocalData(updater) {
     const safeLocal = local && typeof local === 'object' && !Array.isArray(local) ? local : {};
     updater(safeLocal);
     localStorage.setItem('bclss_local', JSON.stringify(safeLocal));
+    queueRemoteLocalSave();
   } catch {
     // Keep the in-memory StudentHub state usable when browser storage is unavailable.
+  }
+}
+
+// ─── Cross-device user data sync ────────────────────────────────
+
+/**
+ * Push the phone's `bclss_local` document to the server (debounced), so
+ * changes made on the phone (ticked tasks, notes, links) reach every device.
+ * Fire-and-forget: failures leave localStorage intact for a later retry.
+ */
+let remoteLocalSaveTimer = null;
+function queueRemoteLocalSave() {
+  clearTimeout(remoteLocalSaveTimer);
+  remoteLocalSaveTimer = setTimeout(pushLocalDataToServer, 800);
+}
+
+export async function pushLocalDataToServer() {
+  const userId = getUserId();
+  if (!userId) return false;
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  try {
+    const local = JSON.parse(localStorage.getItem('bclss_local') || '{}');
+    const res = await fetch(`${base}/api/user/data/${userId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+      body: JSON.stringify({ local }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Fetch the authoritative user document from the server and merge it into
+ * this device's `bclss_local`. The server copy wins for shared data
+ * (canvasOverrides, assignments, notes, events, links, study data) so a
+ * phone shows the same ticks as the computer; it runs on every app load,
+ * not just when connecting Canvas.
+ * @returns {Promise<object|null>} The merged local document, or null.
+ */
+export async function fetchRemoteLocalData() {
+  const userId = getUserId();
+  if (!userId) return null;
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  try {
+    const res = await fetch(`${base}/api/user/data/${userId}`, {
+      headers: {
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const remote = data.localData;
+    if (!remote || typeof remote !== 'object') return null;
+
+    const local = (() => {
+      try {
+        const parsed = JSON.parse(localStorage.getItem('bclss_local') || '{}');
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+      } catch {
+        return {};
+      }
+    })();
+
+    const merged = { ...local, ...remote };
+    // Arrays/objects: server wins, but keep per-device-only keys like prefs caches.
+    ['assignments', 'grades', 'notes', 'studyTasks', 'studyHistory', 'studyDecks',
+      'events', 'announcements', 'links'].forEach((key) => {
+      if (Array.isArray(remote[key])) merged[key] = remote[key];
+    });
+    if (remote.canvasOverrides && typeof remote.canvasOverrides === 'object') {
+      merged.canvasOverrides = remote.canvasOverrides;
+    }
+    if (remote.studyCurrentNote && typeof remote.studyCurrentNote === 'object') {
+      merged.studyCurrentNote = remote.studyCurrentNote;
+    }
+    if (remote.studySettings && typeof remote.studySettings === 'object') {
+      merged.studySettings = { ...local.studySettings, ...remote.studySettings };
+    }
+    // Keep prefs out of bclss_local's sync path on the phone (handled separately).
+    delete merged.prefs;
+    localStorage.setItem('bclss_local', JSON.stringify(merged));
+    return merged;
+  } catch {
+    return null;
   }
 }
 
