@@ -21,6 +21,7 @@ const { createProviderRouter } = require('./ai/provider-router');
 const { createAgentService } = require('./services/agent-service');
 const { createAssistantService } = require('./services/assistant-service');
 const { createCanvasService } = require('./services/canvas-service');
+const { createAgenticHandoffService } = require('./services/agentic-handoff-service');
 const { createNotificationService } = require('./services/notification-service');
 const { createStaticHandler } = require('./services/static-service');
 
@@ -36,6 +37,7 @@ function createApp(rootDir) {
   const config = createConfig(rootDir);
   const { json } = createHttpHelpers(config.corsAllowOrigin);
   const canvasService = createCanvasService(config, json);
+  const agenticHandoffService = createAgenticHandoffService({ config });
   const assistantService = createAssistantService(config);
   const notificationService = createNotificationService(config.firebaseServiceAccountJson);
   const agentService = createAgentService(config, userStorage);
@@ -122,6 +124,7 @@ function createApp(rootDir) {
     agentJobService,
     agentService,
     agentOrchestrator,
+    agenticHandoffService,
     assignmentIngestion,
     artifactStorage,
     assistantService,

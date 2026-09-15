@@ -92,6 +92,8 @@ function createCanvasService(config, json) {
     const verified = {
       userId: profile.id,
       name: profile.name || '',
+      // Kept so callers can compute the identity hash without a re-fetch.
+      domain: auth.domain,
       expiresAt: now + USER_AUTH_CACHE_MS,
     };
     verifiedUsers.set(cacheKey, verified);
@@ -107,6 +109,7 @@ function createCanvasService(config, json) {
     verifiedUsers.set(credentialKey(auth), {
       userId: profile.id,
       name: profile.name || '',
+      domain: auth.domain,
       expiresAt: Date.now() + USER_AUTH_CACHE_MS,
     });
   }

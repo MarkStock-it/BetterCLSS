@@ -60,6 +60,11 @@ function createConfig(rootDir) {
     firebaseServiceAccountJson: process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '',
     // Agentic Helper configuration
     agentEnabled: process.env.AGENT_ENABLED !== '0',
+    // Standalone BetterCLSS Agentic app (betterclss-agentic on Render).
+    // The shared secret MUST match the agentic app's AGENTIC_JWT_SECRET —
+    // it signs the handoff JWT the agentic app verifies on arrival.
+    agenticJwtSecret: process.env.AGENTIC_JWT_SECRET || '',
+    agenticAppUrl: process.env.AGENTIC_APP_URL || 'https://betterclss-agentic.onrender.com',
     agentMaxFileSizeMb: Number(process.env.AGENT_MAX_FILE_SIZE_MB || 10),
     agentMaxConcurrentJobs: Number(process.env.AGENT_MAX_CONCURRENT_JOBS || 3),
     agentMaxRetries: Number(process.env.AGENT_MAX_RETRY_COUNT || 2),

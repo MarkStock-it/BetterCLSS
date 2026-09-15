@@ -453,3 +453,49 @@
 .agent-modal-confirm:not(:disabled):active {
   transform: scale(0.97);
 }
+
+/* ── Agentic Helper launcher (standalone agentic app) ─────────────── */
+.agentic-launch {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(101, 119, 180, 0.16);
+}
+
+.agentic-launch-button {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid rgba(141, 163, 255, 0.45);
+  border-radius: 10px;
+  background: rgba(141, 163, 255, 0.12);
+  color: #8da3ff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.agentic-launch-button:hover:not(:disabled) {
+  background: rgba(141, 163, 255, 0.22);
+  border-color: rgba(141, 163, 255, 0.7);
+}
+
+.agentic-launch-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.agentic-launch-hint {
+  margin-top: 8px;
+  color: rgba(180, 193, 235, 0.6);
+  font-size: 0.6rem;
+  line-height: 1.5;
+}
+
+.agentic-launch-error {
+  margin-top: 8px;
+  color: #ff8f8f;
+  font-size: 0.6rem;
+  font-weight: 600;
+}

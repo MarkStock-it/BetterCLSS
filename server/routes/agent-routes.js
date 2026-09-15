@@ -21,6 +21,7 @@
  *   - POST /api/agent/jobs/:userId/:jobId/cancel — Cancel a job
  *   - POST /api/agent/execute/:userId/:jobId     — Execute an agent job
  *   - GET  /api/agent/summary/:userId            — Get job count summary
+ *   - POST /api/agent/agentic-handoff/:userId    — Mint handoff JWT for the standalone agentic app
  */
 
 const { writeBodyError } = require('../lib/http');
@@ -35,9 +36,11 @@ function createAgentRoutes({
   assignmentIngestion,
   artifactStorage,
   canvasService,
+  config,
   json,
   parseRequestBody,
   toolRuntime,
+  agenticHandoffService,
 }) {
   return async function handleAgentRoute(req, res, pathname) {
     // Bring-your-own-key: read the per-user AI keys sent by the client
@@ -755,6 +758,40 @@ function createAgentRoutes({
       } catch (error) {
         if (!canvasService.writeUserAuthError(res, error)) {
           json(res, 500, { error: 'download_error', message: error.message });
+        }
+      }
+      return true;
+    }
+
+    // POST /api/agent/agentic-handoff/:userId — mint a short-lived handoff JWT
+    // for the standalone BetterCLSS Agentic app (passby_agentic.md §6.1).
+    const handoffMatch = pathname.match(/^\/api\/agent\/agentic-handoff\/(\d+)$/);
+    if (handoffMatch && req.method === 'POST') {
+      const userId = parseInt(handoffMatch[1]);
+      try {
+        // Same live-Canvas verification every other :userId endpoint uses.
+        const verified = await canvasService.verifyUserRequest(req, userId);
+        if (!agenticHandoffService || !agenticHandoffService.isConfigured()) {
+          json(res, 503, {
+            error: 'agentic_not_configured',
+            message: 'Agentic Helper launch is not configured on this server.',
+            hint: 'Set AGENTIC_JWT_SECRET in the environment (must match the agentic app).',
+          });
+          return true;
+        }
+        const token = agenticHandoffService.mintHandoffToken({
+          canvasUserId: verified.userId,
+          canvasDomain: verified.domain,
+          name: verified.name,
+        });
+        json(res, 200, {
+          success: true,
+          launchUrl: agenticHandoffService.buildLaunchUrl(token),
+          expiresIn: 120,
+        });
+      } catch (error) {
+        if (!canvasService.writeUserAuthError(res, error)) {
+          json(res, 500, { error: 'handoff_error', message: error.message });
         }
       }
       return true;

@@ -27,6 +27,7 @@ const checkedScripts = [
   'server/routes/canvas-routes.js',
   'server/routes/notification-routes.js',
   'server/routes/user-routes.js',
+  'server/services/agentic-handoff-service.js',
   'server/services/assistant-service.js',
   'server/services/canvas-service.js',
   'server/services/notification-service.js',

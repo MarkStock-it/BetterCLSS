@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Glyph } from '../ui/Icons';
 import { ViewHeading } from '../ui/ViewControls';
+import { openAgenticHelper } from '../../lib/dashboard-data';
 
 const SPRING = { type: 'spring', stiffness: 430, damping: 38, mass: 0.86 };
 const VIEW_COPY = {
@@ -31,6 +32,8 @@ export function SecondaryView({ view, announcements, grades, links, connected, o
   const [agentWarningOpen, setAgentWarningOpen] = useState(false);
   const [agentWarningAccepted, setAgentWarningAccepted] = useState(false);
   const [agentStatusMessage, setAgentStatusMessage] = useState('');
+  const [agenticBusy, setAgenticBusy] = useState(false);
+  const [agenticMessage, setAgenticMessage] = useState('');
   const agentEnabled = agentSettings?.enabled || false;
   const [title, detail] = VIEW_COPY[view] || ['StudentHub', 'Choose a destination from the navigation drawer.'];
   const gradePanels = grades.slice(0, 6).map((grade) => {
@@ -141,6 +144,24 @@ export function SecondaryView({ view, announcements, grades, links, connected, o
     setAgentWarningAccepted(false);
   };
 
+  const handleOpenAgenticHelper = async () => {
+    if (agenticBusy) return;
+    setAgenticBusy(true);
+    setAgenticMessage('');
+    const result = await openAgenticHelper();
+    setAgenticBusy(false);
+    if (!result.ok) {
+      const messages = {
+        missing_canvas_token: 'Connect your Canvas account first.',
+        not_signed_in: 'Sign in to StudentHub first.',
+        agentic_not_configured: 'Agentic Helper launch is not configured on the server yet.',
+        http_401: 'Your Canvas session expired — reconnect and try again.',
+        http_403: 'Canvas could not confirm this account.',
+      };
+      setAgenticMessage(messages[result.error] || 'Could not open the helper. Try again in a moment.');
+    }
+  };
+
   return (
     <motion.section className="view-stack" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
       <ViewHeading eyebrow="StudentHub" title={title} detail={detail} />
@@ -249,6 +270,22 @@ export function SecondaryView({ view, announcements, grades, links, connected, o
             </div>
             {agentEnabled && (
               <p className="agent-status-text">Agentic Helper is enabled</p>
+            )}
+            {agentEnabled && (
+              <div className="agentic-launch">
+                <button
+                  type="button"
+                  className="agentic-launch-button"
+                  onClick={handleOpenAgenticHelper}
+                  disabled={agenticBusy}
+                >
+                  {agenticBusy ? 'Preparing…' : 'Open Agentic Helper'}
+                </button>
+                <p className="agentic-launch-hint">
+                  Opens the standalone helper in a new tab using a secure one-time link (valid for 2 minutes).
+                </p>
+                {agenticMessage && <p className="agentic-launch-error">{agenticMessage}</p>}
+              </div>
             )}
             {agentEnabled && agentSettings?.permissions && (
               <div className="agent-permissions-section">

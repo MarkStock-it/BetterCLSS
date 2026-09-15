@@ -456,6 +456,45 @@ export async function fetchAgentJobs() {
 }
 
 /**
+ * Ask the server to mint a handoff URL for the standalone BetterCLSS Agentic
+ * app and open it in a new tab. The server verifies the Canvas token live,
+ * signs a 120-second handoff JWT, and returns the full launch URL — the
+ * Canvas token itself never leaves the server.
+ * @returns {Promise<{ok: boolean, error?: string}>}
+ */
+export async function openAgenticHelper() {
+  const userId = getUserId();
+  if (!userId) return { ok: false, error: 'not_signed_in' };
+  const base = getAgentApiBase();
+  const token = localStorage.getItem('bclss_canvas_token') || '';
+  const domain = localStorage.getItem('bclss_canvas_domain') || '';
+  if (!token) return { ok: false, error: 'missing_canvas_token' };
+  try {
+    const res = await fetch(`${base}/api/agent/agentic-handoff/${userId}`, {
+      method: 'POST',
+      headers: {
+        'x-canvas-token': token,
+        'x-canvas-domain': domain,
+      },
+    });
+    if (!res.ok) {
+      let code = `http_${res.status}`;
+      try {
+        const body = await res.json();
+        if (body && body.error) code = body.error;
+      } catch { /* non-JSON error body */ }
+      return { ok: false, error: code };
+    }
+    const data = await res.json();
+    if (!data || !data.launchUrl) return { ok: false, error: 'empty_response' };
+    window.open(data.launchUrl, '_blank', 'noopener');
+    return { ok: true };
+  } catch {
+    return { ok: false, error: 'network_error' };
+  }
+}
+
+/**
  * Fetch a specific agent job.
  * @param {string} jobId
  * @returns {Promise<object|null>}
