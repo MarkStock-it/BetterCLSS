@@ -41,6 +41,7 @@ function createAgentRoutes({
   parseRequestBody,
   toolRuntime,
   agenticHandoffService,
+  agenticBackChannelClient,
 }) {
   return async function handleAgentRoute(req, res, pathname) {
     // Bring-your-own-key: read the per-user AI keys sent by the client
@@ -792,6 +793,43 @@ function createAgentRoutes({
       } catch (error) {
         if (!canvasService.writeUserAuthError(res, error)) {
           json(res, 500, { error: 'handoff_error', message: error.message });
+        }
+      }
+      return true;
+    }
+
+    // GET /api/agent/agentic-jobs/:userId — status mirror from the standalone
+    // agentic app (passby_agentic.md §6.4 back-channel). BetterCLSS never
+    // writes there; it only polls this projection for display.
+    const agenticJobsMatch = pathname.match(/^\/api\/agent\/agentic-jobs\/(\d+)$/);
+    if (agenticJobsMatch && req.method === 'GET') {
+      const userId = parseInt(agenticJobsMatch[1]);
+      try {
+        const verified = await canvasService.verifyUserRequest(req, userId);
+        if (!agenticBackChannelClient || !agenticBackChannelClient.isConfigured()) {
+          json(res, 503, {
+            error: 'agentic_not_configured',
+            message: 'Agentic status mirroring is not configured on this server.',
+            hint: 'Set AGENTIC_BACK_CHANNEL_TOKEN (must match the agentic app).',
+          });
+          return true;
+        }
+        const since = new URL(req.url, 'http://localhost').searchParams.get('since') || undefined;
+        const result = await agenticBackChannelClient.fetchUserJobs(
+          { canvasUserId: verified.userId, canvasDomain: verified.domain },
+          { since }
+        );
+        if (!result.ok) {
+          const status = result.error === 'agentic_not_configured' ? 503
+            : result.error === 'agentic_timeout' ? 504
+              : result.status === 401 || result.status === 403 ? 502 : 502;
+          json(res, status, { success: false, error: result.error });
+          return true;
+        }
+        json(res, 200, { success: true, jobs: result.jobs, count: result.jobs.length });
+      } catch (error) {
+        if (!canvasService.writeUserAuthError(res, error)) {
+          json(res, 500, { error: 'agentic_jobs_error', message: error.message });
         }
       }
       return true;

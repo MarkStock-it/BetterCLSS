@@ -65,6 +65,11 @@ function createConfig(rootDir) {
     // it signs the handoff JWT the agentic app verifies on arrival.
     agenticJwtSecret: process.env.AGENTIC_JWT_SECRET || '',
     agenticAppUrl: process.env.AGENTIC_APP_URL || 'https://betterclss-agentic.onrender.com',
+    // Back-channel (passby_agentic.md §6.4): opaque Bearer token for the
+    // status-mirror endpoint GET /api/v1/users/:userIdHash/jobs on the
+    // agentic app. Must match the agentic app's AGENTIC_BACK_CHANNEL_TOKEN.
+    agenticBackChannelToken: process.env.AGENTIC_BACK_CHANNEL_TOKEN || '',
+    agenticBackChannelTimeoutMs: Number(process.env.AGENTIC_BACK_CHANNEL_TIMEOUT_MS || 8000),
     agentMaxFileSizeMb: Number(process.env.AGENT_MAX_FILE_SIZE_MB || 10),
     agentMaxConcurrentJobs: Number(process.env.AGENT_MAX_CONCURRENT_JOBS || 3),
     agentMaxRetries: Number(process.env.AGENT_MAX_RETRY_COUNT || 2),
