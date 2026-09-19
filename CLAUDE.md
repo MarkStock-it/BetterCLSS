@@ -1,65 +1,80 @@
-# BetterCLSS — Plan of Action
+# BetterCLSS — Session Memory & Plan of Action
 
-Status: **mid-reconciliation** — do not start new work until the git state below is resolved.
+> **Last updated 2026-09-16.** The old "mid-reconciliation" plan (diverged main,
+> agent-toggle bug) is RESOLVED — main is even with origin/main, working tree
+> clean at `26084b4`. Do not redo that reconciliation.
 
-## Current state (2026-09-01)
+## Current state (2026-09-16)
 
-- Local branch `main` has **diverged** from `origin/main`: **1 local vs 5 remote** commits.
-  - Local HEAD: `1875743 Claude Fix this` (our fix).
-  - Remote is ahead by 5 commits (a parallel session's work).
-- `git push` is blocked (non-fast-forward). The `git pull` did **not** complete a merge.
-- Working tree is **clean** — nothing was lost.
+- `main` even with `origin/main`; tree clean. Head `26084b4` (Agentic back-channel
+  job-status mirroring, passby §6.4).
+- Recent arc: `9810372` passby spec → `5d4fd9f` handoff JWT minting (passby §2.1)
+  → `26084b4` back-channel mirror (passby §6.4).
+- **betterclss-agentic is NOT deployed** — `https://betterclss-agentic.onrender.com`
+  returns Render's `x-render-routing: no-server` 404 (no service bound). The
+  BetterCLSS side is ready and URL-agnostic (`AGENTIC_APP_URL` config); the agentic
+  app must be created on Render first (web service + managed Postgres, start
+  `npm run migrate && npm start`, verify `/readyz` → `{"db":"reachable"}`).
+- **dcism GitHub egress is unreliable**: HTTPS and SSH:22 both timed out on
+  2026-09-12. If it fails again, deploy via git bundle over SFTP
+  (`git bundle create x.bundle main` — WITH the ref, then server-side
+  `git pull x.bundle main`), never by direct file edits.
 
-## The bug being fixed: "Agentic job fails"
+## Deploy (dcism shared hosting)
 
-Root cause: the "Enable Agentic Helper" toggle wrote only to browser `localStorage`, never to the
-server. The server's job-creation gate `isAgenticHelperEnabled()` reads a *separate* server-side
-flag (`userStorage.agentSettings.enabled`, default `false`), so every
-`POST /api/agent/jobs/:userId` returned `AGENT_DISABLED` (403), silently surfaced by the frontend
-as "Server returned empty job".
+- `ssh -p22077 s25103705@web.dcism.org` (password shared in chat — the user should
+  `passwd`).
+- pm2 runs `~/BetterCLSS/server.js` (Express API). PWA docroot
+  `~/betterclss.dcism.org/studenthub/` is a **non-git copy** — re-sync it after
+  every bundle rebuild (the agentic handoff launcher lives in the PWA).
+- Secrets in `~/BetterCLSS/.env` (server only): `AGENTIC_JWT_SECRET` already
+  provisioned (generated on the server). If the Render side ever needs the same
+  value, copy it from there — same value both sides is required by design.
+- Deploy loop: commit/push locally → server `git pull --ff-only` (bundle fallback
+  if egress is down) → resync the `studenthub/` docroot → `pm2 restart` → verify
+  with `curl` (bundle serves 200; handoff route answers `missing_credentials`
+  without Canvas headers).
 
-## Two competing fixes exist — a decision is required
+## Architecture facts that bite
 
-| | Our fix (local, `1875743`) | Remote's fix (origin/main) |
-|---|---|---|
-| Approach | Frontend sync: `updateAgentSettings()` POSTs to `/api/agent/settings/:userId` on toggle | Server auto-enable: `user-storage.js` defaults `enabled: true` + migration in `loadOrCreateUser` |
-| Semantics | Preserves opt-in (agent stays OFF until toggled) | Turns agent ON for everyone by default |
-| Extra | — | `[DIAGNOSTIC] console.log`s left in `dashboard-data.js` + `agent-routes.js`; unrelated "scroll CSS" fix; `BUG_DIAGNOSIS.md` |
+- **PWA bundle is prebuilt.** Editing `studenthub-app/src/**` does nothing until
+  `npm run studenthub:build`; the served bundle lives in `studenthub/assets/`.
+  `npm run check` compiles/asserts but does NOT rebuild.
+- **Identity hash convention (do not change unilaterally):** the agentic handoff
+  `sub` = `sha256(\`${domain}\n${canvasUserId}\`)` with domain
+  `trim().toLowerCase()` normalized — mirrors BetterCLSS `user-identity.js` and the
+  agentic app's verifier recomputes it from the claims. Changing the salt breaks
+  the back-channel silently.
+- **Handoff JWT:** HS256, `iss=betterclss`, `aud=betterclss-agentic`, TTL **120s**
+  (do not lengthen — the token rides in a URL), no Canvas token/email/BYOK keys in
+  claims. Minted by `server/services/agentic-handoff-service.js` via
+  `POST /api/agent/agentic-handoff/:userId` (agent-routes; live-Canvas verification
+  like every other `:userId` route; 503 `agentic_not_configured` when the secret is
+  missing). Frontend launcher: Settings → Agentic Helper → "Open Agentic Helper"
+  (`SecondaryView.jsx` + `dashboard-data.js` `openAgenticHelper()`).
+- **Agentic Helper gating:** env `AGENT_ENABLED` (config.agentEnabled) AND
+  per-user `userStorage.isAgentEnabled(userId)` (defaults OFF; toggled in-app via
+  `updateAgentSettings()` → `/api/agent/settings/:userId`).
+- **Agent API auth:** client sends `x-canvas-token` + `x-canvas-domain` headers;
+  `getUserId()` reads `localStorage['bclss_student_id']`; agent calls silently
+  no-op without `bclss_canvas_token`/`bclss_canvas_domain` in localStorage.
+- Verified 2026-09-12: minted tokens pass the agentic app's *actual* verifier
+  (happy path + tampered identity / wrong secret / expired / wrong audience) —
+  8/8 offline suite green.
 
-**Recommendation (option 1):** keep our toggle-sync fix (correct, preserves the safety opt-in),
-discard the remote auto-enable + debug `console.log`s, but retain the remote's unrelated
-scroll-CSS fix and `BUG_DIAGNOSIS.md`.
+## Sibling repos
 
-## Step-by-step reconciliation plan
+- **betterclss-agentic** (`~/Desktop/GIT - PORT/BETTRCLASS/BTTER_AGENTIC`) —
+  standalone agentic app, own Postgres, approval-gated Canvas writes. Contract in
+  `passby_agentic.md` (BetterCLSS side) and `PASSBY_TO_BETTERCLSS.md` (agentic
+  side). Not a git repo; intended for Render. Prompt templates are versioned
+  (`src/agent/prompts/*.md.tmpl` — bump the version header on change).
+- **CISCO-TEAM** (`~/Desktop/GIT - PORT/CISCO-TEAM` — verify the exact path before
+  editing) — the org website, unrelated to BetterCLSS; has its own CLAUDE.md.
 
-1. `git fetch origin` — confirm the 5 remote commits are still as described.
-2. Merge remote into local, resolving conflicts in favor of **our fix** on the files below.
-3. Conflicts will occur on (both sides edited these):
-   - `studenthub-app/src/lib/dashboard-data.js` — keep `updateAgentSettings()`; drop remote `console.log`s.
-   - `studenthub/index.html` — the bundle script hash changed on both sides.
-   - `studenthub/assets/index-BHCax3SH.js` — deleted by both; ours rebuilt to `index-CLOyJXL6.js`, remote to `index-dBmVDXvB.js`.
-4. Manually revert the remote's auto-enable in `user-storage.js` (restore `enabled: false` default and remove the `loadOrCreateUser` migration) — or keep if the user explicitly chooses option 2.
-5. Strip `[DIAGNOSTIC] console.log`s from `server/routes/agent-routes.js` and `dashboard-data.js`.
-6. **Rebuild** (`npm run studenthub:build`) — the PWA serves a prebuilt bundle, so any source change must be followed by a rebuild. `npm run check` only compiles/asserts source; it does NOT rebuild.
-7. `npm run check` — confirm green.
-8. Commit and `git push`.
+## Old reconciliation record (kept for history — DONE, do not redo)
 
-## What is already done
-
-- **Agent-job fix (source):** `updateAgentSettings()` added to
-  `studenthub-app/src/lib/dashboard-data.js`; wired into `handleAgentSettingsChange` in
-  `studenthub-app/src/StudentHubMobileDashboard.jsx`. Committed in `1875743`.
-- **Bundle rebuilt** to `studenthub/assets/index-CLOyJXL6.js` (contains the `api/agent/settings` call).
-- **Plugin marketplaces installed** (restart required to take effect): `caveman` and `xiaolai`
-  — cloned under `~/.claude/plugins/marketplaces/` and registered in
-  `~/.claude/plugins/known_marketplaces.json`. The `claude` CLI was not on PATH, so this was done
-  by direct clone + registry edit (functionally equivalent to `claude plugin marketplace add`).
-
-## Gotchas to remember
-
-- `npm run check` does NOT rebuild the StudentHub bundle — always run `npm run studenthub:build`
-  after touching `studenthub-app/src/**`.
-- The Agentic Helper is gated by **two** server conditions: `config.agentEnabled` (env `AGENT_ENABLED`,
-  defaults on) AND `userStorage.isAgentEnabled(userId)` (defaults off). Our fix addresses the second.
-- `getUserId()` reads `localStorage['bclss_student_id']`; agent API calls need `bclss_canvas_token`
-  and `bclss_canvas_domain` set, or they silently no-op.
+The 2026-09-01 divergence (local `1875743` vs 5 remote commits) was reconciled in
+favor of our toggle-sync fix; the toggle now syncs server-side
+(`updateAgentSettings()` → `/api/agent/settings/:userId`). All `[DIAGNOSTIC]`
+console.logs are gone. The "Agentic job fails" bug (`AGENT_DISABLED` 403) is fixed.

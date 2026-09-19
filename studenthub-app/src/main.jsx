@@ -15,7 +15,7 @@ const theme = savedTheme === 'light' || savedTheme === 'dark'
 document.documentElement.dataset.theme = theme;
 document.querySelector('meta[name="theme-color"]')?.setAttribute(
   'content',
-  theme === 'light' ? '#f1f3fb' : '#070913'
+  theme === 'light' ? '#f2f0e9' : '#131415'
 );
 
 createRoot(document.getElementById('root')).render(

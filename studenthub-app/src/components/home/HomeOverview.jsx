@@ -63,12 +63,12 @@ export function WorkloadProgress({ assignments, overdueCount, announcementCount 
         <svg className="workload-stairs" viewBox="0 0 360 220" preserveAspectRatio="none" aria-hidden="true">
           <defs>
             <linearGradient id="workload-step-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop stopColor="#263057" />
-              <stop offset="1" stopColor="#151a32" />
+              <stop stopColor="var(--surface-inset)" />
+              <stop offset="1" stopColor="var(--surface)" />
             </linearGradient>
             <linearGradient id="workload-step-reached" x1="0" y1="0" x2="1" y2="1">
-              <stop stopColor="#758cff" />
-              <stop offset="1" stopColor="#9d72ea" />
+              <stop stopColor="var(--action)" />
+              <stop offset="1" stopColor="var(--action-strong)" />
             </linearGradient>
           </defs>
           {WORKLOAD_STEPS.map((_, index) => {
@@ -121,10 +121,10 @@ export function WorkloadProgress({ assignments, overdueCount, announcementCount 
           >
             <svg className="workload-blob" viewBox="0 0 64 58" aria-hidden="true">
               <defs>
-                <linearGradient id="workload-blob-fill" x1="0" y1="0" x2="1" y2="1">
-                  <stop stopColor="#b6f37f" />
-                  <stop offset="1" stopColor="#72d8a0" />
-                </linearGradient>
+            <linearGradient id="workload-blob-fill" x1="0" y1="0" x2="1" y2="1">
+              <stop stopColor="var(--action)" />
+              <stop offset="1" stopColor="var(--action-strong)" />
+            </linearGradient>
               </defs>
               <path d="M10 42C5 29 9 13 23 7c13-6 29 2 33 16 3 11-2 26-14 30-12 4-28 1-32-11Z" fill="url(#workload-blob-fill)" />
               <ellipse cx="25" cy="29" rx="2.7" ry="3.5" fill="#172337" />
@@ -166,7 +166,7 @@ export function EmptyDeadlines({ connected, onConnect }) {
     <div className="empty-deadlines">
       <motion.svg
         viewBox="0 0 180 120"
-        className="mx-auto h-[112px] w-[170px]"
+        className="empty-deadlines-art"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15, duration: 0.4 }}
@@ -174,19 +174,19 @@ export function EmptyDeadlines({ connected, onConnect }) {
       >
         <defs>
           <linearGradient id="empty-card-gradient" x1="0" y1="0" x2="1" y2="1">
-            <stop stopColor="#7293ff" />
-            <stop offset="1" stopColor="#9d6cff" />
+            <stop stopColor="var(--action)" />
+            <stop offset="1" stopColor="var(--action-strong)" />
           </linearGradient>
           <filter id="empty-glow"><feGaussianBlur stdDeviation="5" /></filter>
         </defs>
-        <ellipse cx="90" cy="104" rx="50" ry="7" fill="#5f79ff" opacity=".13" filter="url(#empty-glow)" />
-        <motion.circle cx="145" cy="34" r="4" fill="#8aa0ff" animate={{ y: [0, -5, 0] }} transition={{ duration: 2.4, repeat: Infinity }} />
-        <motion.circle cx="35" cy="56" r="3" fill="#9d6cff" animate={{ y: [0, 4, 0] }} transition={{ duration: 2.1, repeat: Infinity }} />
-        <rect x="49" y="18" width="82" height="78" rx="15" fill="#11172b" stroke="#33416d" />
+        <ellipse cx="90" cy="104" rx="50" ry="7" fill="var(--action)" opacity=".13" filter="url(#empty-glow)" />
+        <motion.circle cx="145" cy="34" r="4" fill="var(--action)" animate={{ y: [0, -5, 0] }} transition={{ duration: 2.4, repeat: Infinity }} />
+        <motion.circle cx="35" cy="56" r="3" fill="var(--action-strong)" animate={{ y: [0, 4, 0] }} transition={{ duration: 2.1, repeat: Infinity }} />
+        <rect x="49" y="18" width="82" height="78" rx="15" fill="var(--surface-inset)" stroke="var(--border)" />
         <rect x="59" y="30" width="62" height="11" rx="5.5" fill="url(#empty-card-gradient)" opacity=".75" />
         <path d="M63 54h42M63 65h53M63 76h31" stroke="#42507a" strokeWidth="5" strokeLinecap="round" />
-        <circle cx="112" cy="77" r="15" fill="#18213d" stroke="#6f87ff" />
-        <path d="m106 77 4 4 8-9" fill="none" stroke="#91a5ff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="112" cy="77" r="15" fill="var(--surface)" stroke="var(--action)" />
+        <path d="m106 77 4 4 8-9" fill="none" stroke="var(--action)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
       </motion.svg>
       <h3>{connected ? 'You are all caught up' : 'Bring your deadlines into focus'}</h3>
       <p>{connected ? 'No upcoming assignments need attention right now.' : 'Sync Canvas to see deadlines, urgency, and course priorities here.'}</p>
@@ -517,8 +517,8 @@ export function DeadlineList({ assignments, connected, onConnect, onToggleDone, 
                 <div className="home-deadline-row">
                   <span className={`priority-rail ${item.priority || 'medium'}`} />
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-sm font-semibold text-slate-100">{item.title || 'Untitled assignment'}</h3>
-                    <p className="mt-1 truncate text-xs text-slate-500">{item.subject || 'Course'} · {dueText}</p>
+                    <h3 className="deadline-title">{item.title || 'Untitled assignment'}</h3>
+                    <p className="deadline-sub">{item.subject || 'Course'} · {dueText}</p>
                   </div>
                   <DeadlineSlider item={item} connected={connected} onToggleDone={onToggleDone} onCreateAgentJob={onCreateAgentJob} creatingJobId={creatingJobId} setCreatingJobId={setCreatingJobId} />
                 </div>

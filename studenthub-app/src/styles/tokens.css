@@ -1,0 +1,192 @@
+/* ============================================================================
+   design-system/tokens.css — "Ledger & Verdigris" anti-slop design tokens
+   ----------------------------------------------------------------------------
+   Named theme: cool bone paper, slate-ink, verdigris accent. No pure white or
+   black anywhere; every hue carries a cast so surfaces never read as default.
+   Layers: @layer tokens (primitives) → theme (semantic remap) → primitives.
+   Re-theme by overriding ONLY the semantic block — nothing else may change.
+   ========================================================================== */
+
+@layer tokens, theme, primitives;
+
+@layer tokens {
+  :root {
+    /* ── Color primitives (OKLCH: perceptually even steps, hue-stable themes).
+          Hex fallbacks live in the @supports block below. ─────────────── */
+    --paper-0:  oklch(0.955 0.008 106);   /* bone page ground            */
+    --paper-1:  oklch(0.980 0.006 106);   /* raised surface (sparing)    */
+    --paper-2:  oklch(0.915 0.010 106);   /* inset / code ground         */
+    --ink-0:    oklch(0.205 0.020 240);   /* body text — slate, not #000 */
+    --ink-1:    oklch(0.380 0.018 240);   /* secondary text              */
+    --ink-2:    oklch(0.540 0.015 240);   /* muted text / placeholders   */
+    --line-0:   oklch(0.865 0.012 106);   /* hairline borders            */
+    --line-1:   oklch(0.700 0.018 240);   /* strong rule (rare)          */
+    --accent-0: oklch(0.545 0.095 175);   /* verdigris — one accent only */
+    --accent-1: oklch(0.460 0.085 175);   /* accent, pressed/hover       */
+    --accent-contrast: oklch(0.975 0.006 106);
+    --danger-0: oklch(0.500 0.170 28);
+    --shadow-tint: 0.205 0.020 240;       /* shadows borrow ink's hue    */
+
+    /* ── Fluid type — dual-ratio modular scale, hand-computed clamps.
+          Body steps grow at 1.2 (minor third); display steps at 1.25 so the
+          top of the scale opens up faster than the bottom — hierarchy from
+          the scale itself, not from bolding everything. Viewport span
+          360→1200px. Small text deliberately scales least (a11y). ──────── */
+    --step--1: clamp(0.833rem, 0.789rem + 0.0124vw, 0.938rem);
+    --step-0:  clamp(1rem,     0.946rem + 0.0149vw, 1.125rem);
+    --step-1:  clamp(1.2rem,   1.136rem + 0.0179vw, 1.35rem);
+    --step-2:  clamp(1.44rem,  1.363rem + 0.0214vw, 1.62rem);
+    --step-3:  clamp(1.728rem, 1.635rem + 0.0257vw, 1.944rem);
+    --step-4:  clamp(2.16rem,  2.044rem + 0.0321vw, 2.43rem);
+    --step-5:  clamp(2.7rem,   2.555rem + 0.0402vw, 3.038rem);
+    --step-6:  clamp(3.375rem, 3.194rem + 0.0502vw, 3.797rem);
+    --type-leading-tight: 1.08;   /* display  */
+    --type-leading-body:  1.62;   /* body — generous, serif-friendly */
+    --measure: 62ch;
+
+    /* ── Organic spacing — golden-ratio (φ≈1.618) scale, rooted OFF the 4px
+          grid on purpose. Uniform padding is the template tell; φ gives
+          sections distinguishable rhythm. ──────────────────────────────── */
+    --space-3xs: 0.25rem;
+    --space-2xs: 0.40rem;
+    --space-xs:  0.65rem;
+    --space-s:   1.05rem;
+    --space-m:   1.71rem;
+    --space-l:   2.77rem;
+    --space-xl:  4.48rem;
+    --space-2xl: 7.25rem;
+    /* Flow pairs: compress inside, breathe outside (every layout uses these) */
+    --space-squish: var(--space-xs)  var(--space-s);
+    --space-stretch: var(--space-s) var(--space-l);
+
+    /* ── Radii — a small purposeful set, NOT one radius for everything.
+          edge = structural hairline corners; soft = inputs, quiet chrome;
+          lift = the one card tier allowed elevation; arch is rationed to the
+          single primary CTA (dose cap: 1 per view). fracture is asymmetric —
+          use only where the layout itself is asymmetric. ────────────────── */
+    --radius-edge: 2px;
+    --radius-soft: 5px;
+    --radius-lift: 12px;
+    --radius-arch: 999px;
+    --radius-fracture: 12px 3px 12px 3px;
+
+    /* ── Elevation — two levels, tinted with ink (never black). Budget: at
+          most two elevated elements visible per view; everything else sits
+          flat on the ground plane. ──────────────────────────────────────── */
+    --shadow-1: 0 1px 2px oklch(var(--shadow-tint) / 0.10),
+                0 3px 10px oklch(var(--shadow-tint) / 0.08);
+    --shadow-2: 0 2px 4px oklch(var(--shadow-tint) / 0.10),
+                0 14px 34px oklch(var(--shadow-tint) / 0.14);
+
+    /* ── Motion — durations for state change only. No infinite loops. ──── */
+    --ease-out:   cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* overshoot: confirmations */
+    --duration-fast: 90ms;
+    --duration-base: 180ms;
+    --duration-slow: 320ms;
+
+    /* ── Typefaces — the anti-default stack. A serif display face for
+          headlines (editorial, human), the native system stack for UI (zero
+          bytes, platform-honest), mono for data and metadata (ledger
+          discipline). Never ship Inter as the identity font. ───────────── */
+    --font-display: "Fraunces", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+    /* ── Structure ──────────────────────────────────────────────────────── */
+    --gutter: clamp(var(--space-s), 4vw, var(--space-l));
+    --target: 44px;                     /* minimum interactive target       */
+    --z-dropdown: 10; --z-sticky: 20; --z-modal: 30; --z-toast: 40;
+  }
+
+  /* Hex fallbacks — computed once, only for browsers without OKLCH (2022-).
+     Kept in one block so the modern values above stay the source of truth. */
+  @supports not (color: oklch(0.5 0.1 175)) {
+    :root {
+      --paper-0: #f3f2ec; --paper-1: #f8f7f2; --paper-2: #e9e8df;
+      --ink-0: #22272e;   --ink-1: #4c545e;   --ink-2: #6e7681;
+      --line-0: #dcdad0;  --line-1: #9aa1a9;
+      --accent-0: #34837a; --accent-1: #2a6a63; --accent-contrast: #f3f2ec;
+      --danger-0: #c03a2b;
+      --shadow-1: 0 1px 2px rgba(34,39,46,.10), 0 3px 10px rgba(34,39,46,.08);
+      --shadow-2: 0 2px 4px rgba(34,39,46,.10), 0 14px 34px rgba(34,39,46,.14);
+    }
+  }
+}
+
+@layer theme {
+  :root {
+    /* Semantic layer — the ONLY tier components may consume. */
+    --bg: var(--paper-0);
+    --surface: var(--paper-1);
+    --surface-inset: var(--paper-2);
+    --text: var(--ink-0);
+    --text-muted: var(--ink-2);
+    --border: var(--line-0);
+    --action: var(--accent-0);
+    --action-strong: var(--accent-1);
+    --on-action: var(--accent-contrast);
+  }
+
+  /* Dark theme: remap semantics only; primitives and every clamp stay put.
+     Honors OS preference by default, data-theme forces an explicit choice. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: oklch(0.185 0.014 240);
+      --surface: oklch(0.225 0.016 240);
+      --surface-inset: oklch(0.155 0.012 240);
+      --text: oklch(0.925 0.008 106);
+      --text-muted: oklch(0.700 0.012 240);
+      --border: oklch(0.310 0.016 240);
+      --action: oklch(0.720 0.100 175);
+      --action-strong: oklch(0.790 0.090 175);
+      --on-action: oklch(0.170 0.020 175);
+      --shadow-tint: 0.925 0.008 106;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: oklch(0.185 0.014 240);
+    --surface: oklch(0.225 0.016 240);
+    --surface-inset: oklch(0.155 0.012 240);
+    --text: oklch(0.925 0.008 106);
+    --text-muted: oklch(0.700 0.012 240);
+    --border: oklch(0.310 0.016 240);
+    --action: oklch(0.720 0.100 175);
+    --action-strong: oklch(0.790 0.090 175);
+    --on-action: oklch(0.170 0.020 175);
+    --shadow-tint: 0.925 0.008 106;
+  }
+}
+
+@layer primitives {
+  /* Micro-typography defaults — set once, inherited everywhere. */
+  h1, h2, h3 { text-wrap: balance; }
+  body {
+    text-wrap: pretty;
+    hanging-punctuation: first last;
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--action);
+    outline-offset: 2px;
+  }
+
+  /* Flow: φ rhythm between siblings without wrapper divs in the DOM. */
+  .flow > * + * { margin-block-start: var(--space-m); }
+
+  /* Performance: skip offscreen sections' layout/paint entirely. */
+  .defer-render {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 640px;
+  }
+
+  /* Reduced motion collapses every duration — no partial measures. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
+}

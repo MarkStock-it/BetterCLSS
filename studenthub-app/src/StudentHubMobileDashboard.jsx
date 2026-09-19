@@ -335,8 +335,8 @@ export default function StudentHubMobileDashboard() {
         <header className="mobile-topbar">
           <BrandLogo className="topbar-logo" />
           <div className="min-w-0 flex-1">
-            <span className="block truncate text-[0.66rem] font-bold uppercase tracking-[0.18em] text-[#7380a5]">{dateLabel}</span>
-            <strong className="mt-1 block text-sm font-semibold text-slate-100">BetterCLSS</strong>
+            <span className="topbar-date">{dateLabel}</span>
+            <strong className="topbar-title">BetterCLSS</strong>
           </div>
           <button type="button" className="avatar-button" onClick={() => navigate('settings')} aria-label="Open settings">
             {data.name ? data.name.slice(0, 1).toUpperCase() : 'S'}

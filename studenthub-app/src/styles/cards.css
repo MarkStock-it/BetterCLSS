@@ -22,27 +22,27 @@
   height: 54px;
   flex: 0 0 auto;
   place-items: center;
-  color: #f1c77e;
-  border: 1px solid rgba(230, 178, 91, 0.3);
+  color: var(--card-accent);
+  border: 1px solid color-mix(in oklab, var(--danger) 30%, transparent);
   border-radius: 9px 15px 10px 13px;
   background:
-    linear-gradient(90deg, rgba(247, 194, 101, 0.12) 1px, transparent 1px) 10px 0 / 16px 100%,
-    linear-gradient(155deg, rgba(63, 48, 35, 0.93), rgba(24, 25, 37, 0.96));
-  box-shadow: 6px 6px 0 rgba(116, 78, 48, 0.18);
+    linear-gradient(90deg, color-mix(in oklab, var(--card-accent) 12%, transparent) 1px, transparent 1px) 10px 0 / 16px 100%,
+    var(--surface);
+  box-shadow: 6px 6px 0 var(--border);
   rotate: -2deg;
 }
 
 .cards-library-heading h2 {
   margin: 5px 0 0;
-  color: #f7f2e9;
+  color: var(--text);
   font-size: 1.15rem;
-  font-weight: 790;
+  font-weight: 620;
   letter-spacing: -0.035em;
 }
 
 .cards-library-heading p {
   margin: 5px 0 0;
-  color: #807d86;
+  color: var(--text-muted);
   font-size: 0.65rem;
 }
 
@@ -55,7 +55,7 @@
 
 .deck-page-summary {
   margin: 14px 2px 9px;
-  color: #77727a;
+  color: var(--text-muted);
   font-size: 0.58rem;
   font-weight: 680;
 }
@@ -73,13 +73,13 @@
   align-items: center;
   gap: 12px;
   padding: 12px 13px;
-  color: #d8d5d0;
-  border: 1px solid rgba(190, 154, 96, 0.14);
+  color: var(--text);
+  border: 1px solid color-mix(in oklab, var(--card-accent) 14%, transparent);
   border-radius: 14px 20px 15px 17px;
   background:
-    linear-gradient(90deg, rgba(224, 173, 90, 0.05) 1px, transparent 1px) 0 0 / 22px 100%,
-    linear-gradient(145deg, rgba(29, 27, 31, 0.95), rgba(15, 18, 28, 0.96));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 10px 24px rgba(0, 0, 0, 0.17);
+    linear-gradient(90deg, color-mix(in oklab, var(--card-accent) 5%, transparent) 1px, transparent 1px) 0 0 / 22px 100%,
+    var(--surface);
+  box-shadow: inset 0 1px 0 transparent, 0 10px 24px color-mix(in oklab, var(--text) 24%, transparent);
   text-align: left;
 }
 
@@ -97,9 +97,9 @@
 .deck-selection-glyph i {
   position: absolute;
   inset: 4px 0 0 5px;
-  border: 1px solid rgba(230, 181, 100, 0.35);
+  border: 1px solid color-mix(in oklab, var(--danger) 35%, transparent);
   border-radius: 5px 8px 6px 7px;
-  background: #3d332f;
+  background: var(--surface);
 }
 
 .deck-selection-glyph i:nth-child(2) {
@@ -109,12 +109,12 @@
 
 .deck-selection-glyph i:nth-child(3) {
   translate: -6px -6px;
-  background: #503c31;
+  background: var(--surface);
 }
 
 .deck-selection-glyph.generated i {
-  border-color: rgba(102, 205, 160, 0.32);
-  background: #273e38;
+  border-color: color-mix(in oklab, var(--action) 32%, transparent);
+  background: var(--surface);
 }
 
 .deck-selection-copy {
@@ -128,38 +128,38 @@
 
 .deck-selection-copy strong {
   overflow: hidden;
-  color: #eeeae3;
+  color: var(--text);
   font-size: 0.75rem;
-  font-weight: 760;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .deck-selection-copy small {
   margin-top: 5px;
-  color: #777785;
+  color: var(--text-muted);
   font-size: 0.58rem;
 }
 
 .deck-due-count {
   padding: 5px 7px;
-  color: #e2b66f;
-  border: 1px solid rgba(221, 169, 83, 0.15);
-  border-radius: 8px;
-  background: rgba(150, 99, 47, 0.1);
+  color: var(--card-accent);
+  border: 1px solid color-mix(in oklab, var(--danger) 15%, transparent);
+  border-radius: var(--radius-soft);
+  background: color-mix(in oklab, var(--danger) 10%, transparent);
   font-size: 0.51rem;
-  font-weight: 760;
+  font-weight: 600;
   white-space: nowrap;
 }
 
 .deck-due-count.clear {
-  color: #6fbf9c;
-  border-color: rgba(83, 190, 143, 0.13);
-  background: rgba(53, 129, 97, 0.08);
+  color: var(--action);
+  border-color: color-mix(in oklab, var(--action) 13%, transparent);
+  background: color-mix(in oklab, var(--action) 8%, transparent);
 }
 
 .deck-selection-arrow {
-  color: #696974;
+  color: var(--text-muted);
 }
 
 .deck-pagination {
@@ -169,7 +169,7 @@
   gap: 8px;
   margin-top: 17px;
   padding-top: 15px;
-  border-top: 1px solid rgba(190, 154, 96, 0.13);
+  border-top: 1px solid color-mix(in oklab, var(--card-accent) 13%, transparent);
 }
 
 .deck-pagination > button {
@@ -180,12 +180,12 @@
   justify-content: center;
   gap: 6px;
   padding: 0 10px;
-  color: #b5a183;
-  border: 1px solid rgba(190, 154, 96, 0.15);
+  color: var(--card-accent);
+  border: 1px solid color-mix(in oklab, var(--card-accent) 15%, transparent);
   border-radius: 11px 15px 12px 14px;
-  background: rgba(39, 31, 29, 0.68);
+  background: var(--surface);
   font-size: 0.62rem;
-  font-weight: 720;
+  font-weight: 600;
 }
 
 .deck-pagination > button:last-child {
@@ -203,12 +203,12 @@
   align-items: baseline;
   justify-content: center;
   gap: 4px;
-  color: #746e73;
+  color: var(--text-muted);
   font-size: 0.56rem;
 }
 
 .deck-page-status strong {
-  color: #dfb875;
+  color: var(--card-accent);
   font-size: 0.76rem;
 }
 
@@ -220,10 +220,10 @@
   align-items: center;
   justify-content: center;
   padding: 31px 24px;
-  color: #85818a;
-  border: 1px dashed rgba(208, 164, 91, 0.2);
+  color: var(--text);
+  border: 1px dashed color-mix(in oklab, var(--danger) 20%, transparent);
   border-radius: 22px 29px 23px 26px;
-  background: linear-gradient(145deg, rgba(38, 31, 28, 0.55), rgba(14, 17, 26, 0.7));
+  background: var(--surface);
   text-align: center;
 }
 
@@ -237,7 +237,7 @@
 .cards-empty-stack i {
   position: absolute;
   inset: 8px 5px 0;
-  border: 1px dashed rgba(221, 176, 101, 0.3);
+  border: 1px dashed color-mix(in oklab, var(--danger) 30%, transparent);
   border-radius: 10px 15px 11px 13px;
 }
 
@@ -254,9 +254,9 @@
 .cards-library-empty h2,
 .cards-session-complete h2 {
   margin: 0;
-  color: #f1ece4;
+  color: var(--text);
   font-size: 1.25rem;
-  font-weight: 790;
+  font-weight: 620;
   letter-spacing: -0.04em;
 }
 
@@ -264,7 +264,7 @@
 .cards-session-complete p {
   max-width: 280px;
   margin: 9px 0 0;
-  color: #7d7a83;
+  color: var(--text-muted);
   font-size: 0.68rem;
   line-height: 1.55;
 }
@@ -275,12 +275,12 @@
   min-height: 42px;
   margin-top: 20px;
   padding: 0 16px;
-  color: #f4d7a7;
-  border: 1px solid rgba(226, 177, 98, 0.22);
-  border-radius: 12px;
-  background: rgba(156, 103, 50, 0.16);
+  color: var(--card-accent);
+  border: 1px solid color-mix(in oklab, var(--danger) 22%, transparent);
+  border-radius: var(--radius-soft);
+  background: color-mix(in oklab, var(--danger) 16%, transparent);
   font-size: 0.65rem;
-  font-weight: 750;
+  font-weight: 600;
 }
 
 .cards-review-shell {
@@ -297,13 +297,13 @@
 }
 
 .cards-review-heading > span {
-  color: #89838a;
+  color: var(--text-muted);
   font-size: 0.62rem;
   font-weight: 690;
 }
 
 .cards-review-heading > span strong {
-  color: #e7c17f;
+  color: var(--card-accent);
 }
 
 .cards-back-button {
@@ -313,9 +313,9 @@
   align-self: flex-start;
   gap: 7px;
   padding: 0 3px;
-  color: #8f8a91;
+  color: var(--text-muted);
   font-size: 0.62rem;
-  font-weight: 720;
+  font-weight: 600;
 }
 
 .cards-stack-stage {
@@ -334,8 +334,8 @@
 }
 
 .cards-stack-layer {
-  border: 1px solid rgba(202, 160, 92, 0.13);
-  background: rgba(35, 29, 29, 0.82);
+  border: 1px solid color-mix(in oklab, var(--danger) 13%, transparent);
+  background: var(--surface);
   transform-origin: bottom center;
 }
 
@@ -393,13 +393,13 @@
   align-items: center;
   justify-content: center;
   padding: clamp(26px, 7vw, 42px);
-  border: 1px solid rgba(216, 171, 97, 0.24);
+  border: 1px solid color-mix(in oklab, var(--danger) 24%, transparent);
   border-radius: 19px 28px 21px 24px;
   background:
-    repeating-linear-gradient(0deg, transparent 0 25px, rgba(190, 144, 79, 0.045) 25px 26px),
-    radial-gradient(240px 180px at 18% 8%, rgba(209, 153, 81, 0.11), transparent 70%),
-    linear-gradient(155deg, #282329, #141821);
-  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+    repeating-linear-gradient(0deg, transparent 0 25px, color-mix(in oklab, var(--card-accent) 5%, transparent) 25px 26px),
+    none,
+    var(--surface);
+  box-shadow: 0 28px 60px color-mix(in oklab, var(--text) 24%, transparent), inset 0 1px 0 transparent;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   text-align: center;
@@ -411,43 +411,43 @@
   bottom: 0;
   left: 22px;
   width: 1px;
-  background: rgba(226, 124, 99, 0.14);
+  background: color-mix(in oklab, var(--danger) 14%, transparent);
   content: "";
 }
 
 .cards-face-back {
-  border-color: rgba(84, 194, 148, 0.24);
+  border-color: color-mix(in oklab, var(--action) 24%, transparent);
   background:
-    repeating-linear-gradient(0deg, transparent 0 25px, rgba(99, 183, 147, 0.045) 25px 26px),
-    radial-gradient(240px 180px at 84% 8%, rgba(69, 168, 128, 0.13), transparent 70%),
-    linear-gradient(155deg, #1d2b2a, #131a22);
+    repeating-linear-gradient(0deg, transparent 0 25px, color-mix(in oklab, var(--action) 5%, transparent) 25px 26px),
+    none,
+    var(--surface);
   transform: rotateY(180deg);
 }
 
 .cards-face small {
-  color: #ba9259;
+  color: var(--card-accent);
   font-size: 0.56rem;
-  font-weight: 790;
-  letter-spacing: 0.16em;
+  font-weight: 620;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
 }
 
 .cards-face-back small {
-  color: #69bd99;
+  color: var(--action);
 }
 
 .cards-face strong {
   margin-top: 22px;
-  color: #f5efe6;
+  color: var(--text);
   font-size: clamp(1.1rem, 5.2vw, 1.42rem);
-  font-weight: 760;
+  font-weight: 600;
   line-height: 1.42;
   letter-spacing: -0.025em;
 }
 
 .cards-face em {
   margin-top: 26px;
-  color: #716e76;
+  color: var(--text-muted);
   font-size: 0.57rem;
   font-style: normal;
   font-weight: 670;
@@ -469,24 +469,24 @@
   justify-content: center;
   gap: 7px;
   padding: 8px 7px;
-  color: #9a9296;
-  border: 1px solid rgba(167, 152, 135, 0.13);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
   border-radius: 12px 16px 13px 15px;
-  background: rgba(24, 23, 29, 0.78);
+  background: var(--surface);
 }
 
 .cards-review-actions button.again {
-  color: #df987f;
-  border-color: rgba(221, 119, 89, 0.17);
+  color: var(--card-accent);
+  border-color: color-mix(in oklab, var(--danger) 17%, transparent);
 }
 
 .cards-review-actions button.got-it {
-  color: #75c7a3;
-  border-color: rgba(79, 193, 143, 0.17);
+  color: var(--action);
+  border-color: color-mix(in oklab, var(--action) 17%, transparent);
 }
 
 .cards-review-actions button.flip {
-  color: #ddbd82;
+  color: var(--card-accent);
 }
 
 .cards-review-actions span,
@@ -497,13 +497,13 @@
 
 .cards-review-actions span {
   font-size: 0.58rem;
-  font-weight: 760;
+  font-weight: 600;
   text-align: left;
 }
 
 .cards-review-actions small {
   margin-top: 3px;
-  color: #66636c;
+  color: var(--text-muted);
   font-size: 0.47rem;
   font-weight: 630;
 }
@@ -515,10 +515,10 @@
 .cards-session-complete {
   margin-top: 18px;
   border-style: solid;
-  border-color: rgba(78, 190, 140, 0.19);
+  border-color: color-mix(in oklab, var(--action) 19%, transparent);
   background:
-    radial-gradient(220px 160px at 50% 25%, rgba(69, 176, 130, 0.12), transparent 75%),
-    rgba(18, 27, 29, 0.78);
+    none,
+    var(--surface);
 }
 
 .cards-complete-mark {
@@ -527,10 +527,10 @@
   height: 66px;
   margin-bottom: 17px;
   place-items: center;
-  color: #84d4b0;
-  border: 1px solid rgba(91, 199, 153, 0.23);
+  color: var(--action);
+  border: 1px solid color-mix(in oklab, var(--action) 23%, transparent);
   border-radius: 18px 25px 19px 22px;
-  background: rgba(55, 142, 105, 0.11);
+  background: color-mix(in oklab, var(--action) 11%, transparent);
   rotate: 2deg;
 }
 
@@ -539,9 +539,9 @@
   width: min(100%, 230px);
   grid-template-columns: 1fr 1fr;
   margin-top: 21px;
-  border: 1px solid rgba(108, 151, 129, 0.13);
-  border-radius: 14px;
-  background: rgba(9, 18, 20, 0.35);
+  border: 1px solid color-mix(in oklab, var(--action) 13%, transparent);
+  border-radius: var(--radius-soft);
+  background: var(--surface);
 }
 
 .cards-session-summary span {
@@ -549,7 +549,7 @@
 }
 
 .cards-session-summary span + span {
-  border-left: 1px solid rgba(108, 151, 129, 0.13);
+  border-left: 1px solid color-mix(in oklab, var(--action) 13%, transparent);
 }
 
 .cards-session-summary strong,
@@ -558,20 +558,20 @@
 }
 
 .cards-session-summary strong {
-  color: #e6eee9;
+  color: var(--text);
   font-size: 1.05rem;
 }
 
 .cards-session-summary small {
   margin-top: 3px;
-  color: #70827a;
+  color: var(--text);
   font-size: 0.52rem;
 }
 
 .cards-finish-button {
   margin-top: 9px;
-  color: #8d938f;
-  border-color: rgba(119, 139, 130, 0.14);
-  background: rgba(38, 51, 48, 0.18);
+  color: var(--text-muted);
+  border-color: var(--border);
+  background: var(--surface);
 }
 
