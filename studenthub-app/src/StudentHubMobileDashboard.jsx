@@ -282,8 +282,6 @@ export default function StudentHubMobileDashboard() {
     setActiveView('study');
   };
 
-  const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-
   return (
     <div className={[
       'studenthub-shell',
@@ -334,10 +332,6 @@ export default function StudentHubMobileDashboard() {
         <div className="ambient-grid" />
         <header className="mobile-topbar">
           <BrandLogo className="topbar-logo" />
-          <div className="min-w-0 flex-1">
-            <span className="topbar-date">{dateLabel}</span>
-            <strong className="topbar-title">BetterCLSS</strong>
-          </div>
           <button type="button" className="avatar-button" onClick={() => navigate('settings')} aria-label="Open settings">
             {data.name ? data.name.slice(0, 1).toUpperCase() : 'S'}
             <span />
@@ -348,12 +342,6 @@ export default function StudentHubMobileDashboard() {
           <AnimatePresence mode="wait">
             {activeView === 'home' && (
               <motion.div key="home" className="view-stack" initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={SPRING}>
-                <header className="dashboard-intro">
-                  <span className="eyebrow-mobile">Student overview</span>
-                  <h1>{data.name ? `Welcome back, ${data.name.split(' ')[0]}` : 'Your day, clearly.'}</h1>
-                  <p>Priorities, deadlines, and focus tools without the noise.</p>
-                </header>
-
                 <WorkloadProgress
                   assignments={assignments}
                   overdueCount={overdue.length}

@@ -146,16 +146,12 @@ body {
   gap: var(--space-l);
 }
 
-/* Masthead: serif display headline with a hairline rule — the one bold
-   element per view; everything else defers to it. */
-.dashboard-intro,
+/* View heading: used by Tasks/Calendar/Study — hairline-ruled, serif. */
 .view-heading {
-  padding: var(--space-2xs) 0 0;
+  padding: var(--space-2xs) 0 var(--space-2xs);
   border-bottom: 1px solid var(--hairline-strong);
-  padding-bottom: var(--space-2xs);
 }
 
-.dashboard-intro h1,
 .view-heading h1 {
   max-width: 16ch;
   margin: var(--space-3xs) 0 0;
@@ -168,7 +164,6 @@ body {
   text-wrap: balance;
 }
 
-.dashboard-intro p,
 .view-heading p {
   max-width: var(--measure);
   margin: var(--space-2xs) 0 0;
@@ -1495,51 +1490,3 @@ p {
 .w-5 { width: 1.25rem; }
 .w-6 { width: 1.5rem; }
 
-/* Semantic text styles for rows the old markup styled with utilities. */
-.topbar-date {
-  display: block;
-  overflow: hidden;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  font-weight: 500;
-  letter-spacing: 0.09em;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.topbar-title {
-  display: block;
-  margin-top: var(--space-3xs);
-  color: var(--text);
-  font-family: var(--font-display);
-  font-size: var(--step-0);
-  font-weight: 560;
-}
-
-.deadline-title {
-  overflow: hidden;
-  color: var(--text);
-  font-size: var(--step--1);
-  font-weight: 560;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.deadline-sub {
-  margin-top: var(--space-3xs);
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: 0.74rem;
-  font-variant-numeric: tabular-nums;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.empty-deadlines-art {
-  display: block;
-  width: 170px;
-  height: 112px;
-  margin-inline: auto;
-}
