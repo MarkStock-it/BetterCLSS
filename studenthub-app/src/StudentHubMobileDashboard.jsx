@@ -294,10 +294,7 @@ export default function StudentHubMobileDashboard() {
         <div className="ambient-grid" />
         <header className="mobile-topbar">
           <div className="topbar-spacer" aria-hidden="true" />
-          <button type="button" className="avatar-button" onClick={() => navigate('settings')} aria-label="Open settings">
-            {data.name ? data.name.slice(0, 1).toUpperCase() : 'S'}
-            <span />
-          </button>
+          <div className="topbar-spacer" aria-hidden="true" />
         </header>
 
         <div className="content-wrap">

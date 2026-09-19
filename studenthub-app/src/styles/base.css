@@ -127,7 +127,6 @@ body {
 }
 
 .menu-button,
-.avatar-button,
 .drawer-close {
   display: grid;
   flex: 0 0 auto;
@@ -142,30 +141,10 @@ body {
 }
 
 .menu-button:active,
-.avatar-button:active,
 .drawer-close:active {
   transform: scale(0.96);
 }
 
-.avatar-button {
-  font-family: var(--font-display);
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--on-action);
-  background: var(--action);
-  border-color: var(--action);
-}
-
-.avatar-button > span {
-  position: absolute;
-  right: -1px;
-  bottom: -1px;
-  width: 9px;
-  height: 9px;
-  border: 2px solid var(--bg);
-  border-radius: 999px;
-  background: var(--action-strong);
-}
 
 /* Logo removed: the topbar is brand-less chrome — a spacer keeps the
    avatar pinned to the trailing edge. */
