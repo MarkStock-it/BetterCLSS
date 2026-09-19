@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { BrandLogo, Glyph } from '../ui/Icons';
+import { BrandMark, Glyph } from '../ui/Icons';
 import { ArcMenu } from './ArcMenu';
 
 const DRAWER_TRAVEL = 360;
@@ -146,7 +146,7 @@ export function SidebarDrawer({ x, opacity, open, onOpenChange, activeView, onNa
         <div className="drawer-inner">
           <div className="drawer-head">
             <div className="drawer-head-brand">
-              <span className="brand-mark"><BrandLogo /></span>
+              <span className="brand-mark"><BrandMark className="h-5 w-5" /></span>
               <div>
                 <strong className="drawer-head-title">BetterCLSS</strong>
                 <span className="drawer-head-sub">StudentHub</span>

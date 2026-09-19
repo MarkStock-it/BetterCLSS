@@ -15,7 +15,7 @@ import { AgentCenter } from './components/agent/AgentCenter';
 import { SecondaryView } from './components/secondary/SecondaryView';
 import { StudyView } from './components/study/StudyView';
 import { TasksView } from './components/tasks/TasksView';
-import { BrandLogo, Glyph } from './components/ui/Icons';
+import { Glyph } from './components/ui/Icons';
 import {
   daysUntil,
   readAgentSettings,
@@ -293,7 +293,7 @@ export default function StudentHubMobileDashboard() {
       <main className="studenthub-main">
         <div className="ambient-grid" />
         <header className="mobile-topbar">
-          <BrandLogo className="topbar-logo" />
+          <div className="topbar-spacer" aria-hidden="true" />
           <button type="button" className="avatar-button" onClick={() => navigate('settings')} aria-label="Open settings">
             {data.name ? data.name.slice(0, 1).toUpperCase() : 'S'}
             <span />

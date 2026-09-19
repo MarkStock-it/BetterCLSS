@@ -1,5 +1,4 @@
 import React from 'react';
-import brandLogoUrl from '../../../../icons/icon-192.png';
 
 const GLYPH_PATHS = {
   home: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /></>,
@@ -36,6 +35,18 @@ export function Glyph({ name, className = 'h-5 w-5' }) {
   );
 }
 
-export function BrandLogo({ className = '' }) {
-  return <img className={className} src={brandLogoUrl} alt="" width="192" height="192" decoding="async" />;
+/**
+ * BrandMark — inline SVG brand chip drawn in currentColor so it inherits the
+ * surface it sits on (bone on the verdigris square, bone in the topbar).
+ * The mark echoes the dashboard's workload stairs: a ledger line stepping up
+ * to a summit tick — progress, kept honest.
+ */
+export function BrandMark({ className = '' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 19h4M8 14h5M13 9h5" />
+      <path d="M18 9V4.5" />
+      <circle cx="18" cy="4" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
 }
