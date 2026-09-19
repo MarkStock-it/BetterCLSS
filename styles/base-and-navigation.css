@@ -1,6 +1,7 @@
 /* ============================================================
    BetterCLSS — Student-focused Canvas companion
-   Clean dark theme, USC Canvas integration
+   "Ledger & Verdigris" — same token system as the mobile PWA.
+   Semantic names kept stable; values re-pointed to the shared palette.
    ============================================================ */
 
 *,
@@ -12,40 +13,47 @@
 }
 
 :root {
-  --font-ui: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  --font-display: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  --bg: #0c0e18;
-  --surface: #141720;
-  --surface-2: #1a1e2e;
-  --surface-3: #222638;
-  --border: #2a2f4a;
-  --text: #dfe3f8;
-  --text-muted: #56608a;
-  --text-dim: #8691be;
-  --accent: #6080ff;
-  --accent-hover: #4d6ef5;
-  --red: #ff4f5e;
-  --yellow: #ffb84f;
-  --green: #3dd9a4;
-  --purple: #b06fff;
-  --shadow: 0 4px 32px rgba(0, 0, 0, 0.55);
-  --radius: 14px;
-  --radius-sm: 9px;
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --bg: oklch(0.185 0.014 240);
+  --surface: oklch(0.225 0.016 240);
+  --surface-2: oklch(0.255 0.018 240);
+  --surface-3: oklch(0.29 0.02 240);
+  --border: oklch(0.31 0.016 240);
+  --text: oklch(0.925 0.008 106);
+  --text-muted: oklch(0.7 0.012 240);
+  --text-dim: oklch(0.55 0.015 240);
+  --accent: oklch(0.72 0.1 175);
+  --accent-hover: oklch(0.79 0.09 175);
+  --accent-contrast: oklch(0.17 0.02 175);
+  --red: #c03a2b;
+  --yellow: #b98a3a;
+  --green: oklch(0.72 0.1 175);
+  --purple: oklch(0.6 0.07 70);
+  --shadow-tint: 0.925 0.008 106;
+  --shadow: 0 2px 4px oklch(var(--shadow-tint) / 0.1), 0 14px 34px oklch(var(--shadow-tint) / 0.14);
+  --radius: 12px;
+  --radius-sm: 5px;
   --nav-h: 44px;
   --mobile-nav-h: 70px;
   --top-h: 0px;
 }
 
 [data-theme="light"] {
-  --bg: #f1f3fb;
-  --surface: #ffffff;
-  --surface-2: #eaedfa;
-  --surface-3: #dfe3f5;
-  --border: #cdd2ec;
-  --text: #161929;
-  --text-muted: #7880b0;
-  --text-dim: #4c5480;
-  --shadow: 0 4px 24px rgba(20, 28, 70, 0.10);
+  --bg: oklch(0.955 0.008 106);
+  --surface: oklch(0.98 0.006 106);
+  --surface-2: oklch(0.915 0.01 106);
+  --surface-3: oklch(0.88 0.012 106);
+  --border: oklch(0.865 0.012 106);
+  --text: oklch(0.205 0.02 240);
+  --text-muted: oklch(0.54 0.015 240);
+  --text-dim: oklch(0.38 0.018 240);
+  --accent: oklch(0.545 0.095 175);
+  --accent-hover: oklch(0.46 0.085 175);
+  --accent-contrast: oklch(0.975 0.006 106);
+  --shadow-tint: 0.205 0.02 240;
+  --shadow: 0 2px 4px oklch(var(--shadow-tint) / 0.1), 0 14px 34px oklch(var(--shadow-tint) / 0.1);
 }
 
 html {
@@ -297,7 +305,7 @@ textarea:focus-visible {
 .nav-tab:hover { color: var(--text); background: var(--surface-2); }
 .nav-tab.active {
   color: var(--accent);
-  background: rgba(96, 128, 255, 0.12);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   font-weight: 600;
 }
 
@@ -360,7 +368,7 @@ textarea:focus-visible {
   margin-left: auto;
 }
 .tab-count.alert { background: rgba(255, 79, 94, 0.15); color: var(--red); }
-.tab-count.active-count { background: rgba(96, 128, 255, 0.15); color: var(--accent); }
+.tab-count.active-count { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
 
 /* ============================================================
    SIDEBAR BRAND
@@ -379,7 +387,7 @@ textarea:focus-visible {
   height: 28px;
   color: var(--accent);
   flex-shrink: 0;
-  filter: drop-shadow(0 0 6px rgba(96,128,255,0.35));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 35%, transparent));
 }
 
 .sidebar-brand-text {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
-  <meta name="theme-color" content="#0d1117">
+  <meta name="theme-color" content="#131415">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="BetterCLSS">
@@ -13,8 +13,8 @@
   <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
   <div class="toast-container" id="toastContainer"></div>
@@ -139,7 +139,7 @@
         </div>
 
         <div class="canvas-banner" id="connectBanner">
-          <div class="canvas-banner-icon">&#127891;</div>
+          <div class="canvas-banner-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="26" height="26" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></div>
           <div class="canvas-banner-text">
             <div class="canvas-banner-title">Connect your USC Canvas account</div>
             <div class="canvas-banner-desc">Pull assignments, grades, and announcements directly from Canvas.</div>
@@ -535,16 +535,16 @@
           <div class="card-title" style="margin-bottom:14px">Accent Color</div>
           <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px">Customize the highlight color used across the app UI.</div>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-            <input type="color" id="accentColorPicker" value="#6080ff" oninput="setAccentColor(this.value, false)" style="width:42px;height:34px;padding:0;border:none;background:transparent;cursor:pointer">
-            <span id="accentHexValue" style="font-size:0.78rem;color:var(--text-muted)">#6080ff</span>
+            <input type="color" id="accentColorPicker" value="#34837a" oninput="setAccentColor(this.value, false)" style="width:42px;height:34px;padding:0;border:none;background:transparent;cursor:pointer">
+            <span id="accentHexValue" style="font-size:0.78rem;color:var(--text-muted)">#34837a</span>
             <button class="btn btn-secondary btn-sm" onclick="resetAccentColor()">Reset</button>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <button data-accent="#6080ff" onclick="setAccentColor('#6080ff')" title="Blue" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#6080ff;cursor:pointer"></button>
-            <button data-accent="#3dd9a4" onclick="setAccentColor('#3dd9a4')" title="Mint" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#3dd9a4;cursor:pointer"></button>
-            <button data-accent="#ffb84f" onclick="setAccentColor('#ffb84f')" title="Amber" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#ffb84f;cursor:pointer"></button>
-            <button data-accent="#ff4f5e" onclick="setAccentColor('#ff4f5e')" title="Red" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#ff4f5e;cursor:pointer"></button>
-            <button data-accent="#b06fff" onclick="setAccentColor('#b06fff')" title="Purple" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#b06fff;cursor:pointer"></button>
+            <button data-accent="#34837a" onclick="setAccentColor('#34837a')" title="Verdigris" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#34837a;cursor:pointer"></button>
+            <button data-accent="#72b08a" onclick="setAccentColor('#72b08a')" title="Sage" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#72b08a;cursor:pointer"></button>
+            <button data-accent="#c9a25e" onclick="setAccentColor('#c9a25e')" title="Ochre" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#c9a25e;cursor:pointer"></button>
+            <button data-accent="#c03a2b" onclick="setAccentColor('#c03a2b')" title="Brick" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#c03a2b;cursor:pointer"></button>
+            <button data-accent="#131415" onclick="setAccentColor('#131415')" title="Ink" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#131415;cursor:pointer"></button>
             <button data-accent="#06b6d4" onclick="setAccentColor('#06b6d4')" title="Cyan" style="width:22px;height:22px;border-radius:999px;border:2px solid var(--border);background:#06b6d4;cursor:pointer"></button>
           </div>
         </div>

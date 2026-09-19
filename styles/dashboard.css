@@ -97,10 +97,11 @@
 }
 
 .dashboard-welcome h1 {
-  font-size: clamp(1.5rem, 2.6vw, 1.9rem);
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-  font-weight: 650;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 2.6vw, 2.1rem);
+  letter-spacing: -0.015em;
+  line-height: 1.08;
+  font-weight: 560;
 }
 
 .dashboard-welcome p {
@@ -114,7 +115,6 @@
    ============================================================ */
 .card {
   background: var(--surface);
-  background: linear-gradient(155deg, color-mix(in srgb, var(--surface) 96%, var(--accent)), var(--surface));
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px;
@@ -180,9 +180,10 @@
 
 /* Tier 1 — the focal point */
 .dash-attention-head {
-  font-size: 1.32rem;
-  font-weight: 650;
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 560;
+  letter-spacing: -0.01em;
   margin-bottom: 0.75rem;
 }
 
@@ -502,7 +503,7 @@
   font-size: 0.68rem;
   color: var(--accent);
   font-weight: 600;
-  background: rgba(91,127,255,0.1);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
   padding: 1px 6px;
   border-radius: 4px;
   margin-left: 6px;
@@ -617,7 +618,7 @@
 .assign-item:hover { border-color: var(--accent); transform: translateX(2px); }
 .assign-item.done { opacity: 0.45; }
 .assign-item.done .assign-title { text-decoration: line-through; }
-.assign-item.canvas-item { border-left: 3px solid rgba(91,127,255,0.4); }
+.assign-item.canvas-item { border-left: 3px solid color-mix(in srgb, var(--accent) 40%, transparent); }
 
 .assign-info { flex: 1; min-width: 0; }
 .assign-title {
@@ -670,8 +671,8 @@
    CANVAS CONNECT BANNER
    ============================================================ */
 .canvas-banner {
-  background: linear-gradient(135deg, rgba(91,127,255,0.08), rgba(176,111,255,0.08));
-  border: 1px solid rgba(91,127,255,0.2);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
   border-radius: var(--radius);
   padding: 20px 24px;
   margin-bottom: 20px;
@@ -723,7 +724,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: rgba(91,127,255,0.15);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
   color: var(--accent);
   font-weight: 700;
   font-size: 0.8rem;

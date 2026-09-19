@@ -88,7 +88,7 @@ const BUILT_IN_TUTORIAL_VIDEO_URLS = [
   'assets/tutorial/Screen Recording 2026-04-28 at 10.57.01 AM.mov',
   'assets/tutorial/Screen Recording 2026-04-28 at 10.57.01 AM.mov'
 ];
-const DEFAULT_ACCENT = '#6080ff';
+const DEFAULT_ACCENT = '#34837a';
 const MOBILE_PAGE_ORDER = ['dashboard', 'assignments', 'calendar', 'study'];
 
 // Save instantly on-device, then coalesce server writes to avoid one request per keystroke.
@@ -242,7 +242,7 @@ function toggleTheme() {
 }
 function updateThemeChrome(theme) {
   const themeColor = document.querySelector('meta[name="theme-color"]');
-  if (themeColor) themeColor.setAttribute('content', theme === 'light' ? '#f1f3fb' : '#0c0e18');
+  if (themeColor) themeColor.setAttribute('content', theme === 'light' ? '#f2f0e9' : '#131415');
   document.documentElement.style.colorScheme = theme;
 }
 function setThemeIcon(theme) {

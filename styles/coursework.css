@@ -497,7 +497,7 @@
 }
 .note-card:hover { transform: translateY(-2px); }
 .note-card.yellow { background: rgba(255,184,79, 0.1); border-color: rgba(255,184,79, 0.2); }
-.note-card.blue   { background: rgba(91,127,255, 0.1); border-color: rgba(91,127,255, 0.2); }
+.note-card.blue   { background: color-mix(in srgb, var(--accent) 10%, transparent); border-color: color-mix(in srgb, var(--accent) 20%, transparent); }
 .note-card.pink   { background: rgba(255,100,150,0.1); border-color: rgba(255,100,150,0.2); }
 .note-card.green  { background: rgba(79,221,170, 0.1); border-color: rgba(79,221,170, 0.2); }
 
@@ -526,7 +526,7 @@
   font-size: 0.82rem;
   transition: border-color 0.15s, color 0.15s, background-color 0.15s;
 }
-.add-note-card:hover { border-color: var(--accent); color: var(--accent); background: rgba(91,127,255,0.05); }
+.add-note-card:hover { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, transparent); }
 .add-note-card .plus { font-size: 1.4rem; }
 
 /* ============================================================
