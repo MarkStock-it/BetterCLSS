@@ -726,14 +726,44 @@
   background: color-mix(in oklab, var(--action) 10%, transparent);
 }
 
+/* ─── Desktop: the mobile column, centered, on the ledger desk ────────────
+   The phone layout is the design; the desktop presents it. The app keeps
+   its column, floats it on a larger canvas of the same ground, and the
+   edges get a hairline frame instead of a glow. */
 @media (min-width: 560px) {
-  .studenthub-main {
-    max-width: 520px;
-    border-right: 1px solid color-mix(in oklab, var(--action) 12%, transparent);
-    border-left: 1px solid color-mix(in oklab, var(--action) 12%, transparent);
-    box-shadow: 0 0 90px color-mix(in oklab, var(--text) 24%, transparent);
+  body {
+    padding-block: var(--space-m);
   }
 
+  .studenthub-shell {
+    display: flex;
+    justify-content: center;
+  }
+
+  .studenthub-main {
+    max-width: 520px;
+    width: 100%;
+    border: 1px solid var(--hairline-strong);
+    border-radius: var(--radius-lift);
+    box-shadow: var(--shadow-2);
+  }
+
+  /* The ambient grid stops being masked at the top — it frames the sheet. */
+  .ambient-grid {
+    position: fixed;
+    opacity: 0.35;
+  }
+
+  /* The spine moves to the sheet's left edge instead of the viewport's. */
+  .nav-spine {
+    left: calc(50% - 260px - 28px);
+  }
+
+  @media (max-width: 620px) {
+    .nav-spine {
+      left: 0;
+    }
+  }
 }
 
 @media (max-width: 360px) {
