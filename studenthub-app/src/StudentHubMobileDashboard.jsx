@@ -48,7 +48,6 @@ export default function StudentHubMobileDashboard() {
   const [activeView, setActiveView] = useState('home');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
-  const [edgeDragging, setEdgeDragging] = useState(false);
   const [taskFilter, setTaskFilter] = useState('pending');
   const [calendarView, setCalendarView] = useState('month');
   const [studySpace, setStudySpace] = useState('timer');
@@ -58,7 +57,6 @@ export default function StudentHubMobileDashboard() {
   const [agentJobCreated, setAgentJobCreated] = useState(null);
   const drawerX = useMotionValue(-DRAWER_TRAVEL);
   const backdropOpacity = useTransform(drawerX, [-DRAWER_TRAVEL, 0], [0, 0.74]);
-  const edgeGesture = useRef(null);
 
   // The server is the authoritative, cross-device store for the Agentic Helper
   // enabled state (it lives in a per-user file on the server). localStorage is
@@ -130,31 +128,6 @@ export default function StudentHubMobileDashboard() {
       setActiveView(view);
     }
     settleDrawer(false);
-  };
-
-  const handleEdgeDown = (event) => {
-    edgeGesture.current = { x: event.clientX, time: performance.now(), pointerId: event.pointerId };
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setEdgeDragging(true);
-  };
-
-  const handleEdgeMove = (event) => {
-    if (!edgeGesture.current || event.pointerId !== edgeGesture.current.pointerId) return;
-    const distance = Math.max(0, event.clientX - edgeGesture.current.x);
-    const resisted = distance <= DRAWER_TRAVEL
-      ? distance
-      : DRAWER_TRAVEL + (distance - DRAWER_TRAVEL) * 0.16;
-    drawerX.set(Math.min(0, -DRAWER_TRAVEL + resisted));
-  };
-
-  const handleEdgeEnd = (event) => {
-    if (!edgeGesture.current) return;
-    const distance = Math.max(0, event.clientX - edgeGesture.current.x);
-    const elapsed = Math.max(1, performance.now() - edgeGesture.current.time);
-    const velocity = distance / elapsed;
-    settleDrawer(distance > 78 || velocity > 0.58);
-    edgeGesture.current = null;
-    setEdgeDragging(false);
   };
 
   const connectCanvas = () => {
@@ -287,17 +260,6 @@ export default function StudentHubMobileDashboard() {
       'studenthub-shell',
       activeView === 'study' && studyRunning ? 'focus-session-active' : ''
     ].filter(Boolean).join(' ')}>
-      <div
-        className="edge-swipe-zone"
-        onPointerDown={handleEdgeDown}
-        onPointerMove={handleEdgeMove}
-        onPointerUp={handleEdgeEnd}
-        onPointerCancel={handleEdgeEnd}
-        aria-hidden="true"
-      >
-        <motion.span animate={{ opacity: edgeDragging ? 1 : 0.28, scaleY: edgeDragging ? 1.2 : 1 }} />
-      </div>
-
       <SidebarDrawer
         x={drawerX}
         opacity={backdropOpacity}

@@ -32,6 +32,47 @@
   --pager-accent-border: color-mix(in oklab, var(--action) 45%, transparent);
   --danger: color-mix(in oklab, var(--danger-0) 88%, var(--text));
   --ok: color-mix(in oklab, var(--action) 82%, #e9f5e9);
+  /* Modal/drawer veil — a constant near-black in BOTH themes (dark scrims are
+     the platform norm over light surfaces too). */
+  --scrim: oklch(0.16 0.014 240 / 0.75);
+}
+
+/* Mini-preflight — replaces Tailwind's reset for the few UA defaults the
+   component styles assume: chromeless buttons, zeroed heading/list margins,
+   block images. Class rules below always win over these. */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  padding: 0;
+  border: 0 solid transparent;
+  background: none;
+  cursor: pointer;
+}
+
+h1, h2, h3, h4, h5, h6,
+p, ul, ol, figure {
+  margin: 0;
+}
+
+ul, ol {
+  padding: 0;
+  list-style: none;
+}
+
+img,
+svg {
+  vertical-align: middle;
+}
+
+img {
+  display: block;
+  max-width: 100%;
 }
 
 * {
@@ -1259,7 +1300,7 @@ body {
   position: fixed;
   z-index: 65;
   inset: 0;
-  background: color-mix(in oklab, var(--text) 55%, transparent);
+  background: var(--scrim);
 }
 
 .assistant-fab {
@@ -1465,13 +1506,6 @@ body {
 
 /* Micro-typography primitives (token layer already sets these globally;
    repeated here so component sheets can rely on them without importing). */
-h1, h2, h3, h4 {
-  text-wrap: balance;
-}
-
-p {
-  text-wrap: pretty;
-}
 
 /* ─── Utility shim — replaces Tailwind for the few structural utilities the
        components actually use. No design decisions live here. ────────────── */
@@ -1490,3 +1524,266 @@ p {
 .w-5 { width: 1.25rem; }
 .w-6 { width: 1.5rem; }
 
+
+/* ─── Navigation: edge spine · arc bloom · sectioned drawer ─────────────── */
+
+/* Backdrop — ink veil, no color cast. */
+.nav-backdrop {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: var(--scrim);
+}
+
+/* Layer 1 — the spine: a quiet vertical rule of dots on the left edge.
+   Always visible, 28px wide, never blocks content taps outside its strip. */
+.nav-spine {
+  position: fixed;
+  z-index: 45;
+  top: 50%;
+  left: 0;
+  display: flex;
+  width: 28px;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) 0;
+  transform: translateY(-50%);
+  touch-action: none;
+}
+
+.spine-dot {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.spine-dot::after {
+  display: block;
+  width: 7px;
+  height: 7px;
+  margin: auto;
+  content: "";
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--text) 34%, transparent);
+  transition: background-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-spring);
+}
+
+.spine-dot:hover::after {
+  background: var(--action);
+  transform: scale(1.25);
+}
+
+.spine-dot.is-active::after {
+  background: var(--action);
+  transform: scale(1.45);
+}
+
+.spine-dot:focus-visible,
+.spine-handle:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+
+/* The drag affordance: three ledger ticks at the spine's foot. */
+.spine-handle {
+  display: grid;
+  width: 22px;
+  height: 26px;
+  place-items: center;
+  margin-top: var(--space-3xs);
+  padding: 0;
+  color: var(--text-muted);
+  border: 0;
+  border-radius: var(--radius-edge);
+  background: transparent;
+  cursor: grab;
+}
+
+.spine-handle:active {
+  cursor: grabbing;
+}
+
+/* Layer 2 — the arc bloom. Fixed overlay; nodes are translated squares. */
+.arc-menu-layer {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  pointer-events: none;
+}
+
+.arc-menu-scrim {
+  position: absolute;
+  inset: 0;
+  background: oklch(0.16 0.014 240 / 0.45);
+  pointer-events: auto;
+}
+
+.arc-menu-guides {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.arc-menu-guides line {
+  stroke: color-mix(in oklab, var(--text) 22%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+}
+
+.arc-menu-guides line.is-hot {
+  stroke: var(--action);
+  stroke-dasharray: none;
+}
+
+.arc-menu-node {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  width: 68px;
+  height: 68px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-soft);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  transition: color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.arc-menu-node .arc-menu-label {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.arc-menu-node.is-hot {
+  color: var(--on-action);
+  border-color: var(--action);
+  background: var(--action);
+  transform-origin: center;
+}
+
+.arc-menu-node.is-active:not(.is-hot) {
+  color: var(--action);
+  border-color: var(--pager-accent-border);
+}
+
+/* Origin pin: a small verdigris crosshair where the gesture began. */
+.arc-menu-origin {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--action);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--action) 22%, transparent);
+}
+
+/* Layer 3 — drawer internals: sectioned, collapsible, hairline-ruled. */
+.drawer-inner {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+
+.drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: max(var(--space-s), env(safe-area-inset-top)) var(--space-s) var(--space-s);
+}
+
+.drawer-head-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+.drawer-head-title {
+  display: block;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: var(--step-0);
+  font-weight: 560;
+}
+
+.drawer-head-sub {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.drawer-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 var(--space-2xs) var(--space-s);
+}
+
+.drawer-section {
+  margin-bottom: var(--space-3xs);
+}
+
+.drawer-section-head {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2xs) var(--space-2xs);
+  color: var(--text-muted);
+  border: 0;
+  border-radius: var(--radius-edge);
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+
+.drawer-section-head:hover {
+  color: var(--text);
+}
+
+.drawer-section-caret {
+  width: 14px;
+  height: 14px;
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.drawer-section-caret.is-collapsed {
+  transform: rotate(-90deg);
+}
+
+.drawer-section-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: var(--space-3xs);
+  border-left: 1px solid var(--hairline);
+  margin-left: var(--space-2xs);
+}
