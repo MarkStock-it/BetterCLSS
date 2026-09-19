@@ -1821,3 +1821,238 @@ body {
   color: var(--text);
   font-weight: 560;
 }
+
+/* ─── Deck editor (manual card authoring) ─────────────────────────────── */
+.cards-create-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-block: var(--space-4) 0;
+}
+
+.deck-create-button,
+.deck-ai-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: 600 var(--text-sm)/1 var(--font-ui);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-soft);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.deck-create-button {
+  background: var(--action);
+  border-color: var(--action);
+  color: var(--action-contrast);
+}
+
+.deck-ai-button {
+  border-style: dashed;
+  color: var(--accent);
+}
+
+.deck-create-button:hover { filter: brightness(1.08); }
+.deck-ai-button:hover { background: var(--surface-inset); }
+
+.cards-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: center;
+}
+
+.deck-selection-item {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+
+.deck-selection-item .deck-selection-row {
+  flex: 1;
+  min-width: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.deck-extend-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-inline-start: none;
+  border-radius: 0 var(--radius-soft) var(--radius-soft) 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: 600 var(--text-xs)/1 var(--font-ui);
+  cursor: pointer;
+}
+
+.deck-extend-button:hover {
+  color: var(--accent);
+  background: var(--surface-inset);
+}
+
+.deck-editor {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.deck-editor-head h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  margin-block: var(--space-1) var(--space-1);
+}
+
+.deck-editor-head p {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  max-width: 46ch;
+}
+
+.deck-editor-field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.deck-editor-field span {
+  font: 600 var(--text-xs)/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+}
+
+.deck-editor-field input {
+  font: 500 var(--text-base)/1.4 var(--font-ui);
+  color: var(--text);
+  background: var(--surface-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-soft);
+  padding: var(--space-2) var(--space-3);
+  outline: none;
+}
+
+.deck-editor-field input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.deck-editor-cards {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.deck-editor-card {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-soft);
+  padding: var(--space-2);
+  background: var(--surface);
+}
+
+.deck-editor-num {
+  font: 600 var(--text-xs)/2.2 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  min-width: 2ch;
+  text-align: center;
+}
+
+.deck-editor-sides {
+  flex: 1;
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.deck-editor-sides textarea {
+  width: 100%;
+  resize: vertical;
+  font: 400 var(--text-sm)/1.5 var(--font-ui);
+  color: var(--text);
+  background: var(--surface-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-edge);
+  padding: var(--space-1) var(--space-2);
+  outline: none;
+}
+
+.deck-editor-sides textarea:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.deck-editor-remove {
+  align-self: center;
+  display: inline-flex;
+  padding: var(--space-1);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-edge);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.deck-editor-remove:hover:not(:disabled) { color: var(--danger); }
+.deck-editor-remove:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.deck-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.deck-editor-add {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: 600 var(--text-sm)/1 var(--font-ui);
+  color: var(--text);
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-soft);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+
+.deck-editor-add:hover { background: var(--surface-inset); }
+
+.deck-editor-save {
+  font: 600 var(--text-sm)/1 var(--font-ui);
+  color: var(--action-contrast);
+  background: var(--action);
+  border: 1px solid var(--action);
+  border-radius: var(--radius-soft);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+}
+
+.deck-editor-save:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.deck-editor-save:not(:disabled):hover { filter: brightness(1.08); }
+
+.deck-editor-ai {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: 600 var(--text-sm)/1 var(--font-ui);
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  padding: var(--space-2);
+  cursor: pointer;
+}
+
+.deck-editor-ai:hover { text-decoration: underline; }

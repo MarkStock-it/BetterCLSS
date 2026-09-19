@@ -23,7 +23,7 @@ import {
 
 const SPRING = { type: 'spring', stiffness: 430, damping: 38, mass: 0.86 };
 
-export function StudyView({ activeTab, onTabChange, onRunningChange, onCreateDeck, assignments, savedDecks, initialTasks, initialHistory, initialNote }) {
+export function StudyView({ activeTab, onTabChange, onRunningChange, onCreateDeck, onSaveDeck, assignments, savedDecks, initialTasks, initialHistory, initialNote }) {
   const decks = useMemo(() => buildCourseDecks(assignments, savedDecks), [assignments, savedDecks]);
   const [activeMode, setActiveMode] = useState('work');
   const [durations, setDurations] = useState(readStudyDurations);
@@ -395,6 +395,7 @@ export function StudyView({ activeTab, onTabChange, onRunningChange, onCreateDec
               key="study-cards"
               decks={decks}
               onCreateDeck={onCreateDeck}
+              onSaveDeck={onSaveDeck}
             />
           )}
       </AnimatePresence>

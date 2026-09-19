@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Glyph } from '../../ui/Icons';
 
+const WORKLOAD_SPRING = { type: 'spring', stiffness: 230, damping: 17, mass: 0.82 };
+
 export function GestureTimerRing({
   running,
   timeLeft,

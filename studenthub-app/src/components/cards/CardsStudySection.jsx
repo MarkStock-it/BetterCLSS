@@ -1,17 +1,117 @@
 import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { dateKey, daysUntil } from "../../lib/dashboard-data";
+import { dateKey, daysUntil, updateStoredLocalData } from "../../lib/dashboard-data";
 import { Glyph } from "../ui/Icons";
 
 const DECKS_PER_PAGE = 5;
 const SPRING = { type: "spring", stiffness: 430, damping: 38, mass: 0.86 };
 
-export function CardsStudySection({ decks, onCreateDeck }) {
+const blankCard = () => ({ id: `c${Date.now()}-${Math.floor(Math.random() * 1e4)}`, title: '', answer: '', done: false });
+
+/**
+ * Manual deck editor: create a deck by hand or add cards to an existing one.
+ * `onSaveDeck(title, cards, deckId?)` persists; `onRequestAiDeck` hands off
+ * to the assistant for AI-generated decks.
+ */
+function DeckEditor({ deck = null, onSaveDeck, onDiscard, onRequestAiDeck }) {
+  const [title, setTitle] = useState(deck?.title || '');
+  const [cards, setCards] = useState(() => {
+    const existing = (deck?.cards || []).map((card) => ({ ...card }));
+    return existing.length ? existing : [blankCard(), blankCard()];
+  });
+  const validCards = cards.filter((card) => card.title.trim() && card.answer.trim());
+  const canSave = title.trim() && validCards.length > 0;
+
+  const setCard = (index, patch) => {
+    setCards((current) => current.map((card, i) => (i === index ? { ...card, ...patch } : card)));
+  };
+
+  return (
+    <section className="deck-editor" aria-label={deck ? 'Add cards to deck' : 'New deck'}>
+      <button type="button" className="cards-back-button" onClick={onDiscard}>
+        <Glyph name="arrow" className="h-4 w-4 rotate-180" />
+        {deck ? 'Discard changes' : 'Back to decks'}
+      </button>
+      <header className="deck-editor-head">
+        <span className="eyebrow-mobile">{deck ? 'Extend deck' : 'Manual deck'}</span>
+        <h2>{deck ? 'Add cards' : 'New deck'}</h2>
+        <p>{deck ? 'Fill in the blanks below — saved cards join the review pile instantly.' : 'Write your own cards, front and back. Or let the assistant draft a deck for you.'}</p>
+      </header>
+      <label className="deck-editor-field">
+        <span>Deck name</span>
+        <input
+          type="text"
+          value={title}
+          maxLength={100}
+          placeholder="e.g. Biology — Cell Structure"
+          onChange={(event) => setTitle(event.target.value)}
+        />
+      </label>
+      <div className="deck-editor-cards">
+        {cards.map((card, index) => (
+          <div className="deck-editor-card" key={card.id}>
+            <span className="deck-editor-num" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+            <div className="deck-editor-sides">
+              <textarea
+                value={card.title}
+                maxLength={500}
+                rows={2}
+                placeholder="Front — the question"
+                aria-label={`Card ${index + 1} front`}
+                onChange={(event) => setCard(index, { title: event.target.value })}
+              />
+              <textarea
+                value={card.answer}
+                maxLength={1200}
+                rows={2}
+                placeholder="Back — the answer"
+                aria-label={`Card ${index + 1} back`}
+                onChange={(event) => setCard(index, { answer: event.target.value })}
+              />
+            </div>
+            <button
+              type="button"
+              className="deck-editor-remove"
+              aria-label={`Remove card ${index + 1}`}
+              disabled={cards.length <= 2}
+              onClick={() => setCards((current) => current.filter((_, i) => i !== index))}
+            >
+              <Glyph name="close" className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="deck-editor-actions">
+        <button type="button" className="deck-editor-add" onClick={() => setCards((current) => [...current, blankCard()])}>
+          <Glyph name="plus" className="h-4 w-4" />
+          Add card
+        </button>
+        <button
+          type="button"
+          className="deck-editor-save"
+          disabled={!canSave}
+          onClick={() => onSaveDeck(title.trim(), validCards.map((card) => ({ ...card, title: card.title.trim(), answer: card.answer.trim() })), deck?.id || null)}
+        >
+          Save deck ({validCards.length} {validCards.length === 1 ? 'card' : 'cards'})
+        </button>
+        {!deck && (
+          <button type="button" className="deck-editor-ai" onClick={onRequestAiDeck}>
+            <Glyph name="spark" className="h-4 w-4" />
+            Ask the AI instead
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export function CardsStudySection({ decks, onCreateDeck, onSaveDeck }) {
   const reduceMotion = useReducedMotion();
   const draggingRef = useRef(false);
   const deckListRef = useRef(null);
   const [selectedDeckId, setSelectedDeckId] = useState(null);
   const [deckPage, setDeckPage] = useState(1);
+  const [editorMode, setEditorMode] = useState(null); // null | 'new' | 'extend'
   const [reviewCards, setReviewCards] = useState([]);
   const [reviewIndex, setReviewIndex] = useState(0);
   const [cardFlipped, setCardFlipped] = useState(false);
@@ -114,6 +214,57 @@ export function CardsStudySection({ decks, onCreateDeck }) {
     setAnnouncement(cardFlipped ? 'Card front shown.' : 'Card answer shown.');
   };
 
+  const handleSaveDeck = (title, cards, deckId) => {
+    onSaveDeck(title, cards, deckId);
+    setEditorMode(null);
+    setSelectedDeckId(null);
+    setAnnouncement(`Deck "${title}" saved.`);
+  };
+
+  if (editorMode === 'new') {
+    return (
+      <motion.section
+        className="cards-workspace"
+        id="study-panel-cards"
+        role="region"
+        aria-label="Cards"
+        tabIndex="0"
+        initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={reduceMotion ? { duration: 0 } : SPRING}
+      >
+        <DeckEditor
+          onSaveDeck={handleSaveDeck}
+          onDiscard={() => setEditorMode(null)}
+          onRequestAiDeck={onCreateDeck}
+        />
+      </motion.section>
+    );
+  }
+
+  if (editorMode === 'extend' && selectedDeck) {
+    return (
+      <motion.section
+        className="cards-workspace"
+        id="study-panel-cards"
+        role="region"
+        aria-label="Cards"
+        tabIndex="0"
+        initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={reduceMotion ? { duration: 0 } : SPRING}
+      >
+        <DeckEditor
+          deck={selectedDeck}
+          onSaveDeck={handleSaveDeck}
+          onDiscard={() => setEditorMode(null)}
+        />
+      </motion.section>
+    );
+  }
+
   if (!selectedDeck) {
     return (
       <motion.section
@@ -136,6 +287,17 @@ export function CardsStudySection({ decks, onCreateDeck }) {
           </div>
         </header>
 
+        <div className="cards-create-row">
+          <button type="button" className="deck-create-button" onClick={() => setEditorMode('new')}>
+            <Glyph name="plus" className="h-4 w-4" />
+            New deck
+          </button>
+          <button type="button" className="deck-ai-button" onClick={onCreateDeck}>
+            <Glyph name="spark" className="h-4 w-4" />
+            AI deck
+          </button>
+        </div>
+
         {decks.length ? (
           <>
             <div className="deck-page-summary" aria-live="polite">
@@ -153,29 +315,45 @@ export function CardsStudySection({ decks, onCreateDeck }) {
                 >
                   {visibleDecks.map((deck, index) => {
                     const dueCount = dueCountForDeck(deck);
+                    const isSavedDeck = String(deck.id).startsWith('ai-');
                     return (
-                      <motion.button
-                        type="button"
-                        className="deck-selection-row"
-                        onClick={() => startDeck(deck)}
-                        key={deck.id}
-                        initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={reduceMotion ? { duration: 0 } : { ...SPRING, delay: index * 0.035 }}
-                        aria-label={`${deck.title}. ${deck.cards.length} cards. ${dueCount} due for review today.`}
-                      >
-                        <span className={`deck-selection-glyph ${deck.generated ? 'generated' : ''}`} aria-hidden="true">
-                          <i /><i /><i />
-                        </span>
-                        <span className="deck-selection-copy">
-                          <strong>{deck.title}</strong>
-                          <small>{deck.cards.length} {deck.cards.length === 1 ? 'card' : 'cards'}</small>
-                        </span>
-                        <span className={`deck-due-count ${dueCount ? '' : 'clear'}`}>
-                          {dueCount ? `${dueCount} due today` : 'Caught up'}
-                        </span>
-                        <Glyph name="arrow" className="deck-selection-arrow h-4 w-4" />
-                      </motion.button>
+                      <div className="deck-selection-item" key={deck.id}>
+                        <motion.button
+                          type="button"
+                          className="deck-selection-row"
+                          onClick={() => startDeck(deck)}
+                          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={reduceMotion ? { duration: 0 } : { ...SPRING, delay: index * 0.035 }}
+                          aria-label={`${deck.title}. ${deck.cards.length} cards. ${dueCount} due for review today.`}
+                        >
+                          <span className={`deck-selection-glyph ${deck.generated ? 'generated' : ''}`} aria-hidden="true">
+                            <i /><i /><i />
+                          </span>
+                          <span className="deck-selection-copy">
+                            <strong>{deck.title}</strong>
+                            <small>{deck.cards.length} {deck.cards.length === 1 ? 'card' : 'cards'}</small>
+                          </span>
+                          <span className={`deck-due-count ${dueCount ? '' : 'clear'}`}>
+                            {dueCount ? `${dueCount} due today` : 'Caught up'}
+                          </span>
+                          <Glyph name="arrow" className="deck-selection-arrow h-4 w-4" />
+                        </motion.button>
+                        {isSavedDeck && (
+                          <button
+                            type="button"
+                            className="deck-extend-button"
+                            aria-label={`Add cards to ${deck.title}`}
+                            onClick={() => {
+                              setSelectedDeckId(deck.id);
+                              setEditorMode('extend');
+                            }}
+                          >
+                            <Glyph name="plus" className="h-4 w-4" />
+                            <span>Add cards</span>
+                          </button>
+                        )}
+                      </div>
                     );
                   })}
                 </motion.div>
@@ -209,8 +387,17 @@ export function CardsStudySection({ decks, onCreateDeck }) {
           <div className="cards-library-empty">
             <span className="cards-empty-stack" aria-hidden="true"><i /><i /><i /></span>
             <h2>No decks yet</h2>
-            <p>Create a deck with BetterCLSS AI, then it will appear here ready to review.</p>
-            <button type="button" onClick={onCreateDeck}>Create your first deck</button>
+            <p>Write your own deck by hand, or have the assistant draft one from your coursework.</p>
+            <div className="cards-empty-actions">
+              <button type="button" className="deck-create-button" onClick={() => setEditorMode('new')}>
+                <Glyph name="plus" className="h-4 w-4" />
+                Create your first deck
+              </button>
+              <button type="button" className="deck-ai-button" onClick={onCreateDeck}>
+                <Glyph name="spark" className="h-4 w-4" />
+                Have your AI make one
+              </button>
+            </div>
           </div>
         )}
         <span className="sr-only" aria-live="polite">{announcement}</span>
@@ -235,7 +422,18 @@ export function CardsStudySection({ decks, onCreateDeck }) {
           <span className="cards-empty-stack" aria-hidden="true"><i /><i /><i /></span>
           <h2>{selectedDeck.title} is empty</h2>
           <p>Add a few question-and-answer cards before starting a review.</p>
-          <button type="button" onClick={onCreateDeck}>Create cards</button>
+          {String(selectedDeck.id).startsWith('ai-') && (
+            <button
+              type="button"
+              className="deck-create-button"
+              onClick={() => {
+                setEditorMode('extend');
+              }}
+            >
+              <Glyph name="plus" className="h-4 w-4" />
+              Add cards to this deck
+            </button>
+          )}
         </div>
       </section>
     );
@@ -382,4 +580,3 @@ export function CardsStudySection({ decks, onCreateDeck }) {
     </section>
   );
 }
-

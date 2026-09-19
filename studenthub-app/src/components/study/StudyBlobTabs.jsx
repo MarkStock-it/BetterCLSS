@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { Glyph } from '../ui/Icons';
 
+const SPRING = { type: 'spring', stiffness: 430, damping: 38, mass: 0.86 };
+
 const STUDY_AREA_TABS = [
   { id: 'timer', label: 'Timer', icon: 'clock' },
   { id: 'notes', label: 'Notes', icon: 'notes' },

@@ -226,6 +226,40 @@ export default function StudentHubMobileDashboard() {
     setTimeout(() => setAgentJobCreated(null), 1000);
   };
 
+  // Persists a manually-authored deck (or appends cards to an existing saved
+  // deck). Manual decks live in the same store as assistant decks — the `ai-`
+  // prefix distinguishes them in the deck list.
+  const saveManualDeck = (title, cards, deckId) => {
+    const deckCards = cards.map((card, index) => ({
+      id: card.id || `${Date.now()}-${index}`,
+      front: String(card.title || '').trim().slice(0, 500),
+      back: String(card.answer || '').trim().slice(0, 1200),
+      done: false
+    }));
+    setStudyDecks((current) => {
+      let next;
+      if (deckId) {
+        const deckIdString = String(deckId).replace(/^ai-/, '');
+        next = current.map((deck) => (String(deck.id) === deckIdString
+          ? { ...deck, cards: [...deck.cards, ...deckCards].slice(0, 100) }
+          : deck));
+      } else {
+        const deck = {
+          id: Date.now(),
+          title: String(title || 'My deck').trim().slice(0, 100),
+          cards: deckCards,
+          createdAt: new Date().toISOString(),
+          source: 'manual'
+        };
+        next = [deck, ...current].slice(0, 30);
+      }
+      updateStoredLocalData((local) => {
+        local.studyDecks = next;
+      });
+      return next;
+    });
+  };
+
   const createAssistantDeck = (action) => {
     const cards = (Array.isArray(action.cards) ? action.cards : [])
       .map((card, index) => ({
@@ -345,6 +379,7 @@ export default function StudentHubMobileDashboard() {
                 onTabChange={setStudySpace}
                 onRunningChange={setStudyRunning}
                 onCreateDeck={() => setAssistantOpen(true)}
+                onSaveDeck={saveManualDeck}
                 assignments={assignments}
                 savedDecks={studyDecks}
                 initialTasks={data.studyTasks}
