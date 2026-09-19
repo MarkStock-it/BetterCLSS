@@ -1765,3 +1765,59 @@ body {
   border-left: 1px solid var(--hairline);
   margin-left: var(--space-2xs);
 }
+
+/* ─── Assignments pagination ─────────────────────────────────────────────── */
+.task-pagination {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding-top: var(--space-2xs);
+  border-top: 1px solid var(--hairline);
+}
+
+.task-pagination > button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  min-height: 40px;
+  padding: 0 var(--space-2xs);
+  color: var(--pager-text);
+  border: 1px solid var(--pager-border);
+  border-radius: var(--radius-edge);
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 520;
+}
+
+.task-pagination > button:hover:not(:disabled),
+.task-pagination > button:focus-visible {
+  color: var(--text);
+  border-color: var(--pager-accent-border);
+  background: var(--pager-hover);
+}
+
+.task-pagination > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.task-pag-caret {
+  display: inline-flex;
+}
+
+.task-pag-caret svg { transform: rotate(-90deg); }
+.task-pag-caret.is-prev svg { transform: rotate(90deg); }
+
+.task-pagination-status {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.task-pagination-status strong {
+  color: var(--text);
+  font-weight: 560;
+}

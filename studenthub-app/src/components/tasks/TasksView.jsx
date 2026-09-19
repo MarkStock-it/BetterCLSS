@@ -5,6 +5,7 @@ import { ViewHeading, ViewModeTabs } from '../ui/ViewControls';
 import { daysUntil, smartSort, canCreateAgentJob, createAgentJobSafe } from '../../lib/dashboard-data';
 
 const SPRING = { type: 'spring', stiffness: 430, damping: 38, mass: 0.86 };
+const PAGE_SIZE = 15;
 
 /* Time bucket for grouping. Returns a label only when the data justifies a group. */
 function dueBucket(days) {
@@ -196,6 +197,7 @@ function EmptyTasks({ filter, connected, onConnect }) {
 export function TasksView({ assignments, filter, onFilterChange, connected, onConnect, onToggleDone, onCreateAgentJob }) {
   const [expandedId, setExpandedId] = useState(null);
   const [creatingJobId, setCreatingJobId] = useState(null);
+  const [page, setPage] = useState(0);
   const reduceMotion = useReducedMotion();
 
   const counts = useMemo(() => workloadSummary(assignments), [assignments]);
@@ -207,19 +209,32 @@ export function TasksView({ assignments, filter, onFilterChange, connected, onCo
     return !item.done;
   }), [assignments, filter]);
 
+  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const paged = useMemo(
+    () => visible.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE),
+    [visible, safePage]
+  );
+
   /* Continuous scrollable list — the workload stays in one mental model.
      Group only when the filter shows mixed time horizons. */
   const groups = useMemo(() => {
     if (filter !== 'pending') return null;
     const order = ['overdue', 'today', 'week', 'later', 'unscheduled'];
     const map = new Map();
-    visible.forEach((item) => {
+    paged.forEach((item) => {
       const bucket = dueBucket(daysUntil(item.due));
       if (!map.has(bucket)) map.set(bucket, []);
       map.get(bucket).push(item);
     });
     return order.filter((bucket) => map.has(bucket)).map((bucket) => ({ bucket, label: BUCKET_LABELS[bucket], items: map.get(bucket) }));
-  }, [visible, filter]);
+  }, [paged, filter]);
+
+  const gotoPage = (next) => {
+    setPage(Math.max(0, Math.min(totalPages - 1, next)));
+    setExpandedId(null);
+    document.querySelector('.tasks-list-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const toggleExpand = (rowId) => setExpandedId((current) => (current === rowId ? null : rowId));
 
@@ -235,7 +250,7 @@ export function TasksView({ assignments, filter, onFilterChange, connected, onCo
       <ViewModeTabs
         label="Assignment filters"
         value={filter}
-        onChange={(value) => { setExpandedId(null); onFilterChange(value); }}
+        onChange={(value) => { setExpandedId(null); setPage(0); onFilterChange(value); }}
         options={[
           { value: 'pending', label: `Upcoming${counts.pending ? ` ${counts.pending}` : ''}` },
           { value: 'overdue', label: `Overdue${counts.overdue ? ` ${counts.overdue}` : ''}` },
@@ -244,7 +259,7 @@ export function TasksView({ assignments, filter, onFilterChange, connected, onCo
       />
 
       <section className="tasks-list-wrap" aria-live="polite">
-        {visible.length === 0 ? (
+        {paged.length === 0 ? (
           <EmptyTasks filter={filter} connected={connected} onConnect={onConnect} />
         ) : groups ? (
           groups.map(({ bucket, label, items }) => (
@@ -271,7 +286,7 @@ export function TasksView({ assignments, filter, onFilterChange, connected, onCo
           ))
         ) : (
           <ul className="task-list">
-            {visible.map((item) => (
+            {paged.map((item) => (
               <TaskRow
                 key={item.id || `${item.title}-${item.due || 'nodue'}`}
                 item={item}
@@ -289,6 +304,30 @@ export function TasksView({ assignments, filter, onFilterChange, connected, onCo
           </ul>
         )}
       </section>
+
+      {totalPages > 1 && (
+        <nav className="task-pagination" aria-label="Assignments pages">
+          <button
+            type="button"
+            onClick={() => gotoPage(safePage - 1)}
+            disabled={safePage === 0}
+          >
+            <span className="task-pag-caret is-prev"><Glyph name="chevron" className="h-4 w-4" /></span>
+            Prev
+          </button>
+          <span className="task-pagination-status">
+            Page <strong>{safePage + 1}</strong> of {totalPages} · {visible.length} items
+          </span>
+          <button
+            type="button"
+            onClick={() => gotoPage(safePage + 1)}
+            disabled={safePage >= totalPages - 1}
+          >
+            Next
+            <span className="task-pag-caret"><Glyph name="chevron" className="h-4 w-4" /></span>
+          </button>
+        </nav>
+      )}
     </motion.section>
   );
 }
